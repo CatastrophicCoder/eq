@@ -58,7 +58,7 @@ Decided; details and dates in `docs/PROGRESS.md`.
 
 - Filter topology: matched second-order designs (Vicanek, *Matched Second Order Digital Filters*, 2016),
   run in a biquad structure. Coefficients are computed in our own code, citing the paper.
-  Response tests compare against the analog prototype curve.
+  Response tests check both the digital design and closeness to the analog prototype (see DSP testing rules).
 - Band count: 16.
 - Milestone order after 5: per-band stereo (6), dynamic EQ (7), linear phase (8).
 
@@ -82,8 +82,13 @@ Other threading rules:
 
 Every DSP change comes with tests that check behaviour numerically:
 
-- Magnitude response: gain in dB at the centre frequency, at ±1 octave and at shelf plateaus
-  matches the analytic formula within 0.1 dB.
+- Magnitude response, two levels:
+  - Implementation: the measured response (impulse through the processing code) matches the
+    digital design's own H(e^jw) within 0.1 dB at the centre frequency, ±1 octave and shelf plateaus.
+  - Analog closeness: at the centre frequency (and shelf plateaus) within 0.1 dB of the analog
+    prototype; at ±1 octave within a bound stated per filter type in its test, with the worst
+    measured case written next to it. Bell: 0.35 dB (worst on the grid 0.317 dB).
+    Do not raise a bound without asking.
 - Run response tests at 44.1, 48 and 96 kHz (192 kHz for anything near Nyquist).
 - Cut filters: attenuation one and two octaves past cutoff equals 6 dB/oct per filter order.
 - Stability: a 20 Hz → 20 kHz frequency sweep over one second produces no NaN, no Inf,
