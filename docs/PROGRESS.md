@@ -7,7 +7,7 @@ Milestone definitions and "done when" criteria are in [PLAN.md](PLAN.md#mileston
 
 | # | Milestone | Status | Notes |
 | --- | --- | --- | --- |
-| 0 | Toolchain | In progress | Builds, tests, pluginval and auval pass from the command line. Waiting on owner checks: build from CLion, run Standalone, load AU in Logic |
+| 0 | Toolchain | Done | Command-line build, tests, pluginval and auval pass; owner confirmed CLion build and AU load in Logic (Standalone run not reported separately) |
 | 1 | One bell band | Not started | |
 | 2 | Full band set, tier 1 | Not started | |
 | 3 | Response curve display | Not started | |
@@ -47,8 +47,9 @@ Newest first. One entry per session, a few lines each.
 - Toolchain: CMake 4.4.3, Ninja 1.13.2, Apple clang 17 with the Command Line Tools only (no Xcode); AU builds fine without it.
 - Tests added / passing: `ProcessorSmokeTest` (stereo layout; bit-exact pass-through at 44.1/48/96 kHz), 2/2 pass.
   pluginval 1.0.4 strictness 5 passes for VST3 and AU; `auval -v aufx Peq1 Ctcd` passes.
-- Open issues: CLion build and Logic load not yet checked by owner; no git remote yet.
-- Next step: owner checks, then mark M0 done and start M1 (matched peaking band).
+- Owner checks: CLion build and AU load in Logic work. M0 marked done.
+- Open issues: no git remote yet.
+- Next step: M1 (matched peaking band).
 
 ### YYYY-MM-DD — M<n>
 
