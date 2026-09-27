@@ -6,7 +6,8 @@ add_executable(ParametricEQTests
     SecondOrderShapesTest.cpp
     ShelfDesignTest.cpp
     CutDesignTest.cpp
-    CascadeProcessorTest.cpp)
+    CascadeProcessorTest.cpp
+    BandDesignTest.cpp)
 
 # Link against the plugin's shared-code library. Its JUCE modules are linked
 # PRIVATE there, so take its include paths and defines explicitly instead of

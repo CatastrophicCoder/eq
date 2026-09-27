@@ -46,7 +46,8 @@ target_sources(ParametricEQ
         src/dsp/FirstOrderCutDesign.cpp
         src/dsp/ButterworthCascade.cpp
         src/dsp/FlatTiltDesign.cpp
-        src/dsp/CascadeProcessor.cpp)
+        src/dsp/CascadeProcessor.cpp
+        src/dsp/BandDesign.cpp)
 
 target_include_directories(ParametricEQ
     PUBLIC
