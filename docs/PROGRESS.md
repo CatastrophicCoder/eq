@@ -9,7 +9,7 @@ Milestone definitions and "done when" criteria are in [PLAN.md](PLAN.md#mileston
 | --- | --- | --- | --- |
 | 0 | Toolchain | Done | Command-line build, tests, pluginval and auval pass; owner confirmed CLion build and AU load in Logic (Standalone run not reported separately) |
 | 1 | One bell band | Done | Knobs, smoothing, state save/load and measured response done; tests, pluginval and auval pass. Owner listening check in Logic: no clicks (session save/reopen not reported separately) |
-| 2 | Full band set, tier 1 | In progress | Stage 1 of 5: shape designs and tests |
+| 2 | Full band set, tier 1 | In progress | Stage 1 of 5 done (shape designs and tests). Next: stage 2, EqBand with cascades and crossfaded switching |
 | 3 | Response curve display | Not started | |
 | 4 | Interactive display | Not started | |
 | 5 | Spectrum analyzer | Not started | |
@@ -26,6 +26,14 @@ Newest first. Move each item here from "Open decisions" in `CLAUDE.md` once it i
 
 | Date | Decision | Options considered | Reason |
 | --- | --- | --- | --- |
+| 2026-09-28 | Response-test bounds vs analog, extended grid (fc / +-1 oct below 0.8 Nyq / +-1 oct at or above 0.8 Nyq), with worst measured: Bell 0.1 / 0.65 (0.614) / 2.7 (2.640); Band pass 0.1 / 0.7 (0.645) / 1.4 (1.378); Notch depth < -100 dB / 0.55 (0.538) / 1.8 (1.754); Shelves 0.15 (0.123) / 0.1 (0.080) / 0.25 (0.248); Tilt 0.4 (0.385) / 0.25 (0.222) / 0.05 (0.024); Low Cut 0.1 / 0.5 (0.454); High Cut 0.1 / 0.3 (0.277) / 12.25 (12.218); All pass flat within 1e-9 dB; Flat Tilt 0.25 (0.224) from the ideal line. Strict-grid bounds kept as well (Bell 0.35) | Accept and keep strict grid too; accept extended only; drop the new rows | Chosen by owner after tightening attempts |
+| 2026-09-28 | Extended test grid: add f0 = 10 and 16 kHz at 44.1 kHz; separate near-Nyquist bounds for points at or above 0.8 Nyquist | Add rows or keep CLAUDE.md grid; near-Nyquist bounds or leave those points unasserted | Chosen by owner |
+| 2026-09-28 | Cut slope test: points pass if digital and analog are both below -120 dB | Test below 0.8 Nyquist only; -120 dB floor; add a Nyquist zero to the design | Chosen by owner |
+| 2026-09-28 | High Cut sections: Vicanek 2016 section 4.1 as published | 4.1; three-point section matched at 2 fc; three-point section matched at Nyquist | Chosen by owner; 4.1 is valid everywhere, 3-point at 2 fc was closer below 0.8 Nyq but had no solution in 6/208 cascades |
+| 2026-09-28 | Tilt shelf matching point f_m = 0.9 (paper) | 0.9; 0.84 fitted to our grid | Chosen by owner |
+| 2026-09-28 | Brickwall = order-32 Butterworth cascade (192 dB/oct, 16 sections) | Steep Butterworth; elliptic IIR; defer to M8 FIR | Chosen by owner |
+| 2026-09-28 | Q has no effect on cuts (always Butterworth) | Ignored; resonance on last section; scale all sections | Chosen by owner |
+| 2026-09-28 | Flat Tilt: 16 octave-spaced matched one-pole shelves | 16 one-pole shelves; defer to M8 FIR | Chosen by owner |
 | 2026-09-28 | M2 shapes: all tier-1 shapes (Flat Tilt and Brickwall need research first) | All tier-1; all but Flat Tilt/Brickwall; core only | Chosen by owner |
 | 2026-09-28 | Shelves: matched two-pole Butterworth (Vicanek 2024/25), no Q | Matched Butterworth; RBJ with Q; matched plus one-pole 6 dB option | Chosen by owner |
 | 2026-09-28 | Cut slopes in 6 dB steps (6-96 dB/oct) plus Brickwall | 12-dB steps; 6-dB steps; 12-dB steps plus 6 | Chosen by owner |
@@ -46,6 +54,22 @@ Newest first. Move each item here from "Open decisions" in `CLAUDE.md` once it i
 ## Session log
 
 Newest first. One entry per session, a few lines each.
+
+### 2026-09-28 — M2 stage 1
+
+- Done: design classes for every shape in `src/dsp/`: matched lowpass/highpass/bandpass (Vicanek 2016),
+  two-pole Butterworth shelves (Vicanek 2024/25), one-pole shelf and tilt (Vicanek 2019), notch, all pass
+  and first-order cut sections (own derivations), `ButterworthCascade` (orders 1-32), `FlatTiltDesign`,
+  `SectionCascade`, shared `MatchedDesignMath`. Bell moved onto the shared helpers.
+- Prototyped in Python first (scratch only) to measure deviations before setting bounds. Two prototype bugs
+  found and fixed before any C++: odd-order Butterworth pole angles, and matching the first-order section
+  at Nyquist (now matched at fc, which makes every cascade exact at the cutoff).
+- Band pass: eq. 40 as printed cancels catastrophically at 20 Hz, Q 18, 192 kHz (B1 < 0 in double);
+  replaced by an exact rearrangement. The bell's eq. 45 has the same shape (R1 - R2 phi1 - B0);
+  it passes all tests, not changed.
+- Tests added / passing: 39/39. C++ worst cases equal the Python prototype to 3 decimals.
+- Open issues: FilterType/CutSlope enums moved to stage 2 (first used there).
+- Next step: stage 2, EqBand with cascades and crossfaded type/slope/enable switching.
 
 ### 2026-09-27 — M1
 

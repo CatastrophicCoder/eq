@@ -61,9 +61,12 @@ Decided; details and dates in `docs/PROGRESS.md`.
   Response tests check both the digital design and closeness to the analog prototype (see DSP testing rules).
 - Band count: 16.
 - Filter types: Bell, Low Shelf, High Shelf, Low Cut, High Cut, Notch, Band Pass, Tilt Shelf, Flat Tilt, All Pass.
-  Cut slopes 6-96 dB/oct in 6 dB steps, plus Brickwall. Odd cut orders use one first-order section.
+  Cut slopes 6-96 dB/oct in 6 dB steps, plus Brickwall (order-32 Butterworth, 192 dB/oct).
+  Cuts are always Butterworth: Q has no effect on them. Odd orders add one first-order section.
+  High Cut sections use Vicanek 2016 section 4.1 as published.
+- Flat Tilt: 16 matched one-pole shelves an octave apart (2.5 Hz up); gain = total tilt over 20 Hz-20 kHz.
 - Shelves: matched two-pole Butterworth (Vicanek, *Matched Two-Pole Digital Shelving Filters*, 2024/2025);
-  Q has no effect on shelves. Tilt Shelf uses the matched one-pole shelf (Vicanek 2019).
+  Q has no effect on shelves. Tilt Shelf uses the matched one-pole shelf (Vicanek 2019, f_m = 0.9).
 - Notch, All Pass and first-order cut sections have no published matched formula; they are our own
   derivation from Vicanek 2016's building blocks, marked as such in the code.
 - Type, slope and enable changes crossfade old and new filter over ~20 ms.
@@ -98,6 +101,12 @@ Every DSP change comes with tests that check behaviour numerically:
     prototype; at ±1 octave within a bound stated per filter type in its test, with the worst
     measured case written next to it. Bell: 0.35 dB (worst on the grid 0.317 dB).
     Do not raise a bound without asking.
+  - Grids: the strict grid above, plus an extended grid that adds f0 = 10 and 16 kHz at 44.1 kHz.
+    Each shape asserts both: extended-grid bounds and tighter strict-grid bounds.
+  - Test points at or above 0.8 of Nyquist have their own stated near-Nyquist bound per shape.
+  - Cut slope points pass if digital and analog are both below -120 dB.
+  - Shared grid and checker: `tests/DesignTestGrid.h`. Stated bounds and worst measured values
+    are listed in `docs/PROGRESS.md` (Decisions) and next to each assertion.
 - Run response tests at 44.1, 48 and 96 kHz (192 kHz for anything near Nyquist).
 - Cut filters: attenuation one and two octaves past cutoff equals 6 dB/oct per filter order.
 - Stability: a 20 Hz → 20 kHz frequency sweep over one second produces no NaN, no Inf,
