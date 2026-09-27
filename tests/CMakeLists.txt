@@ -2,7 +2,10 @@ add_executable(ParametricEQTests
     ProcessorSmokeTest.cpp
     MatchedPeakingDesignTest.cpp
     PeakingBandTest.cpp
-    StateTest.cpp)
+    StateTest.cpp
+    SecondOrderShapesTest.cpp
+    ShelfDesignTest.cpp
+    CutDesignTest.cpp)
 
 # Link against the plugin's shared-code library. Its JUCE modules are linked
 # PRIVATE there, so take its include paths and defines explicitly instead of

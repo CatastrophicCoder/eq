@@ -33,7 +33,19 @@ target_sources(ParametricEQ
         src/Parameters.cpp
         src/dsp/BiquadCoefficients.cpp
         src/dsp/MatchedPeakingDesign.cpp
-        src/dsp/PeakingBand.cpp)
+        src/dsp/PeakingBand.cpp
+        src/dsp/SectionCascade.cpp
+        src/dsp/MatchedLowpassDesign.cpp
+        src/dsp/MatchedHighpassDesign.cpp
+        src/dsp/MatchedBandpassDesign.cpp
+        src/dsp/MatchedNotchDesign.cpp
+        src/dsp/MatchedAllpassDesign.cpp
+        src/dsp/MatchedShelfDesign.cpp
+        src/dsp/MatchedOnePoleShelfDesign.cpp
+        src/dsp/TiltShelfDesign.cpp
+        src/dsp/FirstOrderCutDesign.cpp
+        src/dsp/ButterworthCascade.cpp
+        src/dsp/FlatTiltDesign.cpp)
 
 target_include_directories(ParametricEQ
     PUBLIC

@@ -1,3 +1,5 @@
+#include "DesignTestGrid.h"
+
 #include "dsp/MatchedPeakingDesign.h"
 
 #include <catch2/catch_test_macros.hpp>
@@ -163,5 +165,19 @@ TEST_CASE ("Matched peaking design at 0 dB is the identity", "[design]")
             CHECK_THAT (coeffs.b1, WithinAbs (coeffs.a1, 1e-9));
             CHECK_THAT (coeffs.b2, WithinAbs (coeffs.a2, 1e-9));
         }
+    }
+}
+
+TEST_CASE ("Matched peaking design stays within its stated bounds on the extended grid", "[design]")
+{
+    // Extended grid adds f0 = 10 and 16 kHz at 44.1 kHz (decision 2026-09-28).
+    // Worst measured: octave 0.614 below 0.8 Nyquist, 2.640 at or above it.
+    // The strict-grid bound (0.35 dB) is asserted by the test above.
+    for (auto q : { 0.5, 1.0, 4.0 })
+    {
+        DesignTestGrid::checkAgainstAnalog (
+            [q] (double f0, double gainDb, double fs) { return MatchedPeakingDesign::design (f0, gainDb, q, fs); },
+            [q] (double f, double f0, double gainDb) { return MatchedPeakingDesign::analogMagnitudeDb (f, f0, gainDb, q); },
+            DesignTestGrid::gainsDb, { 0.1, 0.65, 2.7, 0.1, 0.35 });
     }
 }
