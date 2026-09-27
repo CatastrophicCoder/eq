@@ -12,6 +12,11 @@ namespace
 {
     constexpr double toleranceDb = 0.1;
 
+    // The matched design (Vicanek 2016, section 4.4) only constrains DC and f0, so between f0
+    // and Nyquist it departs from the analog curve. Worst case on the grid below is 0.317 dB
+    // (-18 dB, Q 0.5, f0/fs ~ 0.11, at +1 octave). Decision 2026-09-27: bound it at 0.35 dB.
+    constexpr double analogOctaveBoundDb = 0.35;
+
     struct Case
     {
         double sampleRate;
@@ -45,7 +50,23 @@ TEST_CASE ("Analog prototype has the expected shape", "[design]")
     CHECK_THAT (MatchedPeakingDesign::analogMagnitudeDb (1.0e9, 1000.0, 12.0, 1.0), WithinAbs (0.0, 1e-6));
 }
 
-TEST_CASE ("Matched peaking design matches the analog prototype at f0 and +-1 octave", "[design]")
+TEST_CASE ("Matched peaking design matches the analog prototype at f0", "[design]")
+{
+    for (const auto& c : responseCases())
+    {
+        for (auto gainDb : gainsDb)
+        {
+            for (auto q : qs)
+            {
+                INFO ("fs=" << c.sampleRate << " f0=" << c.centreHz << " gain=" << gainDb << " Q=" << q);
+                const auto coeffs = MatchedPeakingDesign::design (c.centreHz, gainDb, q, c.sampleRate);
+                CHECK_THAT (coeffs.magnitudeDb (c.centreHz, c.sampleRate), WithinAbs (gainDb, toleranceDb));
+            }
+        }
+    }
+}
+
+TEST_CASE ("Matched peaking design stays within the stated bound of the analog prototype at +-1 octave", "[design]")
 {
     for (const auto& c : responseCases())
     {
@@ -55,7 +76,7 @@ TEST_CASE ("Matched peaking design matches the analog prototype at f0 and +-1 oc
             {
                 const auto coeffs = MatchedPeakingDesign::design (c.centreHz, gainDb, q, c.sampleRate);
 
-                for (auto f : { c.centreHz / 2.0, c.centreHz, c.centreHz * 2.0 })
+                for (auto f : { c.centreHz / 2.0, c.centreHz * 2.0 })
                 {
                     if (f >= c.sampleRate / 2.0)
                         continue;
@@ -64,8 +85,30 @@ TEST_CASE ("Matched peaking design matches the analog prototype at f0 and +-1 oc
                                 << " Q=" << q << " f=" << f);
 
                     const auto expected = MatchedPeakingDesign::analogMagnitudeDb (f, c.centreHz, gainDb, q);
-                    CHECK_THAT (coeffs.magnitudeDb (f, c.sampleRate), WithinAbs (expected, toleranceDb));
+                    CHECK_THAT (coeffs.magnitudeDb (f, c.sampleRate), WithinAbs (expected, analogOctaveBoundDb));
                 }
+            }
+        }
+    }
+}
+
+TEST_CASE ("Matched peaking design has its extremum at f0", "[design]")
+{
+    // Vicanek eq. 43, condition 3: d|H|^2/dw = 0 at w0. Checked as the slope in dB per
+    // unit of ln f, by central difference.
+    for (const auto& c : responseCases())
+    {
+        for (auto gainDb : gainsDb)
+        {
+            for (auto q : qs)
+            {
+                INFO ("fs=" << c.sampleRate << " f0=" << c.centreHz << " gain=" << gainDb << " Q=" << q);
+                const auto coeffs = MatchedPeakingDesign::design (c.centreHz, gainDb, q, c.sampleRate);
+
+                const auto h = c.centreHz * 1.0e-4;
+                const auto slope = (coeffs.magnitudeDb (c.centreHz + h, c.sampleRate)
+                                    - coeffs.magnitudeDb (c.centreHz - h, c.sampleRate)) / (2.0 * h) * c.centreHz;
+                CHECK_THAT (slope, WithinAbs (0.0, 1.0e-3));
             }
         }
     }
