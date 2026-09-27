@@ -33,7 +33,6 @@ target_sources(ParametricEQ
         src/Parameters.cpp
         src/dsp/BiquadCoefficients.cpp
         src/dsp/MatchedPeakingDesign.cpp
-        src/dsp/PeakingBand.cpp
         src/dsp/SectionCascade.cpp
         src/dsp/MatchedLowpassDesign.cpp
         src/dsp/MatchedHighpassDesign.cpp

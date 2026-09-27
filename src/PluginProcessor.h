@@ -1,6 +1,6 @@
 #pragma once
 
-#include "dsp/PeakingBand.h"
+#include "dsp/EqBand.h"
 
 #include <juce_audio_processors/juce_audio_processors.h>
 
@@ -59,7 +59,7 @@ private:
     std::atomic<float>* band1Gain = nullptr;
     std::atomic<float>* band1Q = nullptr;
 
-    PeakingBand band1;
+    EqBand band1;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ParametricEQAudioProcessor)
 };

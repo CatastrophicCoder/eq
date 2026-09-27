@@ -2,6 +2,7 @@
 // functions for the whole test binary. Used to check the real-time rule
 // "no memory allocation in processBlock and anything it calls".
 
+#include "PluginProcessor.h"
 #include "dsp/EqBand.h"
 #include "dsp/CutSlope.h"
 
@@ -95,6 +96,32 @@ TEST_CASE ("EqBand::process does not allocate, including ramps and crossfades", 
         }
 
         band.process (buffer);
+    }
+
+    CHECK (counter.count() == 0);
+}
+
+TEST_CASE ("Processor processBlock does not allocate", "[realtime]")
+{
+    juce::ScopedJuceInitialiser_GUI juce;
+
+    ParametricEQAudioProcessor processor;
+    processor.setPlayConfigDetails (2, 2, 48000.0, 512);
+    processor.prepareToPlay (48000.0, 512);
+
+    auto& gain = *processor.getValueTreeState().getParameter ("band1_gain");
+    juce::AudioBuffer<float> buffer (2, 512);
+    buffer.clear();
+    juce::MidiBuffer midi;
+
+    ScopedAllocationCounter counter;
+
+    for (int block = 0; block < 100; ++block)
+    {
+        if (block % 10 == 0)
+            gain.setValue (static_cast<float> (block % 20) / 20.0f);   // raw value change, as a host would send
+
+        processor.processBlock (buffer, midi);
     }
 
     CHECK (counter.count() == 0);

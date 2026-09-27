@@ -48,7 +48,13 @@ void ParametricEQAudioProcessor::prepareToPlay (double sampleRate, int samplesPe
 
 void ParametricEQAudioProcessor::pushParametersToBand() noexcept
 {
-    band1.setTargets (band1Freq->load(), band1Gain->load(), band1Q->load());
+    // Stage 2 of M2: band 1 is still a bell; types, slopes and enable get parameters in stage 3.
+    BandSettings settings;
+    settings.type = FilterType::bell;
+    settings.frequencyHz = band1Freq->load();
+    settings.gainDb = band1Gain->load();
+    settings.q = band1Q->load();
+    band1.setTargets (settings);
 }
 
 void ParametricEQAudioProcessor::releaseResources()

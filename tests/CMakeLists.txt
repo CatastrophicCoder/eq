@@ -1,7 +1,6 @@
 add_executable(ParametricEQTests
     ProcessorSmokeTest.cpp
     MatchedPeakingDesignTest.cpp
-    PeakingBandTest.cpp
     StateTest.cpp
     SecondOrderShapesTest.cpp
     ShelfDesignTest.cpp
