@@ -60,6 +60,15 @@ Decided; details and dates in `docs/PROGRESS.md`.
   run in a biquad structure. Coefficients are computed in our own code, citing the paper.
   Response tests check both the digital design and closeness to the analog prototype (see DSP testing rules).
 - Band count: 16.
+- Filter types: Bell, Low Shelf, High Shelf, Low Cut, High Cut, Notch, Band Pass, Tilt Shelf, Flat Tilt, All Pass.
+  Cut slopes 6-96 dB/oct in 6 dB steps, plus Brickwall. Odd cut orders use one first-order section.
+- Shelves: matched two-pole Butterworth (Vicanek, *Matched Two-Pole Digital Shelving Filters*, 2024/2025);
+  Q has no effect on shelves. Tilt Shelf uses the matched one-pole shelf (Vicanek 2019).
+- Notch, All Pass and first-order cut sections have no published matched formula; they are our own
+  derivation from Vicanek 2016's building blocks, marked as such in the code.
+- Type, slope and enable changes crossfade old and new filter over ~20 ms.
+- Auto Gain is static: an offset computed from the summed EQ curve, not measured from the audio.
+- Output has one global phase-invert switch.
 - Milestone order after 5: per-band stereo (6), dynamic EQ (7), linear phase (8).
 
 ## Hard rules: real-time audio thread

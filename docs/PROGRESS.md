@@ -9,7 +9,7 @@ Milestone definitions and "done when" criteria are in [PLAN.md](PLAN.md#mileston
 | --- | --- | --- | --- |
 | 0 | Toolchain | Done | Command-line build, tests, pluginval and auval pass; owner confirmed CLion build and AU load in Logic (Standalone run not reported separately) |
 | 1 | One bell band | Done | Knobs, smoothing, state save/load and measured response done; tests, pluginval and auval pass. Owner listening check in Logic: no clicks (session save/reopen not reported separately) |
-| 2 | Full band set, tier 1 | Not started | |
+| 2 | Full band set, tier 1 | In progress | Stage 1 of 5: shape designs and tests |
 | 3 | Response curve display | Not started | |
 | 4 | Interactive display | Not started | |
 | 5 | Spectrum analyzer | Not started | |
@@ -26,6 +26,13 @@ Newest first. Move each item here from "Open decisions" in `CLAUDE.md` once it i
 
 | Date | Decision | Options considered | Reason |
 | --- | --- | --- | --- |
+| 2026-09-28 | M2 shapes: all tier-1 shapes (Flat Tilt and Brickwall need research first) | All tier-1; all but Flat Tilt/Brickwall; core only | Chosen by owner |
+| 2026-09-28 | Shelves: matched two-pole Butterworth (Vicanek 2024/25), no Q | Matched Butterworth; RBJ with Q; matched plus one-pole 6 dB option | Chosen by owner |
+| 2026-09-28 | Cut slopes in 6 dB steps (6-96 dB/oct) plus Brickwall | 12-dB steps; 6-dB steps; 12-dB steps plus 6 | Chosen by owner |
+| 2026-09-28 | Type/slope/enable changes crossfade over ~20 ms; smoothing rule unchanged | Crossfade; switch and reset state; switch and keep state | Chosen by owner (first picked switch and reset, then crossfade to keep the rule) |
+| 2026-09-28 | Auto Gain static, from the summed EQ curve | Static from curve; dynamic measured; defer | Chosen by owner |
+| 2026-09-28 | M2 editor: grid of all 16 bands | Band selector and strip; grid; generic editor | Chosen by owner |
+| 2026-09-28 | Phase invert: one global switch at the output | Not in M2; output invert; per-band invert | Chosen by owner |
 | 2026-09-27 | Response tests are two-level: measured vs digital design within 0.1 dB; vs analog within 0.1 dB at f0 and within a stated bound at ±1 octave (bell: 0.35 dB) | Two-level check, loosen ±1 octave only, keep 0.1 dB and change the design, trim the test grid | Chosen by owner after the matched bell measured up to 0.317 dB off analog at +1 octave (wide cuts near f0/fs = 0.1) |
 | 2026-09-27 | Project generation: CMake (`juce_add_plugin`) | CMake, Projucer | Chosen by owner |
 | 2026-09-27 | Filter topology: matched second-order designs (Vicanek 2016) in a biquad structure; tests compare against the analog prototype | RBJ biquad, TPT/SVF, matched, RBJ now and decide by M4 | Chosen by owner |
