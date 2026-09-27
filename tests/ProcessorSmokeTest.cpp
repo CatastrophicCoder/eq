@@ -7,6 +7,7 @@
 
 TEST_CASE ("Processor reports a stereo in / stereo out layout", "[processor]")
 {
+    juce::ScopedJuceInitialiser_GUI juce;
     ParametricEQAudioProcessor processor;
 
     CHECK (processor.getTotalNumInputChannels() == 2);
@@ -15,8 +16,10 @@ TEST_CASE ("Processor reports a stereo in / stereo out layout", "[processor]")
     CHECK_FALSE (processor.producesMidi());
 }
 
-TEST_CASE ("Processor passes audio through unchanged", "[processor]")
+TEST_CASE ("Processor passes audio through at default settings", "[processor]")
 {
+    // The band is always in the path; at 0 dB it is the identity up to rounding.
+    juce::ScopedJuceInitialiser_GUI juce;
     const auto sampleRate = GENERATE (44100.0, 48000.0, 96000.0);
     constexpr int blockSize = 512;
     constexpr int numChannels = 2;
@@ -42,7 +45,7 @@ TEST_CASE ("Processor passes audio through unchanged", "[processor]")
         {
             const auto sample = buffer.getSample (ch, i);
             REQUIRE (std::isfinite (sample));
-            REQUIRE (juce::exactlyEqual (sample, expected.getSample (ch, i)));
+            REQUIRE (std::abs (sample - expected.getSample (ch, i)) < 1.0e-6f);
         }
     }
 

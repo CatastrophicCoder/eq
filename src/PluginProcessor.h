@@ -1,5 +1,7 @@
 #pragma once
 
+#include "dsp/PeakingBand.h"
+
 #include <juce_audio_processors/juce_audio_processors.h>
 
 //==============================================================================
@@ -42,7 +44,22 @@ public:
     void getStateInformation (juce::MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
 
+    //==============================================================================
+    /** Version written into every saved state; bump when the state format changes. */
+    static constexpr int stateVersion = 1;
+
+    juce::AudioProcessorValueTreeState& getValueTreeState() noexcept { return parameters; }
+
 private:
     //==============================================================================
+    void pushParametersToBand() noexcept;
+
+    juce::AudioProcessorValueTreeState parameters;
+    std::atomic<float>* band1Freq = nullptr;
+    std::atomic<float>* band1Gain = nullptr;
+    std::atomic<float>* band1Q = nullptr;
+
+    PeakingBand band1;
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ParametricEQAudioProcessor)
 };

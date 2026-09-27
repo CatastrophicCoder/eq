@@ -30,6 +30,7 @@ target_sources(ParametricEQ
     PRIVATE
         src/PluginProcessor.cpp
         src/PluginEditor.cpp
+        src/Parameters.cpp
         src/dsp/BiquadCoefficients.cpp
         src/dsp/MatchedPeakingDesign.cpp
         src/dsp/PeakingBand.cpp)

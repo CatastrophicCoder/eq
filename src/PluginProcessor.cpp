@@ -1,12 +1,18 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
+#include "Parameters.h"
 
 //==============================================================================
 ParametricEQAudioProcessor::ParametricEQAudioProcessor()
     : AudioProcessor (BusesProperties()
                           .withInput  ("Input",  juce::AudioChannelSet::stereo(), true)
-                          .withOutput ("Output", juce::AudioChannelSet::stereo(), true))
+                          .withOutput ("Output", juce::AudioChannelSet::stereo(), true)),
+      parameters (*this, nullptr, "ParametricEQ", Parameters::createLayout()),
+      band1Freq (parameters.getRawParameterValue (Parameters::band1Freq)),
+      band1Gain (parameters.getRawParameterValue (Parameters::band1Gain)),
+      band1Q (parameters.getRawParameterValue (Parameters::band1Q))
 {
+    jassert (band1Freq != nullptr && band1Gain != nullptr && band1Q != nullptr);
 }
 
 //==============================================================================
@@ -34,7 +40,15 @@ void ParametricEQAudioProcessor::changeProgramName (int, const juce::String&) {}
 //==============================================================================
 void ParametricEQAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
-    juce::ignoreUnused (sampleRate, samplesPerBlock);
+    juce::ignoreUnused (samplesPerBlock);
+
+    pushParametersToBand();
+    band1.prepare (sampleRate, getTotalNumOutputChannels());
+}
+
+void ParametricEQAudioProcessor::pushParametersToBand() noexcept
+{
+    band1.setTargets (band1Freq->load(), band1Gain->load(), band1Q->load());
 }
 
 void ParametricEQAudioProcessor::releaseResources()
@@ -53,10 +67,12 @@ void ParametricEQAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     juce::ignoreUnused (midiMessages);
     juce::ScopedNoDenormals noDenormals;
 
-    // Pass-through for now. Clear any outputs that have no matching input,
-    // since their contents are not guaranteed.
+    // Clear any outputs that have no matching input, since their contents are not guaranteed.
     for (auto i = getTotalNumInputChannels(); i < getTotalNumOutputChannels(); ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
+
+    pushParametersToBand();
+    band1.process (buffer);
 }
 
 //==============================================================================
@@ -71,15 +87,26 @@ juce::AudioProcessorEditor* ParametricEQAudioProcessor::createEditor()
 }
 
 //==============================================================================
-// No parameters yet; state save/load (with a version number) arrives in milestone 1.
 void ParametricEQAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
 {
-    juce::ignoreUnused (destData);
+    const auto xml = parameters.copyState().createXml();
+    xml->setAttribute ("stateVersion", stateVersion);
+    copyXmlToBinary (*xml, destData);
 }
 
 void ParametricEQAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
 {
-    juce::ignoreUnused (data, sizeInBytes);
+    const auto xml = getXmlFromBinary (data, sizeInBytes);
+
+    // Ignore anything that is not our state, or is from an unknown (newer) format.
+    if (xml == nullptr || ! xml->hasTagName (parameters.state.getType()))
+        return;
+
+    const auto version = xml->getIntAttribute ("stateVersion", 0);
+    if (version < 1 || version > stateVersion)
+        return;
+
+    parameters.replaceState (juce::ValueTree::fromXml (*xml));
 }
 
 //==============================================================================
