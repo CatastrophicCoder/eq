@@ -8,7 +8,7 @@ Milestone definitions and "done when" criteria are in [PLAN.md](PLAN.md#mileston
 | # | Milestone | Status | Notes |
 | --- | --- | --- | --- |
 | 0 | Toolchain | Done | Command-line build, tests, pluginval and auval pass; owner confirmed CLion build and AU load in Logic (Standalone run not reported separately) |
-| 1 | One bell band | In progress | Knobs, smoothing, state save/load and measured response done; tests, pluginval and auval pass. Waiting on owner listening check in Logic |
+| 1 | One bell band | Done | Knobs, smoothing, state save/load and measured response done; tests, pluginval and auval pass. Owner listening check in Logic: no clicks (session save/reopen not reported separately) |
 | 2 | Full band set, tier 1 | Not started | |
 | 3 | Response curve display | Not started | |
 | 4 | Interactive display | Not started | |
@@ -54,8 +54,9 @@ Newest first. One entry per session, a few lines each.
   state (IDs/ranges/defaults, round trip, version, invalid data); processor (+12 dB applied end to end).
   Sweep largest step 0.139 / 0.128 / 0.064 at 44.1 / 48 / 96 kHz (limit 0.2).
   pluginval strictness 5 passes (VST3, AU); AU log warns "Current program is -1" (not a failure). auval passes.
-- Open issues: owner listening check in Logic. The measured-response test takes ~4 s in Debug.
-- Next step: listening check, then mark M1 done; M2 (full band set).
+- Open issues: the measured-response test takes ~4 s in Debug.
+- 2026-09-28: owner listening check in Logic, frequency sweep with gain, no clicks. M1 marked done.
+- Next step: M2 (full band set).
 
 ### 2026-09-27 — M0
 
