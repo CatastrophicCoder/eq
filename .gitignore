@@ -8,3 +8,6 @@ cmake-build-*/
 
 # Claude Code local settings
 .claude/settings.local.json
+
+# Local UI reference screenshots of other products (copyrighted; never commit)
+ui_ref.jpg
