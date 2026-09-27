@@ -31,7 +31,8 @@ target_sources(ParametricEQ
         src/PluginProcessor.cpp
         src/PluginEditor.cpp
         src/dsp/BiquadCoefficients.cpp
-        src/dsp/MatchedPeakingDesign.cpp)
+        src/dsp/MatchedPeakingDesign.cpp
+        src/dsp/PeakingBand.cpp)
 
 target_include_directories(ParametricEQ
     PUBLIC
