@@ -29,7 +29,9 @@ juce_add_plugin(ParametricEQ
 target_sources(ParametricEQ
     PRIVATE
         src/PluginProcessor.cpp
-        src/PluginEditor.cpp)
+        src/PluginEditor.cpp
+        src/dsp/BiquadCoefficients.cpp
+        src/dsp/MatchedPeakingDesign.cpp)
 
 target_include_directories(ParametricEQ
     PUBLIC
