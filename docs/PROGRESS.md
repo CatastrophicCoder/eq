@@ -9,7 +9,7 @@ Milestone definitions and "done when" criteria are in [PLAN.md](PLAN.md#mileston
 | --- | --- | --- | --- |
 | 0 | Toolchain | Done | Command-line build, tests, pluginval and auval pass; owner confirmed CLion build and AU load in Logic (Standalone run not reported separately) |
 | 1 | One bell band | Done | Knobs, smoothing, state save/load and measured response done; tests, pluginval and auval pass. Owner listening check in Logic: no clicks (session save/reopen not reported separately) |
-| 2 | Full band set, tier 1 | In progress | Stage 1 of 5 done (shape designs and tests). Next: stage 2, EqBand with cascades and crossfaded switching |
+| 2 | Full band set, tier 1 | In progress | Stages 1-2 of 5 done (shape designs; EqBand with cascades and crossfaded switching). Next: stage 3, 16 bands, parameters, state migration |
 | 3 | Response curve display | Not started | |
 | 4 | Interactive display | Not started | |
 | 5 | Spectrum analyzer | Not started | |
@@ -54,6 +54,23 @@ Newest first. Move each item here from "Open decisions" in `CLAUDE.md` once it i
 ## Session log
 
 Newest first. One entry per session, a few lines each.
+
+### 2026-09-28 — M2 stage 2
+
+- Done: `FilterType` (order fixed, saved in sessions) and `CutSlope` (index 0-15 = orders 1-16, 16 = Brickwall);
+  `BandSettings`; `BandDesign` (settings -> sections, disabled = none, frequency capped at 0.49 fs);
+  `CascadeProcessor` (own TDF-II cascade in double, fixed arrays; matches `juce::dsp::IIR::Filter<double>`
+  within 1e-12 on random cascades); `EqBand` (two slots, 20 ms smoothing, 20 ms linear crossfade for
+  type/slope/enable, later discrete requests wait and the latest wins). Processor runs band 1 through `EqBand`
+  as a bell. `PeakingBand` removed.
+- Tests added / passing: 57/57. Measured response vs design within 0.1 dB for every type and cut slope
+  (2148 checks); sweeps for every type incl. Brickwall, largest step 0.142 (clean +12 dB sine: 0.1425);
+  crossfades 0.142 / 0.130 (enable); stress test settles on the last request; zero allocations in
+  `EqBand::process` and `processBlock` (global allocation counter in `RealtimeAllocationTest`).
+  pluginval strictness 5 (VST3, AU) and auval pass.
+- Open issues: the measured-response test takes ~9 s in Debug. Pushing happens from the owner's IDE
+  (this shell has no GitHub credentials); stage 1 is on GitHub.
+- Next step: stage 3, 16 bands, parameters, state version 2 with v1 migration.
 
 ### 2026-09-28 — M2 stage 1
 
