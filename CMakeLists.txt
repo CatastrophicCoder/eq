@@ -6,6 +6,8 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+option(PARAMETRICEQ_BUILD_TESTS "Build the Catch2 unit tests" ON)
+
 add_subdirectory(external/JUCE)
 
 juce_add_plugin(ParametricEQ
@@ -47,3 +49,9 @@ target_link_libraries(ParametricEQ
         juce::juce_recommended_config_flags
         juce::juce_recommended_lto_flags
         juce::juce_recommended_warning_flags)
+
+if (PARAMETRICEQ_BUILD_TESTS)
+    enable_testing()
+    add_subdirectory(external/Catch2)
+    add_subdirectory(tests)
+endif()
