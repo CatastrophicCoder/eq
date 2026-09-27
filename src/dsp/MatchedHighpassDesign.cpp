@@ -1,12 +1,25 @@
 #include "MatchedHighpassDesign.h"
 
+#include "MatchedDesignMath.h"
+
 #include <cmath>
 
 BiquadCoefficients MatchedHighpassDesign::design (double cutoffHz, double q, double sampleRate) noexcept
 {
-    // Not implemented yet.
-    (void) cutoffHz; (void) q; (void) sampleRate;
-    return {};
+    using namespace MatchedDesignMath;
+
+    const auto w0 = omega (cutoffHz, sampleRate);
+    const auto poles = impulseInvariantPoles (w0, 1.0 / (2.0 * q));   // eq. 12
+    const auto p = phi (w0);
+
+    // Double zero at DC (b1 = -2 b0, b2 = b0) and |H(w0)| = Q: eq. 36.
+    BiquadCoefficients c;
+    c.a1 = poles.a1;
+    c.a2 = poles.a2;
+    c.b0 = std::sqrt (evaluate (denominatorTerms (poles), p)) / (4.0 * p.phi1) * q;
+    c.b1 = -2.0 * c.b0;
+    c.b2 = c.b0;
+    return c;
 }
 
 double MatchedHighpassDesign::analogMagnitudeDb (double frequencyHz, double cutoffHz, double q) noexcept
