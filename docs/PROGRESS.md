@@ -7,7 +7,7 @@ Milestone definitions and "done when" criteria are in [PLAN.md](PLAN.md#mileston
 
 | # | Milestone | Status | Notes |
 | --- | --- | --- | --- |
-| 0 | Toolchain | Not started | |
+| 0 | Toolchain | In progress | Builds, tests, pluginval and auval pass from the command line. Waiting on owner checks: build from CLion, run Standalone, load AU in Logic |
 | 1 | One bell band | Not started | |
 | 2 | Full band set, tier 1 | Not started | |
 | 3 | Response curve display | Not started | |
@@ -38,6 +38,17 @@ Newest first. Move each item here from "Open decisions" in `CLAUDE.md` once it i
 ## Session log
 
 Newest first. One entry per session, a few lines each.
+
+### 2026-09-27 — M0
+
+- Done: open decisions settled and recorded; docs moved to `docs/`; repo-local git identity; branch renamed to `main`;
+  `.gitignore`, AGPLv3 `LICENSE`; JUCE 9.0.2 and Catch2 v3.16.0 as submodules; CMake plugin skeleton
+  (pass-through stereo processor, empty editor, AU/VST3/Standalone, auto-copy to `~/Library/Audio/Plug-Ins`).
+- Toolchain: CMake 4.4.3, Ninja 1.13.2, Apple clang 17 with the Command Line Tools only (no Xcode); AU builds fine without it.
+- Tests added / passing: `ProcessorSmokeTest` (stereo layout; bit-exact pass-through at 44.1/48/96 kHz), 2/2 pass.
+  pluginval 1.0.4 strictness 5 passes for VST3 and AU; `auval -v aufx Peq1 Ctcd` passes.
+- Open issues: CLion build and Logic load not yet checked by owner; no git remote yet.
+- Next step: owner checks, then mark M0 done and start M1 (matched peaking band).
 
 ### YYYY-MM-DD — M<n>
 

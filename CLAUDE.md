@@ -33,12 +33,18 @@ cmake --build build
 # run unit tests (Catch2, in tests/)
 ctest --test-dir build --output-on-failure
 
-# validate the plugin
-pluginval --strictness-level 5 --validate build/ParametricEQ_artefacts/Debug/VST3/ParametricEQ.vst3
+# validate the plugin (pluginval is not on PATH; run it from the app bundle)
+/Applications/pluginval.app/Contents/MacOS/pluginval --strictness-level 5 --validate build/ParametricEQ_artefacts/Debug/VST3/ParametricEQ.vst3
+/Applications/pluginval.app/Contents/MacOS/pluginval --strictness-level 5 --validate ~/Library/Audio/Plug-Ins/Components/ParametricEQ.component
 
-# AU validation (after the AU is copied to ~/Library/Audio/Plug-Ins/Components)
-auval -a | grep -i parametriceq
+# AU validation (the build copies the AU to ~/Library/Audio/Plug-Ins/Components)
+auval -v aufx Peq1 Ctcd
 ```
+
+- Plugin identity: company `CatastrophicCoder`, manufacturer code `Ctcd`, plugin code `Peq1`,
+  bundle ID `com.catastrophiccoder.parametriceq`. Do not change the codes: hosts use them to recall saved sessions.
+- `COPY_PLUGIN_AFTER_BUILD` is on: every build installs the AU and VST3 into `~/Library/Audio/Plug-Ins/`.
+- If a fresh AU build does not show up in `auval -a`, restart the AU registry: `killall -9 AudioComponentRegistrar`.
 
 - JUCE 9.0.2 is a git submodule in `external/JUCE`, pinned to the release tag.
 - Catch2 is a git submodule in `external/Catch2`, pinned to a release tag.
