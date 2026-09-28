@@ -11,7 +11,7 @@ Milestone definitions and "done when" criteria are in [PLAN.md](PLAN.md#mileston
 | 1 | One bell band | Done | Knobs, smoothing, state save/load and measured response done; tests, pluginval and auval pass. Owner listening check in Logic: no clicks (session save/reopen not reported separately) |
 | 2 | Full band set, tier 1 | Done | All 5 stages built and validated (tests Debug + Release, pluginval, auval). Owner listening check in Logic: no clicks (other checklist items not reported separately) |
 | 3 | Response curve display | Done | Built and validated (108 tests, pluginval, auval); owner reviewed the layout and colours |
-| 4 | Interactive display | In progress | |
+| 4 | Interactive display | In progress | Built and validated (124 tests, pluginval, auval). Waiting on owner check in Logic |
 | 5 | Spectrum analyzer | Not started | |
 | 6 | Per-band stereo | Not started | |
 | 7 | Dynamic EQ | Not started | |
@@ -74,6 +74,22 @@ Newest first. Move each item here from "Open decisions" in `CLAUDE.md` once it i
 ## Session log
 
 Newest first. One entry per session, a few lines each.
+
+### 2026-09-28 — M4
+
+- Done: `NodeLayout`, `SelectionModel`, `NodeDragController`, `BandParameterWriter` in `src/ui/`; `ResponseDisplay`
+  nodes, selection (click, Cmd-click, area with Shift to add), drags (multi-band, Shift fine), Q by wheel/pinch,
+  double-click add (Bell) / disable, right-click type/slope/disable menu, Delete/Backspace, all-bands-in-use
+  notice, readout. Band tabs removed; the panel follows the primary selection and hides without one.
+  `EDITOR_WANTS_KEYBOARD_FOCUS` on; unhandled keys return to the host.
+- Tests added / passing: 124/124. Interaction is tested through handlePress/Drag/Release/Wheel/Magnify/Key
+  (no synthetic mouse events); a parameter listener checks every edit is inside matched host gestures.
+  pluginval strictness 5 (VST3, AU) and auval pass.
+- Modifier choice: Cmd-click toggles selection; Shift is fine-drag on a node and add-to-selection on an area
+  (Shift could not also toggle on click without clashing with fine-drag).
+- Open issues: a node under the band panel cannot be clicked there (reachable by area selection); host key
+  handling (Delete reaching the plugin, space bar still reaching Logic) needs the owner's check.
+- Next step: owner check in Logic, then mark M4 done; M5 (spectrum analyzer).
 
 ### 2026-09-28 — M3
 
