@@ -39,6 +39,14 @@ ctest --test-dir build --output-on-failure
 
 # AU validation (the build copies the AU to ~/Library/Audio/Plug-Ins/Components)
 auval -v aufx Peq1 Ctcd
+
+# look at the editor without a host: renders PNGs of the editor into <dir>
+EQ_SNAPSHOT_DIR=<dir> build/tests/ParametricEQTests "[.snapshot]"
+
+# Release CPU check: build only the tests, so the installed Debug plugin is not replaced
+cmake -B build/release -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build build/release --target ParametricEQTests
+build/release/tests/ParametricEQTests "16 Brickwall bands*" -s
 ```
 
 - Plugin identity: company `CatastrophicCoder`, manufacturer code `Ctcd`, plugin code `Peq1`,

@@ -9,7 +9,7 @@ Milestone definitions and "done when" criteria are in [PLAN.md](PLAN.md#mileston
 | --- | --- | --- | --- |
 | 0 | Toolchain | Done | Command-line build, tests, pluginval and auval pass; owner confirmed CLion build and AU load in Logic (Standalone run not reported separately) |
 | 1 | One bell band | Done | Knobs, smoothing, state save/load and measured response done; tests, pluginval and auval pass. Owner listening check in Logic: no clicks (session save/reopen not reported separately) |
-| 2 | Full band set, tier 1 | In progress | Stages 1-4 of 5 done (shape designs; EqBand; 16 bands and state v2; output gain, Auto Gain, phase invert). Next: stage 5, grid editor and validation |
+| 2 | Full band set, tier 1 | In progress | All 5 stages built and validated (tests Debug + Release, pluginval, auval). Waiting on owner listening check in Logic |
 | 3 | Response curve display | Not started | |
 | 4 | Interactive display | Not started | |
 | 5 | Spectrum analyzer | Not started | |
@@ -26,6 +26,9 @@ Newest first. Move each item here from "Open decisions" in `CLAUDE.md` once it i
 
 | Date | Decision | Options considered | Reason |
 | --- | --- | --- | --- |
+| 2026-09-28 | M2 editor: one resizable row (1000x360 to 2600x800, default 1480x440) | One row of 16; two rows of 8; one resizable row | Chosen by owner |
+| 2026-09-28 | Controls a type does not use are greyed out | Grey out; hide | Chosen by owner |
+| 2026-09-28 | Release CPU measured as part of M2 validation and logged | Measure and log; skip | Chosen by owner |
 | 2026-09-28 | Auto Gain formula: K-weighted (BS.1770-5) pink-noise power average | Unweighted power average; K-weighted power; mean dB with clamp (mean dB breaks with deep cuts) | Chosen by owner |
 | 2026-09-28 | Auto Gain excludes Low Cut and High Cut | All enabled bands; exclude cuts | Chosen by owner |
 | 2026-09-28 | Auto Gain limit +-24 dB | +-12; +-24; +-30 dB | Chosen by owner |
@@ -61,6 +64,25 @@ Newest first. Move each item here from "Open decisions" in `CLAUDE.md` once it i
 ## Session log
 
 Newest first. One entry per session, a few lines each.
+
+### 2026-09-28 — M2 stage 5
+
+- Done: `BandStrip`, `OutputStrip`, `CompactLookAndFeel` in `src/ui/`; resizable one-row editor with a 15 Hz
+  timer for greying and the Auto Gain readout; short menu labels when full ones do not fit; gain text never
+  shows -0.00. Hidden `[.snapshot]` test renders the editor to PNG (used to check the layout by eye).
+- Tests added / passing: 89/89 (Debug), 99346/99346 assertions (Release). Editor structure, size limits,
+  layout at min/default/max, all 99 controls attached both ways, menu choices, greying per type, readout,
+  menu text shown and fitting at all sizes, repeated open/close. pluginval strictness 5 (VST3, AU, including
+  its editor tests) and auval pass.
+- CPU, 16 Brickwall bands at 96 kHz stereo, 1 s of audio: Debug 232 ms (4.3x real time),
+  Release ~37 ms (~27x real time).
+- Found (from the rendered snapshot, not the first tests): gain showing -0.00; menus truncated to "..." by
+  the V4 combo-box layout; then blank menus, because `ComboBox::getSelectedId()` returns 0 after
+  `changeItemText`. The first fit test passed on blank menus; it now requires the shown text to equal the
+  selected item. In Release, the allocation counter's self-test was optimised away (elided new/delete);
+  it now calls `::operator new` directly.
+- Open issues: owner listening check in Logic.
+- Next step: listening check, then mark M2 done.
 
 ### 2026-09-28 — M2 stage 4
 
