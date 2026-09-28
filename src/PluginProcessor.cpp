@@ -144,6 +144,16 @@ float ParametricEQAudioProcessor::getAutoGainOffsetDb() const noexcept
     return autoGainUpdater.getOffsetDb();
 }
 
+double ParametricEQAudioProcessor::getDisplayRangeDb() const
+{
+    return 12.0;   // Not implemented yet.
+}
+
+void ParametricEQAudioProcessor::setDisplayRangeDb (double rangeDb)
+{
+    juce::ignoreUnused (rangeDb);
+}
+
 //==============================================================================
 bool ParametricEQAudioProcessor::hasEditor() const
 {

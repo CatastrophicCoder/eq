@@ -54,6 +54,12 @@ public:
     /** Latest Auto Gain offset from the background thread, in dB (whether or not Auto Gain is on). */
     float getAutoGainOffsetDb() const noexcept;
 
+    /** Display range in dB (one of FrequencyAxis::ranges), stored in the session as the
+        non-automatable state property "displayRangeDb". Message thread only.
+    */
+    double getDisplayRangeDb() const;
+    void setDisplayRangeDb (double rangeDb);
+
 private:
     //==============================================================================
     void pushParametersToBands() noexcept;

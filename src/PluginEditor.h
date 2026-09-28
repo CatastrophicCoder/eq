@@ -1,23 +1,25 @@
 #pragma once
 
 #include "PluginProcessor.h"
-#include "ui/BandStrip.h"
+#include "ui/BandPanel.h"
+#include "ui/BottomBar.h"
 #include "ui/CompactLookAndFeel.h"
-#include "ui/OutputStrip.h"
-
-#include <array>
+#include "ui/ResponseDisplay.h"
+#include "ui/TopBar.h"
 
 //==============================================================================
-/** M2 editor: one resizable row of 16 band strips plus the output strip, in the
-    default JUCE look (the real UI comes in M3-M4).
+/** M3 editor. The overall layout follows the reference EQ (decision 2026-09-28):
+    a thin top bar, a full-width response display with the dB scale on the right,
+    a band panel over the lower part of the display, and a thin bottom bar.
+    Components and styling are our own.
 */
 class ParametricEQAudioProcessorEditor final : public juce::AudioProcessorEditor,
                                               private juce::Timer
 {
 public:
-    static constexpr int defaultWidth = 1480, defaultHeight = 440;
-    static constexpr int minWidth = 1000, minHeight = 360;
-    static constexpr int maxWidth = 2600, maxHeight = 800;
+    static constexpr int defaultWidth = 1280, defaultHeight = 770;
+    static constexpr int minWidth = 960, minHeight = 580;
+    static constexpr int maxWidth = 2400, maxHeight = 1440;
 
     explicit ParametricEQAudioProcessorEditor (ParametricEQAudioProcessor&);
     ~ParametricEQAudioProcessorEditor() override;
@@ -26,18 +28,22 @@ public:
     void paint (juce::Graphics&) override;
     void resized() override;
 
-    /** Greys out unused controls and updates the Auto Gain readout (also run by a 15 Hz timer). */
+    /** Refreshes curves, greying and the Auto Gain readout (also run by a 30 Hz timer). */
     void refreshControls();
 
-    BandStrip& getBandStrip (int band) noexcept { return *strips[static_cast<size_t> (band - 1)]; }
-    OutputStrip& getOutputStrip() noexcept      { return output; }
+    TopBar& getTopBar() noexcept              { return topBar; }
+    ResponseDisplay& getDisplay() noexcept    { return display; }
+    BandPanel& getBandPanel() noexcept        { return bandPanel; }
+    BottomBar& getBottomBar() noexcept        { return bottomBar; }
 
 private:
     void timerCallback() override { refreshControls(); }
 
-    CompactLookAndFeel lookAndFeel;   // declared before the strips: outlives them
-    std::array<std::unique_ptr<BandStrip>, 16> strips;
-    OutputStrip output;
+    CompactLookAndFeel lookAndFeel;   // declared first: outlives every child
+    TopBar topBar;
+    ResponseDisplay display;
+    BandPanel bandPanel;
+    BottomBar bottomBar;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ParametricEQAudioProcessorEditor)
 };

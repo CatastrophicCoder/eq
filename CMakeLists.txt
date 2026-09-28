@@ -32,8 +32,12 @@ target_sources(ParametricEQ
         src/PluginEditor.cpp
         src/Parameters.cpp
         src/AutoGainUpdater.cpp
-        src/ui/BandStrip.cpp
-        src/ui/OutputStrip.cpp
+        src/ui/FrequencyAxis.cpp
+        src/ui/ResponseCurves.cpp
+        src/ui/ResponseDisplay.cpp
+        src/ui/BandPanel.cpp
+        src/ui/TopBar.cpp
+        src/ui/BottomBar.cpp
         src/ui/CompactLookAndFeel.cpp
         src/dsp/BiquadCoefficients.cpp
         src/dsp/MatchedPeakingDesign.cpp

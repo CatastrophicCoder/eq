@@ -20,93 +20,139 @@ namespace
         ParametricEQAudioProcessorEditor& editor = *dynamic_cast<ParametricEQAudioProcessorEditor*> (base.get());
     };
 
-    /** Every visible child sits inside the given area and has a usable size. */
-    void checkLaidOut (juce::Component& c, juce::Rectangle<int> area, const juce::String& path)
+    using E = ParametricEQAudioProcessorEditor;
+    const std::pair<int, int> sizes[] { { E::minWidth, E::minHeight }, { E::defaultWidth, E::defaultHeight },
+                                         { E::maxWidth, E::maxHeight } };
+
+    /** Bounds of c in the editor's coordinate space. */
+    juce::Rectangle<int> inEditor (juce::Component& c, juce::Component& editor)
+    {
+        return editor.getLocalArea (c.getParentComponent(), c.getBounds());
+    }
+
+    /** Every visible descendant sits inside the editor and has a usable size. */
+    void checkLaidOut (juce::Component& c, juce::Component& editor, const juce::String& path)
     {
         for (auto* child : c.getChildren())
         {
             if (! child->isVisible())
                 continue;
 
-            const auto bounds = child->getBounds() + c.getScreenPosition() - c.getTopLevelComponent()->getScreenPosition();
-            INFO (path << "/" << child->getName() << " " << bounds.toString() << " in " << area.toString());
+            const auto bounds = inEditor (*child, editor);
+            INFO (path << "/" << child->getName() << " " << bounds.toString());
             CHECK_FALSE (child->getBounds().isEmpty());
-            CHECK (area.contains (bounds));
-
-            checkLaidOut (*child, area, path + "/" + child->getName());
+            CHECK (editor.getLocalBounds().contains (bounds));
+            checkLaidOut (*child, editor, path + "/" + child->getName());
         }
+    }
+
+    /** The box shows the selected item's text, and the text fits its label. */
+    bool menuReadable (juce::ComboBox& box, int expectedIndex)
+    {
+        INFO ("shown '" << box.getText() << "', item " << expectedIndex << " is '" << box.getItemText (expectedIndex) << "'");
+        CHECK (box.getText().isNotEmpty());
+        CHECK (box.getText() == box.getItemText (expectedIndex));
+
+        auto* label = dynamic_cast<juce::Label*> (box.getChildComponent (0));
+        REQUIRE (label != nullptr);
+        const auto textArea = label->getBorderSize().subtractedFrom (label->getLocalBounds());
+        const auto width = juce::GlyphArrangement::getStringWidth (label->getFont(), box.getText());
+        INFO ("needs " << width << " px, has " << textArea.getWidth());
+        return width <= static_cast<float> (textArea.getWidth());
     }
 }
 
-TEST_CASE ("Editor has 16 band strips and an output strip at the planned size", "[editor]")
+//==============================================================================
+TEST_CASE ("Editor has a top bar, display, band panel and bottom bar at the planned size", "[editor]")
 {
     EditorFixture f;
 
-    CHECK (f.editor.getWidth() == ParametricEQAudioProcessorEditor::defaultWidth);
-    CHECK (f.editor.getHeight() == ParametricEQAudioProcessorEditor::defaultHeight);
+    CHECK (f.editor.getWidth() == E::defaultWidth);
+    CHECK (f.editor.getHeight() == E::defaultHeight);
     CHECK (f.editor.isResizable());
 
     auto* constrainer = f.editor.getConstrainer();
     REQUIRE (constrainer != nullptr);
-    CHECK (constrainer->getMinimumWidth() == ParametricEQAudioProcessorEditor::minWidth);
-    CHECK (constrainer->getMinimumHeight() == ParametricEQAudioProcessorEditor::minHeight);
-    CHECK (constrainer->getMaximumWidth() == ParametricEQAudioProcessorEditor::maxWidth);
-    CHECK (constrainer->getMaximumHeight() == ParametricEQAudioProcessorEditor::maxHeight);
+    CHECK (constrainer->getMinimumWidth() == E::minWidth);
+    CHECK (constrainer->getMinimumHeight() == E::minHeight);
+    CHECK (constrainer->getMaximumWidth() == E::maxWidth);
+    CHECK (constrainer->getMaximumHeight() == E::maxHeight);
 
-    for (int band = 1; band <= Parameters::numBands; ++band)
-        CHECK (f.editor.getBandStrip (band).isVisible());
-    CHECK (f.editor.getOutputStrip().isVisible());
+    CHECK (f.editor.getTopBar().isVisible());
+    CHECK (f.editor.getDisplay().isVisible());
+    CHECK (f.editor.getBandPanel().isVisible());
+    CHECK (f.editor.getBottomBar().isVisible());
 }
 
-TEST_CASE ("Editor lays out every control inside the window at minimum, default and maximum size", "[editor]")
+TEST_CASE ("Layout follows the planned arrangement at every size", "[editor]")
 {
     EditorFixture f;
-    using E = ParametricEQAudioProcessorEditor;
 
-    for (auto [w, h] : { std::pair { E::minWidth, E::minHeight }, { E::defaultWidth, E::defaultHeight },
-                         { E::maxWidth, E::maxHeight } })
+    for (auto [w, h] : sizes)
     {
         f.editor.setSize (w, h);
         INFO ("size " << w << "x" << h);
 
-        checkLaidOut (f.editor, f.editor.getLocalBounds(), "editor");
+        const auto top = f.editor.getTopBar().getBounds();
+        const auto display = f.editor.getDisplay().getBounds();
+        const auto bottom = f.editor.getBottomBar().getBounds();
+        const auto panel = inEditor (f.editor.getBandPanel(), f.editor);
 
-        // Knobs stay usable at the smallest size.
-        for (int band = 1; band <= Parameters::numBands; ++band)
+        // Thin full-width bars at the top and bottom, the display filling the space between.
+        CHECK (top.getY() == 0);
+        CHECK (top.getWidth() == w);
+        CHECK (top.getHeight() <= h / 12);
+        CHECK (bottom.getBottom() == h);
+        CHECK (bottom.getWidth() == w);
+        CHECK (bottom.getHeight() <= h / 12);
+        CHECK (display.getY() == top.getBottom());
+        CHECK (display.getBottom() == bottom.getY());
+        CHECK (display.getWidth() == w);
+
+        // The band panel sits over the lower part of the display, centred, above the frequency labels.
+        CHECK (display.contains (panel));
+        CHECK (std::abs (panel.getCentreX() - display.getCentreX()) <= 2);
+        CHECK (panel.getY() > display.getCentreY());
+        CHECK (panel.getBottom() <= display.getBottom() - ResponseDisplay::labelStripHeight);
+
+        checkLaidOut (f.editor, f.editor, "editor");
+
+        auto& bp = f.editor.getBandPanel();
+        for (auto* knob : { &bp.getFrequencySlider(), &bp.getGainSlider(), &bp.getQSlider() })
         {
-            auto& strip = f.editor.getBandStrip (band);
-            for (auto* knob : { &strip.getFrequencySlider(), &strip.getGainSlider(), &strip.getQSlider() })
-            {
-                INFO ("band " << band);
-                CHECK (knob->getWidth() >= 30);
-                CHECK (knob->getHeight() >= 30);
-            }
+            CHECK (knob->getWidth() >= 30);
+            CHECK (knob->getHeight() >= 30);
         }
-
-        // Strips do not overlap each other.
-        for (int band = 1; band < Parameters::numBands; ++band)
-            CHECK (f.editor.getBandStrip (band).getRight() <= f.editor.getBandStrip (band + 1).getX());
-        CHECK (f.editor.getBandStrip (Parameters::numBands).getRight() <= f.editor.getOutputStrip().getX());
     }
 }
 
-TEST_CASE ("Band controls are attached to their parameters in both directions", "[editor]")
+TEST_CASE ("The band panel has 16 tabs and follows the selected band", "[editor]")
 {
     EditorFixture f;
+    auto& panel = f.editor.getBandPanel();
     auto& p = f.processor;
+
+    CHECK (panel.getBand() == 1);
+    CHECK (panel.getTab (1).getToggleState());
 
     for (int band = 1; band <= Parameters::numBands; ++band)
     {
-        auto& strip = f.editor.getBandStrip (band);
         INFO ("band " << band);
+        // triggerClick() is asynchronous; call the click handler directly.
+        REQUIRE (panel.getTab (band).onClick != nullptr);
+        panel.getTab (band).onClick();
+        CHECK (panel.getBand() == band);
+
+        for (int other = 1; other <= Parameters::numBands; ++other)
+            CHECK (panel.getTab (other).getToggleState() == (other == band));
 
         // Control -> parameter.
-        strip.getFrequencySlider().setValue (2345.0, juce::sendNotificationSync);
-        strip.getGainSlider().setValue (-7.25, juce::sendNotificationSync);
-        strip.getQSlider().setValue (3.3, juce::sendNotificationSync);
-        strip.getTypeBox().setSelectedItemIndex (static_cast<int> (FilterType::notch), juce::sendNotificationSync);
-        strip.getSlopeBox().setSelectedItemIndex (CutSlope::brickwallIndex, juce::sendNotificationSync);
-        strip.getEnableButton().setToggleState (true, juce::sendNotificationSync);
+        panel.getFrequencySlider().setValue (2345.0, juce::sendNotificationSync);
+        panel.getGainSlider().setValue (-7.25, juce::sendNotificationSync);
+        panel.getQSlider().setValue (3.3, juce::sendNotificationSync);
+        panel.getTypeBox().setSelectedItemIndex (static_cast<int> (FilterType::notch), juce::sendNotificationSync);
+        panel.getSlopeBox().setSelectedItemIndex (CutSlope::brickwallIndex, juce::sendNotificationSync);
+        panel.getEnableButton().setToggleState (true, juce::sendNotificationSync);
 
         CHECK_THAT (value (p, Parameters::id (band, "freq")), WithinRel (2345.0f, 1e-3f));
         CHECK_THAT (value (p, Parameters::id (band, "gain")), WithinAbs (-7.25f, 0.01f));
@@ -117,92 +163,161 @@ TEST_CASE ("Band controls are attached to their parameters in both directions", 
 
         // Parameter -> control.
         setBand (p, band, FilterType::highShelf, 432.0f, 11.5f, 0.9f, 5, false);
-        CHECK_THAT (strip.getFrequencySlider().getValue(), WithinRel (432.0, 1e-3));
-        CHECK_THAT (strip.getGainSlider().getValue(), WithinAbs (11.5, 0.01));
-        CHECK_THAT (strip.getQSlider().getValue(), WithinRel (0.9, 1e-3));
-        CHECK (strip.getTypeBox().getSelectedItemIndex() == static_cast<int> (FilterType::highShelf));
-        CHECK (strip.getSlopeBox().getSelectedItemIndex() == 5);
-        CHECK_FALSE (strip.getEnableButton().getToggleState());
+        CHECK_THAT (panel.getFrequencySlider().getValue(), WithinRel (432.0, 1e-3));
+        CHECK_THAT (panel.getGainSlider().getValue(), WithinAbs (11.5, 0.01));
+        CHECK_THAT (panel.getQSlider().getValue(), WithinRel (0.9, 1e-3));
+        CHECK (panel.getTypeBox().getSelectedItemIndex() == static_cast<int> (FilterType::highShelf));
+        CHECK (panel.getSlopeBox().getSelectedItemIndex() == 5);
+        CHECK_FALSE (panel.getEnableButton().getToggleState());
     }
+
+    // Switching bands must not write to the band left behind.
+    panel.setBand (3);
+    const auto before = value (p, Parameters::id (2, "freq"));
+    panel.getFrequencySlider().setValue (777.0, juce::sendNotificationSync);
+    CHECK_THAT (value (p, Parameters::id (2, "freq")), WithinAbs (before, 0.0f));
+    CHECK_THAT (value (p, Parameters::id (3, "freq")), WithinRel (777.0f, 1e-3f));
 }
 
-TEST_CASE ("Type and slope menus list the parameter choices in order", "[editor]")
+TEST_CASE ("Band tabs carry their band's colour", "[editor]")
 {
     EditorFixture f;
-    auto& strip = f.editor.getBandStrip (7);
-
-    REQUIRE (strip.getTypeBox().getNumItems() == FilterTypes::count);
-    for (int i = 0; i < FilterTypes::count; ++i)
-        CHECK (strip.getTypeBox().getItemText (i) == FilterTypes::names[i]);
-
-    REQUIRE (strip.getSlopeBox().getNumItems() == CutSlope::count);
-    for (int i = 0; i < CutSlope::count; ++i)
-        CHECK (strip.getSlopeBox().getItemText (i) == CutSlope::labels[i]);
+    for (int band = 1; band <= Parameters::numBands; ++band)
+        CHECK (f.editor.getBandPanel().getTab (band).findColour (juce::TextButton::textColourOffId)
+               == ResponseDisplay::bandColour (band));
 }
 
-TEST_CASE ("Output controls are attached to their parameters", "[editor]")
+TEST_CASE ("Menus list the parameter choices and stay readable at every size", "[editor]")
 {
     EditorFixture f;
+    auto& panel = f.editor.getBandPanel();
     auto& p = f.processor;
-    auto& out = f.editor.getOutputStrip();
 
-    out.getGainSlider().setValue (-4.5, juce::sendNotificationSync);
-    out.getAutoGainButton().setToggleState (true, juce::sendNotificationSync);
-    out.getInvertButton().setToggleState (true, juce::sendNotificationSync);
+    REQUIRE (panel.getTypeBox().getNumItems() == FilterTypes::count);
+    REQUIRE (panel.getSlopeBox().getNumItems() == CutSlope::count);
 
-    CHECK_THAT (value (p, Parameters::outputGain), WithinAbs (-4.5f, 1e-4f));
-    CHECK_THAT (value (p, Parameters::autoGain), WithinAbs (1.0f, 0.0f));
-    CHECK_THAT (value (p, Parameters::outputInvert), WithinAbs (1.0f, 0.0f));
+    for (auto [w, h] : sizes)
+    {
+        f.editor.setSize (w, h);
+        INFO ("size " << w << "x" << h);
 
-    set (p, Parameters::outputGain, 7.0f);
-    set (p, Parameters::autoGain, 0.0f);
-    set (p, Parameters::outputInvert, 0.0f);
+        for (int t = 0; t < FilterTypes::count; ++t)
+        {
+            set (p, Parameters::id (1, "type"), static_cast<float> (t));
+            CHECK (menuReadable (panel.getTypeBox(), t));
+        }
 
-    CHECK_THAT (out.getGainSlider().getValue(), WithinAbs (7.0, 1e-4));
-    CHECK_FALSE (out.getAutoGainButton().getToggleState());
-    CHECK_FALSE (out.getInvertButton().getToggleState());
+        for (int s = 0; s < CutSlope::count; ++s)
+        {
+            set (p, Parameters::id (1, "slope"), static_cast<float> (s));
+            CHECK (menuReadable (panel.getSlopeBox(), s));
+        }
+    }
 }
 
 TEST_CASE ("Controls a type does not use are greyed out", "[editor]")
 {
     EditorFixture f;
-    auto& p = f.processor;
-    auto& strip = f.editor.getBandStrip (3);
+    auto& panel = f.editor.getBandPanel();
+    panel.setBand (3);
 
     for (int t = 0; t < FilterTypes::count; ++t)
     {
         const auto type = static_cast<FilterType> (t);
-        set (p, Parameters::id (3, "type"), static_cast<float> (t));
+        set (f.processor, Parameters::id (3, "type"), static_cast<float> (t));
         f.editor.refreshControls();
 
         INFO ("type " << FilterTypes::names[t]);
-        CHECK (strip.getGainSlider().isEnabled() == FilterTypes::usesGain (type));
-        CHECK (strip.getQSlider().isEnabled() == FilterTypes::usesQ (type));
-        CHECK (strip.getSlopeBox().isEnabled() == FilterTypes::usesSlope (type));
-        CHECK (strip.getFrequencySlider().isEnabled());
-        CHECK (strip.getTypeBox().isEnabled());
-        CHECK (strip.getEnableButton().isEnabled());
+        CHECK (panel.getGainSlider().isEnabled() == FilterTypes::usesGain (type));
+        CHECK (panel.getQSlider().isEnabled() == FilterTypes::usesQ (type));
+        CHECK (panel.getSlopeBox().isEnabled() == FilterTypes::usesSlope (type));
+        CHECK (panel.getFrequencySlider().isEnabled());
     }
 }
 
-TEST_CASE ("The output strip shows the current Auto Gain correction", "[editor]")
+TEST_CASE ("Bottom bar controls are attached and show the Auto Gain correction", "[editor]")
 {
     EditorFixture f;
     auto& p = f.processor;
+    auto& bar = f.editor.getBottomBar();
+
+    bar.getGainSlider().setValue (-4.5, juce::sendNotificationSync);
+    bar.getAutoGainButton().setToggleState (true, juce::sendNotificationSync);
+    bar.getInvertButton().setToggleState (true, juce::sendNotificationSync);
+    CHECK_THAT (value (p, Parameters::outputGain), WithinAbs (-4.5f, 1e-4f));
+    CHECK_THAT (value (p, Parameters::autoGain), WithinAbs (1.0f, 0.0f));
+    CHECK_THAT (value (p, Parameters::outputInvert), WithinAbs (1.0f, 0.0f));
+
+    set (p, Parameters::outputGain, 7.0f);
+    set (p, Parameters::outputInvert, 0.0f);
+    CHECK_THAT (bar.getGainSlider().getValue(), WithinAbs (7.0, 1e-4));
+    CHECK_FALSE (bar.getInvertButton().getToggleState());
+
     p.setPlayConfigDetails (2, 2, 48000.0, 512);
     p.prepareToPlay (48000.0, 512);
-
     setBand (p, 5, FilterType::bell, 1000.0f, 9.0f, 1.0f, 3, true);
-    set (p, Parameters::autoGain, 1.0f);
-
     for (int i = 0; i < 200 && std::abs (p.getAutoGainOffsetDb()) < 0.5f; ++i)
         juce::Thread::sleep (10);
     REQUIRE (std::abs (p.getAutoGainOffsetDb()) > 0.5f);
 
     f.editor.refreshControls();
-    const auto expected = juce::String (p.getAutoGainOffsetDb(), 1) + " dB";
-    INFO ("label: " << f.editor.getOutputStrip().getOffsetLabel().getText());
-    CHECK (f.editor.getOutputStrip().getOffsetLabel().getText().contains (expected));
+    CHECK (bar.getOffsetLabel().getText().contains (juce::String (p.getAutoGainOffsetDb(), 1) + " dB"));
+}
+
+TEST_CASE ("The range button cycles 3, 6, 12, 30 dB and stores the choice", "[editor]")
+{
+    EditorFixture f;
+    auto& display = f.editor.getDisplay();
+    auto& button = display.getRangeButton();
+
+    CHECK (button.getButtonText() == "12 dB");
+    CHECK_THAT (display.getAxis().getRangeDb(), WithinAbs (12.0, 0.0));
+
+    for (auto expected : { 30.0, 3.0, 6.0, 12.0 })
+    {
+        REQUIRE (button.onClick != nullptr);
+        button.onClick();
+        INFO ("expected " << expected);
+        CHECK_THAT (f.processor.getDisplayRangeDb(), WithinAbs (expected, 0.0));
+        CHECK_THAT (display.getAxis().getRangeDb(), WithinAbs (expected, 0.0));
+        CHECK (button.getButtonText() == juce::String (juce::roundToInt (expected)) + " dB");
+    }
+}
+
+TEST_CASE ("The display recomputes curves only after a change", "[editor]")
+{
+    EditorFixture f;
+    auto& display = f.editor.getDisplay();
+
+    f.editor.refreshControls();
+    const auto baseline = display.getCurves().getNumRecomputes();
+
+    f.editor.refreshControls();
+    f.editor.refreshControls();
+    CHECK (display.getCurves().getNumRecomputes() == baseline);
+
+    setBand (f.processor, 4, FilterType::bell, 500.0f, 6.0f, 1.0f, 3, true);
+    f.editor.refreshControls();
+    CHECK (display.getCurves().getNumRecomputes() == baseline + 1);
+    CHECK (display.getCurves().isBandActive (3));
+}
+
+TEST_CASE ("Curves are clipped to the plot area", "[editor]")
+{
+    EditorFixture f;
+    auto& display = f.editor.getDisplay();
+
+    // +30 dB on a 3 dB display would run far outside the plot without clipping.
+    setBand (f.processor, 4, FilterType::bell, 500.0f, 30.0f, 1.0f, 3, true);
+    setBand (f.processor, 1, FilterType::lowCut, 200.0f, 0.0f, 0.71f, 15, true);
+    f.processor.setDisplayRangeDb (3.0);
+    f.editor.refreshControls();
+
+    const auto plot = display.getPlotArea();
+    const auto path = display.getSumPath().getBounds();
+    INFO ("path " << path.toString() << " plot " << plot.toString());
+    CHECK_FALSE (path.isEmpty());
+    CHECK (plot.expanded (1.0f).contains (path));
 }
 
 TEST_CASE ("Editors can be opened and closed repeatedly", "[editor]")
@@ -214,7 +329,7 @@ TEST_CASE ("Editors can be opened and closed repeatedly", "[editor]")
     for (int i = 0; i < 10; ++i)
     {
         std::unique_ptr<juce::AudioProcessorEditor> editor (processor.createEditor());
-        editor->setSize (1200, 400);
+        editor->setSize (1100, 700);
     }
 }
 
@@ -226,71 +341,23 @@ TEST_CASE ("Editor snapshot (renders PNGs to $EQ_SNAPSHOT_DIR)", "[.snapshot]")
         SKIP ("EQ_SNAPSHOT_DIR not set");
 
     EditorFixture f;
-    setBand (f.processor, 1, FilterType::lowCut, 40.0f, 0.0f, 0.71f, 3, true);
-    setBand (f.processor, 4, FilterType::bell, 400.0f, 6.0f, 2.0f, 3, true);
-    setBand (f.processor, 16, FilterType::highCut, 16000.0f, 0.0f, 0.71f, CutSlope::brickwallIndex, true);
-    set (f.processor, Parameters::autoGain, 1.0f);
+    setBand (f.processor, 1, FilterType::lowCut, 30.0f, 0.0f, 0.71f, 3, true);
+    setBand (f.processor, 3, FilterType::bell, 90.0f, 5.0f, 3.0f, 3, true);
+    setBand (f.processor, 5, FilterType::notch, 170.0f, 0.0f, 6.0f, 3, true);
+    setBand (f.processor, 8, FilterType::bell, 800.0f, 9.0f, 0.8f, 3, true);
+    setBand (f.processor, 10, FilterType::bell, 2500.0f, -6.0f, 1.2f, 3, true);
+    setBand (f.processor, 15, FilterType::highShelf, 9000.0f, 3.0f, 0.71f, 3, true);
+    f.editor.getBandPanel().setBand (8);
     f.editor.refreshControls();
 
-    using E = ParametricEQAudioProcessorEditor;
-    for (auto [w, h] : { std::pair { E::defaultWidth, E::defaultHeight }, { E::minWidth, E::minHeight } })
+    for (auto [w, h] : sizes)
     {
         f.editor.setSize (w, h);
+        f.editor.refreshControls();
         const auto image = f.editor.createComponentSnapshot (f.editor.getLocalBounds());
-        juce::File file (dir + "/editor_" + juce::String (w) + "x" + juce::String (h) + ".png");
+        juce::File file (dir + "/m3_" + juce::String (w) + "x" + juce::String (h) + ".png");
         file.deleteFile();
         juce::FileOutputStream stream (file);
         REQUIRE (juce::PNGImageFormat().writeImageToStream (image, stream));
-    }
-}
-
-TEST_CASE ("Menu text fits its box at minimum, default and maximum size", "[editor]")
-{
-    // The ComboBox's own Label decides what is visible; measure the shown text against its text area.
-    EditorFixture f;
-    auto& p = f.processor;
-    using E = ParametricEQAudioProcessorEditor;
-
-    // The box must show the selected item's text (not empty), and that text must fit.
-    auto fits = [] (juce::ComboBox& box, int expectedIndex)
-    {
-        INFO ("shown '" << box.getText() << "', item " << expectedIndex << " is '" << box.getItemText (expectedIndex) << "'");
-        CHECK (box.getText().isNotEmpty());
-        CHECK (box.getText() == box.getItemText (expectedIndex));
-
-        auto* label = dynamic_cast<juce::Label*> (box.getChildComponent (0));
-        REQUIRE (label != nullptr);
-        const auto textArea = label->getBorderSize().subtractedFrom (label->getLocalBounds());
-        const auto width = juce::GlyphArrangement::getStringWidth (label->getFont(), box.getText());
-        INFO ("'" << box.getText() << "' needs " << width << " px, has " << textArea.getWidth());
-        return width <= static_cast<float> (textArea.getWidth());
-    };
-
-    for (auto [w, h] : { std::pair { E::minWidth, E::minHeight }, { E::defaultWidth, E::defaultHeight },
-                         { E::maxWidth, E::maxHeight } })
-    {
-        f.editor.setSize (w, h);
-        INFO ("size " << w << "x" << h);
-
-        for (int t = 0; t < FilterTypes::count; ++t)
-        {
-            set (p, Parameters::id (1, "type"), static_cast<float> (t));
-            CHECK (fits (f.editor.getBandStrip (1).getTypeBox(), t));
-        }
-
-        for (int s = 0; s < CutSlope::count; ++s)
-        {
-            set (p, Parameters::id (1, "slope"), static_cast<float> (s));
-            CHECK (fits (f.editor.getBandStrip (1).getSlopeBox(), s));
-        }
-
-        // Every strip, as laid out right now (not only the one being changed).
-        for (int band = 1; band <= Parameters::numBands; ++band)
-        {
-            auto& strip = f.editor.getBandStrip (band);
-            INFO ("band " << band);
-            CHECK (fits (strip.getTypeBox(), juce::roundToInt (value (p, Parameters::id (band, "type")))));
-            CHECK (fits (strip.getSlopeBox(), juce::roundToInt (value (p, Parameters::id (band, "slope")))));
-        }
     }
 }

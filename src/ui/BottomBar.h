@@ -5,23 +5,25 @@
 #include <functional>
 
 //==============================================================================
-/** Output gain, Auto Gain (with the current correction shown) and phase invert. */
-class OutputStrip final : public juce::Component
+/** Thin bar below the display: output gain, Auto Gain (with its current
+    correction) and phase invert.
+*/
+class BottomBar final : public juce::Component
 {
 public:
-    /** offsetDb returns the latest Auto Gain offset (read on the message thread). */
-    OutputStrip (juce::AudioProcessorValueTreeState& state, std::function<float()> offsetDb);
-    ~OutputStrip() override;
+    BottomBar (juce::AudioProcessorValueTreeState& state, std::function<float()> autoGainOffsetDb);
+    ~BottomBar() override;
 
-    /** Updates the Auto Gain readout. Call on the message thread. */
+    /** Updates the Auto Gain readout. Message thread only. */
     void refresh();
 
+    void paint (juce::Graphics&) override;
     void resized() override;
 
-    juce::Slider& getGainSlider() noexcept         { return gain; }
+    juce::Slider& getGainSlider() noexcept           { return gain; }
     juce::ToggleButton& getAutoGainButton() noexcept { return autoGain; }
-    juce::ToggleButton& getInvertButton() noexcept { return invert; }
-    juce::Label& getOffsetLabel() noexcept         { return offsetLabel; }
+    juce::ToggleButton& getInvertButton() noexcept   { return invert; }
+    juce::Label& getOffsetLabel() noexcept           { return offsetLabel; }
 
 private:
     juce::AudioProcessorValueTreeState& state;
@@ -34,5 +36,5 @@ private:
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> gainAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> autoGainAttachment, invertAttachment;
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (OutputStrip)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (BottomBar)
 };

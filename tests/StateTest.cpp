@@ -190,3 +190,45 @@ TEST_CASE ("A version-2 state from before the output parameters loads their defa
     CHECK_THAT (value (p, Parameters::autoGain), WithinAbs (0.0f, 0.0f));
     CHECK_THAT (value (p, Parameters::outputInvert), WithinAbs (0.0f, 0.0f));
 }
+
+TEST_CASE ("The display range is saved with the session", "[state]")
+{
+    juce::ScopedJuceInitialiser_GUI juce;
+
+    CHECK_THAT (ParametricEQAudioProcessor().getDisplayRangeDb(), WithinAbs (12.0, 0.0));
+
+    juce::MemoryBlock saved;
+    {
+        ParametricEQAudioProcessor source;
+        source.setDisplayRangeDb (30.0);
+        CHECK_THAT (source.getDisplayRangeDb(), WithinAbs (30.0, 0.0));
+        source.getStateInformation (saved);
+    }
+
+    ParametricEQAudioProcessor target;
+    target.setStateInformation (saved.getData(), static_cast<int> (saved.getSize()));
+    CHECK_THAT (target.getDisplayRangeDb(), WithinAbs (30.0, 0.0));
+}
+
+TEST_CASE ("A missing or invalid display range falls back to 12 dB", "[state]")
+{
+    juce::ScopedJuceInitialiser_GUI juce;
+    ParametricEQAudioProcessor p;
+
+    p.setDisplayRangeDb (7.0);   // not one of 3 / 6 / 12 / 30: ignored
+    CHECK_THAT (p.getDisplayRangeDb(), WithinAbs (12.0, 0.0));
+
+    for (auto stored : { juce::var(), juce::var (25.0), juce::var ("twelve") })
+    {
+        juce::XmlElement xml ("ParametricEQ");
+        xml.setAttribute ("stateVersion", 2);
+        if (! stored.isVoid())
+            xml.setAttribute ("displayRangeDb", stored.toString());
+
+        const auto block = toBlock (xml);
+        p.setDisplayRangeDb (6.0);
+        p.setStateInformation (block.getData(), static_cast<int> (block.getSize()));
+        INFO ("stored " << stored.toString());
+        CHECK_THAT (p.getDisplayRangeDb(), WithinAbs (12.0, 0.0));
+    }
+}
