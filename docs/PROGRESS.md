@@ -45,6 +45,12 @@ Newest first. Move each item here from "Open decisions" in `CLAUDE.md` once it i
 | 2026-09-28 | Presets become milestone M6b, built before M7 (moved from the M9 list) | Now before M7; after M8; in M9 | Chosen by owner |
 | 2026-09-28 | A preset stores all 16 bands (in use, enabled, settings, channel) plus output gain, Auto Gain and invert; not view settings | Bands and output; bands only; everything | Chosen by owner |
 | 2026-09-28 | User presets are XML files in ~/Library/Audio/Presets/CatastrophicCoder/ParametricEQ/ | Preset files; host presets only | Chosen by owner |
+| 2026-09-29 | M8 phase mode (Zero latency / Linear phase) is a hidden state property, not a host parameter | Host parameter; hidden state property | Chosen by owner |
+| 2026-09-29 | M8 filter length is a tap count, the same at every sample rate (latency in ms shrinks at higher rates) | Same ms at every rate; same tap count | Chosen by owner |
+| 2026-09-29 | M8 latency menu: 8192 / 16384 / 32768 taps (85 / 171 / 341 ms at 48 kHz) | 4 steps 4k-32k; 5 steps 2k-32k; 3 steps 4k/16k/64k; 3 steps 8k-32k | Chosen by owner |
+| 2026-09-29 | M8: dynamic bands run as normal (IIR) filters after the linear-phase FIR, as in Zero latency mode | IIR after FIR; static part in FIR plus delta filter; unavailable in Linear phase | Chosen by owner |
+| 2026-09-29 | M8: dynamic bands detect on the delayed signal (where they act) | Delayed signal; undelayed input (lookahead) | Chosen by owner |
+| 2026-09-29 | Detector (Peak and RMS): classic linear-domain attack/release follower, converted to dB afterwards; replaces the dB-domain smoothing of 2026-09-28 | Keep; peak hold + dB smoothing; classic follower; decide later (RMS: both or Peak only) | Chosen by owner (both Peak and RMS) |
 | 2026-09-28 | Plugin name "Spectral Fault", brand (company) "Catastrophic Audio" | Name lists proposed by Claude | Chosen by owner |
 | 2026-09-28 | Rename details: bundle ID com.catastrophicaudio.spectralfault; CMake target SpectralFault (tests SpectralFaultTests); plugin codes, saved-state tag and preset tag unchanged; rename committed under M7 | Keep or change bundle ID; keep or rename target; M7 or separate prefix | Chosen by owner |
 | 2026-09-28 | User preset folder moves to ~/Library/Audio/Presets/Catastrophic Audio/Spectral Fault/; the old folder's presets are copied once (only if the new folder has none); old files stay | Keep old path; move without migration; move and migrate | Chosen by owner |
