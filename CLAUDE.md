@@ -140,8 +140,13 @@ Write the test first, then the implementation.
 - Edit anything under `external/`.
 - Copy code from AGPL/GPL projects (e.g. ZL Equalizer, FreeEQ8). Reading them for ideas is fine;
   implement from published papers and formulas and cite the source in a comment.
-- Use other companies' product or brand names (including the commercial EQ that inspired this project),
-  or imitate their graphics, in code, UI or docs.
+- Use other companies' product or brand names, logos or wordmarks anywhere (code, UI, docs, commits); copy their
+  images, icons, fonts or other assets; or make individual components (knobs, panels, nodes, icons) identical to theirs.
+- UI layout (decision 2026-09-28): the overall layout may follow the reference EQ: a full-window display with the dB
+  scale and output meter on the right, a thin top bar, a thin bottom bar, and a band panel over the lower part of the
+  display. Components and styling are our own.
+- Colours may be similar in character to the reference (dark background, saturated band hues, a warm summed curve).
+  The colour values are chosen by us, not sampled from the reference image.
 
 ## Open decisions (ask before assuming)
 

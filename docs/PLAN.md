@@ -191,7 +191,7 @@ Licensing facts to check before publishing anything:
 - JUCE is dual-licensed under AGPLv3 and a commercial JUCE licence with a free tier below a revenue limit; read the current terms at juce.com.
 - VST3 comes with its own SDK licence (bundled with JUCE); AU needs no separate licence; AAX requires an Avid developer agreement and PACE signing.
 - Code copied from ZL Equalizer or other AGPLv3/GPLv3 projects carries that licence into your plugin if distributed; published papers and the RBJ cookbook formulas carry no such restriction.
-- The reference EQ's product and company names are trademarks; a public release needs its own name, must not use those names, and must not copy the reference EQ's UI graphics.
+- The reference EQ's product and company names are trademarks; a public release needs its own name and must not use those names. Decision 2026-09-28: the UI may follow the reference EQ's overall layout, with our own components, styling and colour values; no copied graphics or assets (see CLAUDE.md).
 
 Open questions (tracked in `CLAUDE.md` until decided, then logged in `PROGRESS.md`):
 

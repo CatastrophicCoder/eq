@@ -10,7 +10,7 @@ Milestone definitions and "done when" criteria are in [PLAN.md](PLAN.md#mileston
 | 0 | Toolchain | Done | Command-line build, tests, pluginval and auval pass; owner confirmed CLion build and AU load in Logic (Standalone run not reported separately) |
 | 1 | One bell band | Done | Knobs, smoothing, state save/load and measured response done; tests, pluginval and auval pass. Owner listening check in Logic: no clicks (session save/reopen not reported separately) |
 | 2 | Full band set, tier 1 | Done | All 5 stages built and validated (tests Debug + Release, pluginval, auval). Owner listening check in Logic: no clicks (other checklist items not reported separately) |
-| 3 | Response curve display | Not started | |
+| 3 | Response curve display | In progress | |
 | 4 | Interactive display | Not started | |
 | 5 | Spectrum analyzer | Not started | |
 | 6 | Per-band stereo | Not started | |
@@ -26,6 +26,10 @@ Newest first. Move each item here from "Open decisions" in `CLAUDE.md` once it i
 
 | Date | Decision | Options considered | Reason |
 | --- | --- | --- | --- |
+| 2026-09-28 | Look and feel: the overall layout follows the reference EQ (full-window display, dB scale and meter on the right, thin top and bottom bars, band panel over the lower display); components and styling our own; no names, logos or copied assets | Own look with functional conventions; close imitation kept private; close imitation in the public repo; decide later with neutral styling | Chosen by owner (option 3, limited to the overall layout). Trade-dress risk noted at decision time |
+| 2026-09-28 | Colours similar in character to the reference; values chosen by us, not sampled from the reference image | Own palette; close to the reference | Chosen by owner |
+| 2026-09-28 | M3 band controls: reference-style band panel at the bottom of the display, with 16 band tabs until M4's click-to-select | Panel with tabs; display with the M2 grid below | Chosen by owner |
+| 2026-09-28 | Display range (3/6/12/30 dB) saved with the session as a non-automatable state property | Save in session; not saved | Chosen by owner |
 | 2026-09-28 | M2 editor: one resizable row (1000x360 to 2600x800, default 1480x440) | One row of 16; two rows of 8; one resizable row | Chosen by owner |
 | 2026-09-28 | Controls a type does not use are greyed out | Grey out; hide | Chosen by owner |
 | 2026-09-28 | Release CPU measured as part of M2 validation and logged | Measure and log; skip | Chosen by owner |
