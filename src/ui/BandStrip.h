@@ -17,6 +17,7 @@ public:
     void refreshControlStates();
 
     void resized() override;
+    void lookAndFeelChanged() override;
 
     juce::ToggleButton& getEnableButton() noexcept { return enable; }
     juce::ComboBox& getTypeBox() noexcept          { return type; }
@@ -26,6 +27,9 @@ public:
     juce::ComboBox& getSlopeBox() noexcept         { return slope; }
 
 private:
+    /** Uses full menu labels when they all fit, short ones otherwise. */
+    void updateMenuLabels();
+
     using SliderAttachment = juce::AudioProcessorValueTreeState::SliderAttachment;
     using ComboBoxAttachment = juce::AudioProcessorValueTreeState::ComboBoxAttachment;
     using ButtonAttachment = juce::AudioProcessorValueTreeState::ButtonAttachment;

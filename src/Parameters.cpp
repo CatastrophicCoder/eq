@@ -6,6 +6,15 @@
 
 namespace
 {
+    /** Two decimals, and never "-0.00" (0 dB snaps to -6.7e-7 dB with a 0.01 dB interval in float). */
+    juce::String formatDb (float v)
+    {
+        auto rounded = std::round (v * 100.0f) / 100.0f;
+        if (std::abs (rounded) < 0.005f)
+            rounded = 0.0f;
+        return juce::String (rounded, 2);
+    }
+
     /** A range mapped logarithmically onto 0..1, so equal knob travel is an equal ratio. */
     juce::NormalisableRange<float> logRange (float start, float end)
     {
@@ -67,7 +76,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout Parameters::createLayout()
             juce::ParameterID { id (band, "gain"), hintForM1Field }, name + "Gain",
             juce::NormalisableRange<float> (-30.0f, 30.0f, 0.01f), d.gainDb,
             FloatAttributes().withLabel ("dB")
-                             .withStringFromValueFunction ([] (float v, int) { return juce::String (v, 2); })));
+                             .withStringFromValueFunction ([] (float v, int) { return formatDb (v); })));
 
         layout.add (std::make_unique<juce::AudioParameterFloat> (
             juce::ParameterID { id (band, "q"), hintForM1Field }, name + "Q",
@@ -92,7 +101,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout Parameters::createLayout()
         // and the output stage must be exactly unity (bit-exact bypass) at its default.
         juce::NormalisableRange<float> (-30.0f, 30.0f), 0.0f,
         FloatAttributes().withLabel ("dB")
-                         .withStringFromValueFunction ([] (float v, int) { return juce::String (v, 2); })));
+                         .withStringFromValueFunction ([] (float v, int) { return formatDb (v); })));
 
     layout.add (std::make_unique<juce::AudioParameterBool> (
         juce::ParameterID { autoGain, m2VersionHint }, "Auto Gain", false));

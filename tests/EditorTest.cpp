@@ -251,8 +251,13 @@ TEST_CASE ("Menu text fits its box at minimum, default and maximum size", "[edit
     auto& p = f.processor;
     using E = ParametricEQAudioProcessorEditor;
 
-    auto fits = [] (juce::ComboBox& box)
+    // The box must show the selected item's text (not empty), and that text must fit.
+    auto fits = [] (juce::ComboBox& box, int expectedIndex)
     {
+        INFO ("shown '" << box.getText() << "', item " << expectedIndex << " is '" << box.getItemText (expectedIndex) << "'");
+        CHECK (box.getText().isNotEmpty());
+        CHECK (box.getText() == box.getItemText (expectedIndex));
+
         auto* label = dynamic_cast<juce::Label*> (box.getChildComponent (0));
         REQUIRE (label != nullptr);
         const auto textArea = label->getBorderSize().subtractedFrom (label->getLocalBounds());
@@ -270,13 +275,22 @@ TEST_CASE ("Menu text fits its box at minimum, default and maximum size", "[edit
         for (int t = 0; t < FilterTypes::count; ++t)
         {
             set (p, Parameters::id (1, "type"), static_cast<float> (t));
-            CHECK (fits (f.editor.getBandStrip (1).getTypeBox()));
+            CHECK (fits (f.editor.getBandStrip (1).getTypeBox(), t));
         }
 
         for (int s = 0; s < CutSlope::count; ++s)
         {
             set (p, Parameters::id (1, "slope"), static_cast<float> (s));
-            CHECK (fits (f.editor.getBandStrip (1).getSlopeBox()));
+            CHECK (fits (f.editor.getBandStrip (1).getSlopeBox(), s));
+        }
+
+        // Every strip, as laid out right now (not only the one being changed).
+        for (int band = 1; band <= Parameters::numBands; ++band)
+        {
+            auto& strip = f.editor.getBandStrip (band);
+            INFO ("band " << band);
+            CHECK (fits (strip.getTypeBox(), juce::roundToInt (value (p, Parameters::id (band, "type")))));
+            CHECK (fits (strip.getSlopeBox(), juce::roundToInt (value (p, Parameters::id (band, "slope")))));
         }
     }
 }

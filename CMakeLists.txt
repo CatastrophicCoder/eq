@@ -34,6 +34,7 @@ target_sources(ParametricEQ
         src/AutoGainUpdater.cpp
         src/ui/BandStrip.cpp
         src/ui/OutputStrip.cpp
+        src/ui/CompactLookAndFeel.cpp
         src/dsp/BiquadCoefficients.cpp
         src/dsp/MatchedPeakingDesign.cpp
         src/dsp/SectionCascade.cpp

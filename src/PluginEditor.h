@@ -2,6 +2,7 @@
 
 #include "PluginProcessor.h"
 #include "ui/BandStrip.h"
+#include "ui/CompactLookAndFeel.h"
 #include "ui/OutputStrip.h"
 
 #include <array>
@@ -35,6 +36,7 @@ private:
     void timerCallback() override { refreshControls(); }
 
     ParametricEQAudioProcessor& eqProcessor;
+    CompactLookAndFeel lookAndFeel;   // declared before the strips: outlives them
     std::array<std::unique_ptr<BandStrip>, 16> strips;
     OutputStrip output;
 
