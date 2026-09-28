@@ -86,6 +86,10 @@ Decided; details and dates in `docs/PROGRESS.md`.
   over 256 log-spaced points 20 Hz-20 kHz, Low Cut and High Cut excluded, clamped to +-24 dB.
   Computed on a background thread (`AutoGainUpdater`, polls parameters every 20 ms), published via an atomic.
 - Output stage: bands -> output gain x Auto Gain x polarity, one 20 ms linear ramp (polarity ramps through zero).
+- Per-band channel mode (M6): Stereo / Left / Right / Mid / Side, band<n>_channel. Mid/Side is encoded and decoded
+  around each M/S band (M = (L+R)/2, S = (L-R)/2). `StereoTransfer` models the chain as a 2x2 complex matrix per
+  frequency; Auto Gain uses its power gain ||M||^2/2 (uncorrelated equal-level L/R) and the display shows one sum,
+  L and R, or M and S.
 - Analyzer and meter (M5): processBlock pushes stereo input (pre) and output (post) into two `AnalyzerFifo`s
   (SPSC, allocated once in the processor constructor) only while an editor is open. All FFT work, binning,
   smoothing and metering happen on the message thread (`SpectrumAnalyzer`, `LevelMeter`). Analyzer settings

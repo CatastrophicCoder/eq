@@ -13,7 +13,7 @@ Milestone definitions and "done when" criteria are in [PLAN.md](PLAN.md#mileston
 | 3 | Response curve display | Done | Built and validated (108 tests, pluginval, auval); owner reviewed the layout and colours |
 | 4 | Interactive display | Done | Built and validated (135 tests, pluginval, auval). Owner re-check in Logic: everything tested, looks good |
 | 5 | Spectrum analyzer | Done | Built and validated (157 tests, pluginval, auval); owner tested in Logic |
-| 6 | Per-band stereo | In progress | |
+| 6 | Per-band stereo | In progress | Built and validated (172 tests, pluginval, auval). Waiting on owner check in Logic |
 | 7 | Dynamic EQ | Not started | |
 | 8 | Linear phase mode | Not started | |
 | 9 | Deferred features | Not started | |
@@ -87,6 +87,23 @@ Newest first. Move each item here from "Open decisions" in `CLAUDE.md` once it i
 ## Session log
 
 Newest first. One entry per session, a few lines each.
+
+### 2026-09-28 — M6
+
+- Done: `ChannelMode`, band<n>_channel parameters; frame-wise routing in `EqBand` (Left/Right one channel,
+  Mid/Side encode-filter-decode), crossfaded mode changes; complex `response()` on sections; `StereoTransfer`
+  (2x2 chain matrices) for Auto Gain and the split sum curves; L/R/M/S node badges; channel menu in the panel
+  and a Channel submenu in the node menu.
+- Tests added / passing: 172/172. Left/Right leave the other channel bit-exact; Mid/Side leave the other part
+  bit-exact; neutral M/S returns the input; crossfades; matrices, chain order and power gain; Auto Gain exact
+  per mode; K-weighted loudness of uncorrelated pink noise with a mix of modes and Auto Gain on: 0.018 dB
+  change (limit 0.3); sum curves exact for L/R-only and M/S-only chains; measured L and R responses within
+  0.1 dB of the displayed sums. pluginval strictness 5 (VST3, AU) and auval pass.
+- Test fixes: the M/S test relied on AudioProcessor::reset() clearing the filters, which the processor does not
+  override; a 3 dB threshold was only the large-gain limit, replaced by the exact formula.
+- Open issues: the processor does not override reset() (hosts call it on transport jumps; filter tails then
+  continue). Candidate for a later small fix.
+- Next step: owner check in Logic, then mark M6 done; M7 (dynamic EQ).
 
 ### 2026-09-28 — M5
 
