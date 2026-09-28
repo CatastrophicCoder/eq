@@ -32,6 +32,17 @@ public:
     juce::ComboBox& getSlopeBox() noexcept             { return slope; }
     juce::ComboBox& getChannelBox() noexcept           { return channel; }
 
+    // Dynamics (M7).
+    juce::ToggleButton& getDynamicButton() noexcept    { return dynamic; }
+    juce::ComboBox& getDynamicModeBox() noexcept       { return dynamicMode; }
+    juce::ComboBox& getDetectorBox() noexcept          { return detector; }
+    juce::ToggleButton& getSidechainButton() noexcept  { return sidechain; }
+    juce::Slider& getThresholdSlider() noexcept        { return threshold; }
+    juce::Slider& getRangeSlider() noexcept            { return range; }
+    juce::Slider& getRatioSlider() noexcept            { return ratio; }
+    juce::Slider& getAttackSlider() noexcept           { return attack; }
+    juce::Slider& getReleaseSlider() noexcept          { return release; }
+
 private:
     void attach();
 
@@ -46,6 +57,10 @@ private:
     juce::ComboBox type, slope, channel;
     juce::Slider frequency, gain, q;
     juce::Label frequencyCaption, gainCaption, qCaption;
+
+    juce::ToggleButton dynamic, sidechain;
+    juce::ComboBox dynamicMode, detector;
+    juce::Slider threshold, range, ratio, attack, release;
 
     std::unique_ptr<ButtonAttachment> enableAttachment;
     std::unique_ptr<ComboBoxAttachment> typeAttachment, slopeAttachment, channelAttachment;

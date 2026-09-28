@@ -504,3 +504,121 @@ TEST_CASE ("The top bar shows the preset and drives the browser", "[preset][edit
     bar.getPreviousButton().onClick();
     CHECK (f.presets.getCurrentName() == f.presets.getEntries()[0].name);
 }
+
+//==============================================================================
+namespace
+{
+    BandSettings::Dynamics someDynamics()
+    {
+        BandSettings::Dynamics d;
+        d.on = true;
+        d.mode = DynamicGainLaw::Mode::ratio;
+        d.thresholdDb = -32.5;
+        d.rangeDb = 4.5;
+        d.ratio = 3.0;
+        d.attackMs = 2.5;
+        d.releaseMs = 250.0;
+        d.detector = LevelDetector::Mode::rms;
+        d.sidechain = true;
+        return d;
+    }
+
+    bool sameDynamics (const BandSettings::Dynamics& a, const BandSettings::Dynamics& b)
+    {
+        return a.on == b.on && a.mode == b.mode && a.detector == b.detector && a.sidechain == b.sidechain
+            && std::abs (a.thresholdDb - b.thresholdDb) < 1e-4 && std::abs (a.rangeDb - b.rangeDb) < 1e-4
+            && std::abs (a.ratio - b.ratio) < 1e-4 && std::abs (a.attackMs - b.attackMs) < 1e-4
+            && std::abs (a.releaseMs - b.releaseMs) < 1e-3;
+    }
+}
+
+TEST_CASE ("Preset format 2 stores each band's dynamics", "[preset][dynamics]")
+{
+    CHECK (Preset::formatVersion == 2);
+
+    auto original = sample();
+    original.bands[4].dynamics = someDynamics();
+
+    const auto xml = original.toXml();
+    const auto parsed = Preset::fromXml (*xml);
+    REQUIRE (parsed.has_value());
+    CHECK (sameDynamics (parsed->bands[4].dynamics, someDynamics()));
+    CHECK_FALSE (parsed->bands[0].dynamics.on);
+    CHECK (parsed->hasSameSettingsAs (original));
+
+    // A dynamics difference is a different sound.
+    auto changed = original;
+    changed.bands[4].dynamics.thresholdDb = -20.0;
+    CHECK_FALSE (changed.hasSameSettingsAs (original));
+    changed = original;
+    changed.bands[4].dynamics.on = false;
+    CHECK_FALSE (changed.hasSameSettingsAs (original));
+}
+
+TEST_CASE ("Format 1 presets load with dynamics off", "[preset][dynamics]")
+{
+    // Written by hand, as M6b saved them: no Dynamics element.
+    const auto xml = juce::parseXML (R"(<ParametricEQPreset formatVersion="1" name="Old" category="User" outputGain="0" autoGain="0" invert="0">
+                                          <Band index="3" enabled="1" type="Bell" freq="800" gain="4" q="1.5" slope="3" channel="Stereo"/>
+                                        </ParametricEQPreset>)");
+    REQUIRE (xml != nullptr);
+    const auto parsed = Preset::fromXml (*xml);
+    REQUIRE (parsed.has_value());
+    REQUIRE (parsed->bands[2].inUse);
+    CHECK (sameDynamics (parsed->bands[2].dynamics, BandSettings::Dynamics {}));
+}
+
+TEST_CASE ("Out-of-range dynamics in a preset are clamped", "[preset][dynamics]")
+{
+    auto p = sample();
+    p.bands[4].dynamics = someDynamics();
+    auto xml = p.toXml();
+    auto* dyn = xml->getChildElement (1)->getChildByName ("Dynamics");   // band 5 is the second element
+    REQUIRE (dyn != nullptr);
+    dyn->setAttribute ("threshold", -99.0);
+    dyn->setAttribute ("range", 40.0);
+    dyn->setAttribute ("ratio", 0.2);
+    dyn->setAttribute ("attack", 9999.0);
+    dyn->setAttribute ("release", 1.0);
+    dyn->setAttribute ("mode", "Sideways");     // unknown: default
+    dyn->setAttribute ("detector", "Psychic");  // unknown: default
+
+    const auto parsed = Preset::fromXml (*xml);
+    REQUIRE (parsed.has_value());
+    const auto& d = parsed->bands[4].dynamics;
+    CHECK_THAT (d.thresholdDb, WithinAbs (-60.0, 0.0));
+    CHECK_THAT (d.rangeDb, WithinAbs (24.0, 0.0));
+    CHECK_THAT (d.ratio, WithinAbs (1.0, 0.0));
+    CHECK_THAT (d.attackMs, WithinAbs (200.0, 0.0));
+    CHECK_THAT (d.releaseMs, WithinAbs (5.0, 0.0));
+    CHECK (d.mode == DynamicGainLaw::Mode::range);
+    CHECK (d.detector == LevelDetector::Mode::peak);
+}
+
+TEST_CASE ("Dynamics round-trip through capture and apply, and count as a change", "[preset][dynamics]")
+{
+    Fixture f;
+    auto p = sample();
+    p.bands[4].dynamics = someDynamics();
+    p.bands[9].dynamics.on = true;   // disabled band keeps its dynamics too
+
+    f.presets.apply (p);
+    CHECK (f.presets.capture ("Again").hasSameSettingsAs (p));
+    CHECK_THAT (value (f.processor, "band5_thresh"), WithinAbs (-32.5f, 1e-4f));
+    CHECK_THAT (value (f.processor, "band5_sidechain"), WithinAbs (1.0f, 0.0f));
+
+    REQUIRE (f.presets.saveUserPreset ("Dyn", false) == PresetManager::SaveResult::saved);
+    CHECK_FALSE (f.presets.isModified());
+    set (f.processor, "band5_attack", 40.0f);
+    CHECK (f.presets.isModified());
+}
+
+TEST_CASE ("Factory presets have dynamics off", "[preset][factory][dynamics]")
+{
+    for (const auto& p : FactoryPresets::all())
+        for (const auto& b : p.bands)
+        {
+            INFO (p.name);
+            CHECK_FALSE (b.dynamics.on);
+        }
+}

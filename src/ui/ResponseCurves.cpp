@@ -101,3 +101,11 @@ double ResponseCurves::bandDb (int band, int point) const noexcept
 {
     return curves[static_cast<size_t> (band)][static_cast<size_t> (point)];
 }
+
+bool ResponseCurves::update (std::span<const BandSettings> bands, double sampleRate, std::span<const double>)
+{
+    return update (bands, sampleRate);
+}
+
+double ResponseCurves::staticBandDb (int, int) const noexcept { return 0.0; }
+double ResponseCurves::rangeBandDb (int, int) const noexcept { return 0.0; }

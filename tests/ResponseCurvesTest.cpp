@@ -191,3 +191,94 @@ TEST_CASE ("Disabled bands are drawn but not summed; free bands are neither", "[
         CHECK_THAT (curves.sumDb (k), WithinAbs (BandDesign::design (bands[2], fs).magnitudeDb (f, fs), 1e-9));
     }
 }
+
+//==============================================================================
+TEST_CASE ("A dynamic band's curve follows its live gain; its range curve spans static to static + range", "[curves][dynamics]")
+{
+    constexpr double fs = 48000.0;
+    auto bands = disabledBands();
+    bands[5] = make (FilterType::bell, 1000.0, 3.0, 1.0);
+    bands[5].dynamics.on = true;
+    bands[5].dynamics.rangeDb = -6.0;
+    bands[7] = make (FilterType::bell, 5000.0, 2.0, 2.0);   // static
+
+    std::array<double, 16> live {};
+    live[5] = -4.0;
+    live[7] = -3.0;   // ignored: band 8 is not dynamic
+
+    ResponseCurves curves;
+    REQUIRE (curves.update (bands, fs, live));
+
+    // Nearest curve point to each centre.
+    auto pointAt = [&] (double f)
+    {
+        int best = 0;
+        for (int k = 0; k < ResponseCurves::numPoints; ++k)
+            if (std::abs (std::log (curves.frequency (k) / f)) < std::abs (std::log (curves.frequency (best) / f)))
+                best = k;
+        return best;
+    };
+    const auto k1 = pointAt (1000.0), k5 = pointAt (5000.0);
+
+    auto liveBand = bands[5];
+    liveBand.gainDb = 3.0 - 4.0;
+    auto rangeBand = bands[5];
+    rangeBand.gainDb = 3.0 - 6.0;
+    const auto f1 = curves.frequency (k1);
+
+    CHECK (curves.isBandDynamic (5));
+    CHECK_FALSE (curves.isBandDynamic (7));
+    CHECK_THAT (curves.bandDb (5, k1), WithinAbs (BandDesign::design (liveBand, fs).magnitudeDb (f1, fs), 1e-9));
+    CHECK_THAT (curves.staticBandDb (5, k1), WithinAbs (BandDesign::design (bands[5], fs).magnitudeDb (f1, fs), 1e-9));
+    CHECK_THAT (curves.rangeBandDb (5, k1), WithinAbs (BandDesign::design (rangeBand, fs).magnitudeDb (f1, fs), 1e-9));
+    CHECK_THAT (curves.bandDb (7, k5), WithinAbs (BandDesign::design (bands[7], fs).magnitudeDb (curves.frequency (k5), fs), 1e-9));
+
+    // The sum uses the live curve.
+    CHECK_THAT (curves.sumDb (k1), WithinAbs (curves.bandDb (5, k1) + curves.bandDb (7, k1), 1e-9));
+}
+
+TEST_CASE ("Live gain changes under 0.05 dB do not recompute the curves", "[curves][dynamics]")
+{
+    auto bands = disabledBands();
+    bands[2] = make (FilterType::lowShelf, 200.0, 0.0, 0.71);
+    bands[2].dynamics.on = true;
+
+    std::array<double, 16> live {};
+    ResponseCurves curves;
+    CHECK (curves.update (bands, 48000.0, live));
+    live[2] = -0.03;
+    CHECK_FALSE (curves.update (bands, 48000.0, live));
+    live[2] = -0.2;
+    CHECK (curves.update (bands, 48000.0, live));
+    live[6] = -5.0;   // a band that is not in use
+    CHECK_FALSE (curves.update (bands, 48000.0, live));
+}
+
+TEST_CASE ("Disabled or non-dynamic-type bands ignore live gain", "[curves][dynamics]")
+{
+    constexpr double fs = 48000.0;
+    auto bands = disabledBands();
+    bands[0] = make (FilterType::bell, 500.0, 4.0, 1.0);
+    bands[0].dynamics.on = true;
+    bands[0].enabled = false;
+    bands[1] = make (FilterType::notch, 3000.0, 0.0, 4.0);
+    bands[1].dynamics.on = true;
+
+    std::array<double, 16> live {};
+    live[0] = -6.0;
+    live[1] = -6.0;
+
+    ResponseCurves curves;
+    curves.update (bands, fs, live);
+    CHECK_FALSE (curves.isBandDynamic (0));
+    CHECK_FALSE (curves.isBandDynamic (1));
+
+    auto enabled = bands[0];
+    enabled.enabled = true;
+    for (int k = 0; k < ResponseCurves::numPoints; k += 31)
+    {
+        const auto f = curves.frequency (k);
+        CHECK_THAT (curves.bandDb (0, k), WithinAbs (BandDesign::design (enabled, fs).magnitudeDb (f, fs), 1e-9));
+        CHECK_THAT (curves.bandDb (1, k), WithinAbs (BandDesign::design (bands[1], fs).magnitudeDb (f, fs), 1e-9));
+    }
+}

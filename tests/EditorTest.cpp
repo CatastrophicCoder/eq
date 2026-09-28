@@ -1,6 +1,7 @@
 #include "TestParameters.h"
 
 #include "PluginEditor.h"
+#include "dsp/BandDesign.h"
 #include "dsp/CutSlope.h"
 
 #include <catch2/catch_test_macros.hpp>
@@ -330,6 +331,182 @@ TEST_CASE ("Editors can be opened and closed repeatedly", "[editor]")
     }
 }
 
+TEST_CASE ("Dynamic controls follow the band and its parameters", "[editor][dynamics]")
+{
+    EditorFixture f;
+    auto& panel = f.editor.getBandPanel();
+    auto& p = f.processor;
+
+    for (int band : { 2, 11 })
+    {
+        INFO ("band " << band);
+        setBand (p, band, FilterType::bell, 1000.0f, 0.0f, 1.0f, 3, true);
+        panel.setBand (band);
+
+        // Control -> parameter.
+        panel.getDynamicButton().setToggleState (true, juce::sendNotificationSync);
+        panel.getDynamicModeBox().setSelectedItemIndex (1, juce::sendNotificationSync);
+        panel.getDetectorBox().setSelectedItemIndex (1, juce::sendNotificationSync);
+        panel.getSidechainButton().setToggleState (true, juce::sendNotificationSync);
+        panel.getThresholdSlider().setValue (-33.0, juce::sendNotificationSync);
+        panel.getRangeSlider().setValue (9.0, juce::sendNotificationSync);
+        panel.getRatioSlider().setValue (4.0, juce::sendNotificationSync);
+        panel.getAttackSlider().setValue (3.0, juce::sendNotificationSync);
+        panel.getReleaseSlider().setValue (400.0, juce::sendNotificationSync);
+
+        CHECK_THAT (value (p, Parameters::id (band, "dyn")), WithinAbs (1.0f, 0.0f));
+        CHECK_THAT (value (p, Parameters::id (band, "dynmode")), WithinAbs (1.0f, 0.0f));
+        CHECK_THAT (value (p, Parameters::id (band, "detector")), WithinAbs (1.0f, 0.0f));
+        CHECK_THAT (value (p, Parameters::id (band, "sidechain")), WithinAbs (1.0f, 0.0f));
+        CHECK_THAT (value (p, Parameters::id (band, "thresh")), WithinAbs (-33.0f, 0.01f));
+        CHECK_THAT (value (p, Parameters::id (band, "range")), WithinAbs (9.0f, 0.01f));
+        CHECK_THAT (value (p, Parameters::id (band, "ratio")), WithinRel (4.0f, 1e-3f));
+        CHECK_THAT (value (p, Parameters::id (band, "attack")), WithinRel (3.0f, 1e-3f));
+        CHECK_THAT (value (p, Parameters::id (band, "release")), WithinRel (400.0f, 1e-3f));
+
+        // Parameter -> control.
+        set (p, Parameters::id (band, "thresh"), -12.0f);
+        set (p, Parameters::id (band, "dynmode"), 0.0f);
+        set (p, Parameters::id (band, "dyn"), 0.0f);
+        CHECK_THAT (panel.getThresholdSlider().getValue(), WithinAbs (-12.0, 0.01));
+        CHECK (panel.getDynamicModeBox().getSelectedItemIndex() == 0);
+        CHECK_FALSE (panel.getDynamicButton().getToggleState());
+    }
+
+    // Switching bands must not write to the band left behind.
+    panel.setBand (5);
+    const auto before = value (p, Parameters::id (11, "thresh"));
+    panel.getThresholdSlider().setValue (-50.0, juce::sendNotificationSync);
+    CHECK_THAT (value (p, Parameters::id (11, "thresh")), WithinAbs (before, 0.0f));
+    CHECK_THAT (value (p, Parameters::id (5, "thresh")), WithinAbs (-50.0f, 0.01f));
+}
+
+TEST_CASE ("Dynamic controls are active only where dynamics apply", "[editor][dynamics]")
+{
+    EditorFixture f;
+    auto& panel = f.editor.getBandPanel();
+    auto& p = f.processor;
+    setBand (p, 3, FilterType::bell, 500.0f, 0.0f, 1.0f, 3, true);
+    panel.setBand (3);
+
+    auto settings = [&] { return std::vector<juce::Component*> { &panel.getDynamicModeBox(), &panel.getDetectorBox(),
+                                                                 &panel.getSidechainButton(), &panel.getThresholdSlider(),
+                                                                 &panel.getRangeSlider(), &panel.getAttackSlider(),
+                                                                 &panel.getReleaseSlider() }; };
+
+    // Type: only Bell and the shelves can be dynamic.
+    set (p, Parameters::id (3, "dyn"), 1.0f);
+    for (int t = 0; t < FilterTypes::count; ++t)
+    {
+        const auto type = static_cast<FilterType> (t);
+        set (p, Parameters::id (3, "type"), static_cast<float> (t));
+        f.editor.refreshControls();
+        INFO ("type " << FilterTypes::names[t]);
+        CHECK (panel.getDynamicButton().isEnabled() == BandSettings::typeCanBeDynamic (type));
+        for (auto* c : settings())
+            CHECK (c->isEnabled() == BandSettings::typeCanBeDynamic (type));
+    }
+
+    // Dynamics off: the switch stays usable, the settings grey out.
+    set (p, Parameters::id (3, "type"), static_cast<float> (FilterType::bell));
+    set (p, Parameters::id (3, "dyn"), 0.0f);
+    f.editor.refreshControls();
+    CHECK (panel.getDynamicButton().isEnabled());
+    for (auto* c : settings())
+        CHECK_FALSE (c->isEnabled());
+    CHECK_FALSE (panel.getRatioSlider().isEnabled());
+
+    // Ratio is used in Ratio mode only; Range caps both modes.
+    set (p, Parameters::id (3, "dyn"), 1.0f);
+    set (p, Parameters::id (3, "dynmode"), 0.0f);
+    f.editor.refreshControls();
+    CHECK_FALSE (panel.getRatioSlider().isEnabled());
+    CHECK (panel.getRangeSlider().isEnabled());
+    set (p, Parameters::id (3, "dynmode"), 1.0f);
+    f.editor.refreshControls();
+    CHECK (panel.getRatioSlider().isEnabled());
+
+    // A disabled band: nothing but its On switch.
+    set (p, Parameters::id (3, "enabled"), 0.0f);
+    f.editor.refreshControls();
+    CHECK_FALSE (panel.getDynamicButton().isEnabled());
+    CHECK_FALSE (panel.getRatioSlider().isEnabled());
+    for (auto* c : settings())
+        CHECK_FALSE (c->isEnabled());
+}
+
+TEST_CASE ("Dynamic controls fit and stay readable at every size", "[editor][dynamics]")
+{
+    EditorFixture f;
+    auto& panel = f.editor.getBandPanel();
+    setBand (f.processor, 4, FilterType::bell, 500.0f, 3.0f, 1.0f, 3, true);
+    set (f.processor, "band4_dyn", 1.0f);
+    f.editor.refreshControls();
+    f.editor.getDisplay().setSelection ({ 4 }, 4);
+
+    REQUIRE (panel.getDynamicModeBox().getNumItems() == 2);
+    REQUIRE (panel.getDetectorBox().getNumItems() == 2);
+
+    for (auto [w, h] : sizes)
+    {
+        f.editor.setSize (w, h);
+        INFO ("size " << w << "x" << h);
+        checkLaidOut (f.editor, f.editor, "editor");
+
+        for (auto* knob : { &panel.getThresholdSlider(), &panel.getRangeSlider(), &panel.getRatioSlider(),
+                            &panel.getAttackSlider(), &panel.getReleaseSlider() })
+        {
+            CHECK (knob->getWidth() >= 30);
+            CHECK (knob->getHeight() >= 30);
+        }
+
+        for (int i = 0; i < 2; ++i)
+        {
+            set (f.processor, "band4_dynmode", static_cast<float> (i));
+            set (f.processor, "band4_detector", static_cast<float> (i));
+            CHECK (menuReadable (panel.getDynamicModeBox(), i));
+            CHECK (menuReadable (panel.getDetectorBox(), i));
+        }
+    }
+}
+
+TEST_CASE ("The display draws a dynamic band at its live gain", "[editor][dynamics]")
+{
+    EditorFixture f;
+    constexpr double fs = 48000.0;
+    setBand (f.processor, 6, FilterType::bell, 1000.0f, 2.0f, 1.0f, 3, true);
+    set (f.processor, "band6_dyn", 1.0f);
+    set (f.processor, "band6_thresh", -30.0f);
+    set (f.processor, "band6_range", -6.0f);
+    f.processor.setPlayConfigDetails (2, 2, fs, 512);
+    f.processor.prepareToPlay (fs, 512);
+
+    // A loud 1 kHz tone drives the band to its full range.
+    juce::MidiBuffer midi;
+    for (int block = 0; block < 100; ++block)
+    {
+        juce::AudioBuffer<float> buffer (2, 512);
+        for (int i = 0; i < 512; ++i)
+            for (int ch = 0; ch < 2; ++ch)
+                buffer.setSample (ch, i, 0.3f * std::sin (2.0f * juce::MathConstants<float>::pi * 1000.0f * static_cast<float> (block * 512 + i) / 48000.0f));
+        f.processor.processBlock (buffer, midi);
+    }
+
+    const auto live = f.processor.getLiveGainChangeDb (6, 0);
+    REQUIRE (live < -5.0f);
+    f.editor.refreshControls();
+
+    const auto& curves = f.editor.getDisplay().getCurves();
+    REQUIRE (curves.isBandDynamic (5));
+    auto settings = f.processor.getBandSettings()[5];
+    settings.gainDb += live;
+
+    int k = 0;
+    while (curves.frequency (k) < 1000.0)
+        ++k;
+    CHECK_THAT (curves.bandDb (5, k), WithinAbs (BandDesign::design (settings, fs).magnitudeDb (curves.frequency (k), fs), 0.05));
+}
+
 TEST_CASE ("Editor snapshot (renders PNGs to $EQ_SNAPSHOT_DIR)", "[.snapshot]")
 {
     // Hidden: run with  EQ_SNAPSHOT_DIR=<dir> SpectralFaultTests "[.snapshot]"  to look at the layout.
@@ -347,6 +524,9 @@ TEST_CASE ("Editor snapshot (renders PNGs to $EQ_SNAPSHOT_DIR)", "[.snapshot]")
     setBand (f.processor, 12, FilterType::bell, 5500.0f, 6.0f, 2.0f, 3, false);   // disabled: grey
     set (f.processor, Parameters::id (10, "channel"), static_cast<float> (ChannelMode::left));
     set (f.processor, Parameters::id (15, "channel"), static_cast<float> (ChannelMode::side));
+    set (f.processor, Parameters::id (8, "dyn"), 1.0f);           // dynamic: range and live gain drawn
+    set (f.processor, Parameters::id (8, "thresh"), -40.0f);
+    set (f.processor, Parameters::id (8, "range"), -8.0f);
     setBand (f.processor, 14, FilterType::highCut, 6000.0f, 0.0f, 0.71f, 5, true);   // post drops above 6 kHz
     f.editor.refreshControls();
     f.editor.getDisplay().setSelection ({ 8, 10 }, 8);

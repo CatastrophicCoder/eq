@@ -1,5 +1,6 @@
 #pragma once
 
+#include "dsp/BandSettings.h"
 #include "dsp/ChannelMode.h"
 #include "dsp/FilterType.h"
 
@@ -32,6 +33,7 @@ struct Preset
         float q = 0.71f;
         int slopeIndex = 3;
         ChannelMode channel = ChannelMode::stereo;
+        BandSettings::Dynamics dynamics {};   // format 2 (M7); format 1 files load with dynamics off
     };
 
     juce::String name, category;

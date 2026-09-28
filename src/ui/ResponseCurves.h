@@ -22,6 +22,9 @@ public:
     /** Returns true if the curves were recomputed. */
     bool update (std::span<const BandSettings> bands, double sampleRate);
 
+    /** Same, with each band's live dynamic gain change in dB (M7). */
+    bool update (std::span<const BandSettings> bands, double sampleRate, std::span<const double> liveGainDb);
+
     int getNumRecomputes() const noexcept { return recomputes; }
 
     double frequency (int point) const noexcept   { return frequencies[static_cast<size_t> (point)]; }
@@ -30,6 +33,12 @@ public:
     /** In use (enabled or not): has a curve to draw. */
     bool isBandShown (int band) const noexcept    { return shown[static_cast<size_t> (band)]; }
     double bandDb (int band, int point) const noexcept;
+
+    /** Active, dynamic and of a type that can be dynamic (M7): has static and range curves too. */
+    bool isBandDynamic (int band) const noexcept { return dynamic[static_cast<size_t> (band)]; }
+    /** A dynamic band's curve at its static gain, and at static gain + range. */
+    double staticBandDb (int band, int point) const noexcept;
+    double rangeBandDb (int band, int point) const noexcept;
     /** Which sums are shown: one (all Stereo), L and R, or M and S (decision 2026-09-28). */
     enum class SumLayout { single, leftRight, midSide };
     SumLayout getSumLayout() const noexcept { return layout; }
@@ -46,6 +55,7 @@ private:
     SumLayout layout = SumLayout::single;
     std::array<bool, numBands> active {};
     std::array<bool, numBands> shown {};
+    std::array<bool, numBands> dynamic {};
 
     std::array<BandSettings, numBands> lastBands {};
     double lastSampleRate = 0.0;
