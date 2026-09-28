@@ -10,7 +10,7 @@ Milestone definitions and "done when" criteria are in [PLAN.md](PLAN.md#mileston
 | 0 | Toolchain | Done | Command-line build, tests, pluginval and auval pass; owner confirmed CLion build and AU load in Logic (Standalone run not reported separately) |
 | 1 | One bell band | Done | Knobs, smoothing, state save/load and measured response done; tests, pluginval and auval pass. Owner listening check in Logic: no clicks (session save/reopen not reported separately) |
 | 2 | Full band set, tier 1 | Done | All 5 stages built and validated (tests Debug + Release, pluginval, auval). Owner listening check in Logic: no clicks (other checklist items not reported separately) |
-| 3 | Response curve display | In progress | Built and validated (104 tests, pluginval, auval). Waiting on owner check in Logic |
+| 3 | Response curve display | Done | Built and validated (108 tests, pluginval, auval); owner reviewed the layout and colours |
 | 4 | Interactive display | Not started | |
 | 5 | Spectrum analyzer | Not started | |
 | 6 | Per-band stereo | Not started | |
@@ -87,7 +87,8 @@ Newest first. One entry per session, a few lines each.
 - Owner review: layout works well. Band colours changed to a violet-to-red spectrum (390-645 nm; 700 nm made
   bands 14-16 identical, found in the snapshot, now covered by a distinctness test); tab numbers tinted for
   contrast. Text scaling left as is (owner's call). 108/108 tests, pluginval passes.
-- Next step: owner check in Logic, then mark M3 done; M4 (interactive display).
+- 2026-09-28: owner reviewed the layout and spectrum colours. M3 marked done.
+- Next step: M4 (interactive display).
 
 ### 2026-09-28 — M2 stage 5
 
