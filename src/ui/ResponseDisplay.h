@@ -33,7 +33,10 @@ class ResponseDisplay final : public juce::Component
 public:
     /** Space along the bottom for frequency labels, and on the right for the dB scale. */
     static constexpr int labelStripHeight = 18;
-    static constexpr int scaleWidth = 40;
+    static constexpr int eqScaleWidth = 40;         // EQ dB labels
+    static constexpr int analyzerScaleWidth = 36;   // analyzer dB labels
+    static constexpr int meterWidth = 24;           // output meter
+    static constexpr int scaleWidth = eqScaleWidth + analyzerScaleWidth + meterWidth;
 
     explicit ResponseDisplay (ParametricEQAudioProcessor& processor);
     ~ResponseDisplay() override;
@@ -90,6 +93,12 @@ public:
     /** Pulls the analyzer taps, updates the analyzers and the meter, and repaints (M5). */
     void refreshAnalyzer (double elapsedSeconds);
 
+    /** Applies stored analyzer settings (resolution, speed) and freeze. */
+    void setAnalyzerFrozen (bool frozen);
+
+    /** Area of the output meter (clicking it resets the clip lights). */
+    juce::Rectangle<float> getMeterArea() const;
+
     SpectrumAnalyzer& getPreAnalyzer() noexcept  { return preAnalyzer; }
     SpectrumAnalyzer& getPostAnalyzer() noexcept { return postAnalyzer; }
     LevelMeter& getMeter() noexcept              { return meter; }
@@ -137,8 +146,13 @@ private:
     juce::String message;
     juce::uint32 messageTime = 0;
 
+    void paintAnalyzer (juce::Graphics&, const FrequencyAxis&);
+    void paintMeter (juce::Graphics&);
+
     SpectrumAnalyzer preAnalyzer, postAnalyzer;
     LevelMeter meter;
+    juce::AudioBuffer<float> tapScratch { 2, 4096 };
+    std::vector<float> monoScratch = std::vector<float> (4096);
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ResponseDisplay)
 };

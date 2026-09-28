@@ -2,11 +2,21 @@
 
 ParametricEQAudioProcessorEditor::ParametricEQAudioProcessorEditor (ParametricEQAudioProcessor& p)
     : AudioProcessorEditor (&p),
+      eqProcessor (p),
       display (p),
       bandPanel (p.getValueTreeState()),
       bottomBar (p.getValueTreeState(), [&p] { return p.getAutoGainOffsetDb(); })
 {
     setLookAndFeel (&lookAndFeel);
+    eqProcessor.setAnalyzerActive (true);   // the taps run only while an editor is open
+
+    bottomBar.showAnalyzerSettings (p.getAnalyzerSettings());
+    bottomBar.onAnalyzerSettingsChanged = [this]
+    {
+        eqProcessor.setAnalyzerSettings (bottomBar.getAnalyzerSettingsShown());
+        display.setAnalyzerFrozen (bottomBar.getFreezeButton().getToggleState());
+        display.refreshAnalyzer (0.0);
+    };
 
     addAndMakeVisible (topBar);
     addAndMakeVisible (display);
@@ -32,6 +42,7 @@ ParametricEQAudioProcessorEditor::ParametricEQAudioProcessorEditor (ParametricEQ
 ParametricEQAudioProcessorEditor::~ParametricEQAudioProcessorEditor()
 {
     stopTimer();
+    eqProcessor.setAnalyzerActive (false);
     setLookAndFeel (nullptr);
 }
 
@@ -60,7 +71,19 @@ void ParametricEQAudioProcessorEditor::resized()
 
 void ParametricEQAudioProcessorEditor::refreshControls()
 {
+    const auto now = juce::Time::getMillisecondCounterHiRes();
+    const auto elapsed = lastRefreshMs > 0.0 ? juce::jlimit (0.0, 0.2, (now - lastRefreshMs) / 1000.0) : 0.0;
+    lastRefreshMs = now;
+
+    // Settings may change from outside (a loaded session): keep the menus in step.
+    if (const auto stored = eqProcessor.getAnalyzerSettings(); ! (stored.mode == bottomBar.getAnalyzerSettingsShown().mode
+            && stored.resolution == bottomBar.getAnalyzerSettingsShown().resolution
+            && stored.speed == bottomBar.getAnalyzerSettingsShown().speed
+            && stored.range == bottomBar.getAnalyzerSettingsShown().range))
+        bottomBar.showAnalyzerSettings (stored);
+
     display.refresh();
+    display.refreshAnalyzer (elapsed);
     bandPanel.refreshControlStates();
     bottomBar.refresh();
 }

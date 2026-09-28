@@ -26,6 +26,10 @@ ParametricEQAudioProcessor::ParametricEQAudioProcessor()
                  && p.type != nullptr && p.slope != nullptr && p.enabled != nullptr);
     }
 
+    // Analyzer taps, allocated once: prepareToPlay may run while the editor is reading them.
+    preFifo.prepare (2, analyzerFifoCapacity);
+    postFifo.prepare (2, analyzerFifoCapacity);
+
     outputGainDb = parameters.getRawParameterValue (Parameters::outputGain);
     autoGainOn = parameters.getRawParameterValue (Parameters::autoGain);
     invertOn = parameters.getRawParameterValue (Parameters::outputInvert);
@@ -135,10 +139,19 @@ void ParametricEQAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
 
     pushParametersToBands();
 
+    const auto tap = analyzerActive.load (std::memory_order_relaxed);
+    const auto tapChannels = std::min (2, buffer.getNumChannels());
+
+    if (tap)
+        preFifo.push (buffer.getArrayOfReadPointers(), tapChannels, buffer.getNumSamples());
+
     for (auto& band : bands)
         band.process (buffer);
 
     applyOutputGain (buffer);
+
+    if (tap)
+        postFifo.push (buffer.getArrayOfReadPointers(), tapChannels, buffer.getNumSamples());
 }
 
 float ParametricEQAudioProcessor::getAutoGainOffsetDb() const noexcept
@@ -201,20 +214,43 @@ std::array<BandSettings, 16> ParametricEQAudioProcessor::getBandSettings() const
     return result;
 }
 
-// Not implemented yet (M5 analyzer).
 void ParametricEQAudioProcessor::setAnalyzerActive (bool shouldBeActive) noexcept
 {
     analyzerActive.store (shouldBeActive, std::memory_order_relaxed);
 }
 
+namespace
+{
+    const juce::Identifier analyzerModeProperty { "analyzerMode" };
+    const juce::Identifier analyzerResolutionProperty { "analyzerResolution" };
+    const juce::Identifier analyzerSpeedProperty { "analyzerSpeed" };
+    const juce::Identifier analyzerRangeProperty { "analyzerRange" };
+
+    int validIndex (const juce::var& stored, int count, int fallback)
+    {
+        const auto v = static_cast<int> (stored);
+        return stored.isVoid() || v < 0 || v >= count ? fallback : v;
+    }
+}
+
 AnalyzerSettings::Values ParametricEQAudioProcessor::getAnalyzerSettings() const
 {
-    return {};
+    const AnalyzerSettings::Values defaults;
+    const auto& state = parameters.state;
+
+    return { validIndex (state.getProperty (analyzerModeProperty), static_cast<int> (AnalyzerSettings::modeNames.size()), defaults.mode),
+             validIndex (state.getProperty (analyzerResolutionProperty), static_cast<int> (AnalyzerSettings::fftOrders.size()), defaults.resolution),
+             validIndex (state.getProperty (analyzerSpeedProperty), static_cast<int> (AnalyzerSettings::releaseDbPerSecond.size()), defaults.speed),
+             validIndex (state.getProperty (analyzerRangeProperty), static_cast<int> (AnalyzerSettings::ranges.size()), defaults.range) };
 }
 
 void ParametricEQAudioProcessor::setAnalyzerSettings (const AnalyzerSettings::Values& values)
 {
-    juce::ignoreUnused (values);
+    // Out-of-range values are stored as given and read back as the defaults.
+    parameters.state.setProperty (analyzerModeProperty, values.mode, nullptr);
+    parameters.state.setProperty (analyzerResolutionProperty, values.resolution, nullptr);
+    parameters.state.setProperty (analyzerSpeedProperty, values.speed, nullptr);
+    parameters.state.setProperty (analyzerRangeProperty, values.range, nullptr);
 }
 
 //==============================================================================

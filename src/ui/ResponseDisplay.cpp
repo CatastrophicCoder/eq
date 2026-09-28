@@ -3,6 +3,7 @@
 #include "Parameters.h"
 #include "PluginProcessor.h"
 #include "SpectrumColour.h"
+#include "AnalyzerSettings.h"
 #include "dsp/CutSlope.h"
 
 #include <algorithm>
@@ -139,6 +140,8 @@ void ResponseDisplay::paint (juce::Graphics& g)
         g.drawHorizontalLine (juce::roundToInt (axis.yForDb (db)), plot.getX(), plot.getRight());
     }
 
+    paintAnalyzer (g, axis);
+
     // Frequency labels along the bottom, dB scale on the right.
     g.setFont (juce::FontOptions (11.0f));
     g.setColour (labelColour);
@@ -158,7 +161,7 @@ void ResponseDisplay::paint (juce::Graphics& g)
         // Keep the label box inside the display, so the top and bottom values are not clipped.
         const auto y = juce::jlimit (7, getHeight() - labelStripHeight - 7, juce::roundToInt (axis.yForDb (db)));
         const auto text = db > 0.0 ? "+" + juce::String (juce::roundToInt (db)) : juce::String (juce::roundToInt (db));
-        g.drawText (text, juce::roundToInt (plot.getRight()) + 4, y - 7, scaleWidth - 8, 14, juce::Justification::centredRight);
+        g.drawText (text, juce::roundToInt (plot.getRight()) + 4, y - 7, eqScaleWidth - 8, 14, juce::Justification::centredRight);
     }
 
     // Each active band: filled between its curve and 0 dB, then its outline.
@@ -199,6 +202,7 @@ void ResponseDisplay::paint (juce::Graphics& g)
     }
 
     paintNodes (g, axis);
+    paintMeter (g);
 }
 
 void ResponseDisplay::resized()
@@ -551,6 +555,13 @@ void ResponseDisplay::mouseDown (const juce::MouseEvent& e)
 {
     grabKeyboardFocus();
 
+    if (getMeterArea().contains (e.position))
+    {
+        meter.resetClip();
+        repaint();
+        return;
+    }
+
     if (e.mods.isPopupMenu())
     {
         const auto band = NodeLayout::bandAt (getNodes(), e.position);
@@ -625,7 +636,145 @@ bool ResponseDisplay::keyPressed (const juce::KeyPress& key)
 //==============================================================================
 void ResponseDisplay::refreshAnalyzer (double elapsedSeconds)
 {
-    juce::ignoreUnused (elapsedSeconds);   // Not implemented yet.
+    const auto settings = processor.getAnalyzerSettings();
+    const auto mode = static_cast<AnalyzerSettings::Mode> (settings.mode);
+    const auto showPre = mode == AnalyzerSettings::Mode::pre || mode == AnalyzerSettings::Mode::prePost;
+    const auto showPost = mode == AnalyzerSettings::Mode::post || mode == AnalyzerSettings::Mode::prePost;
+    const auto rate = processor.getSampleRate() > 0.0 ? processor.getSampleRate() : 48000.0;
+
+    for (auto* a : { &preAnalyzer, &postAnalyzer })
+    {
+        a->setFftOrder (AnalyzerSettings::fftOrders[static_cast<size_t> (settings.resolution)]);
+        a->setReleaseDbPerSecond (AnalyzerSettings::releaseDbPerSecond[static_cast<size_t> (settings.speed)]);
+    }
+
+    // Drain both taps every time, so they never fill up; feed only what is shown.
+    auto drain = [&] (AnalyzerFifo& fifo, SpectrumAnalyzer* analyzer, bool feedMeter)
+    {
+        for (int n = fifo.pull (tapScratch); n > 0; n = fifo.pull (tapScratch))
+        {
+            const auto* left = tapScratch.getReadPointer (0);
+            const auto* right = tapScratch.getReadPointer (1);
+
+            if (feedMeter)
+                meter.addSamples (left, right, n, rate);
+
+            if (analyzer != nullptr)
+            {
+                for (int i = 0; i < n; ++i)
+                    monoScratch[static_cast<size_t> (i)] = 0.5f * (left[i] + right[i]);
+                analyzer->addSamples (monoScratch.data(), n);
+            }
+        }
+    };
+
+    drain (processor.getPreFifo(), showPre ? &preAnalyzer : nullptr, false);
+    drain (processor.getPostFifo(), showPost ? &postAnalyzer : nullptr, true);
+
+    if (showPre)
+        preAnalyzer.update (rate, elapsedSeconds);
+    if (showPost)
+        postAnalyzer.update (rate, elapsedSeconds);
+
+    meter.update (elapsedSeconds);
+    repaint();
+}
+
+void ResponseDisplay::setAnalyzerFrozen (bool frozen)
+{
+    preAnalyzer.setFrozen (frozen);
+    postAnalyzer.setFrozen (frozen);
+}
+
+juce::Rectangle<float> ResponseDisplay::getMeterArea() const
+{
+    auto area = getLocalBounds().toFloat();
+    area.removeFromTop (6.0f);
+    area.removeFromBottom (static_cast<float> (labelStripHeight));
+    return area.removeFromRight (static_cast<float> (meterWidth)).reduced (3.0f, 0.0f);
+}
+
+void ResponseDisplay::paintAnalyzer (juce::Graphics& g, const FrequencyAxis& axis)
+{
+    const auto settings = processor.getAnalyzerSettings();
+    const auto mode = static_cast<AnalyzerSettings::Mode> (settings.mode);
+    if (mode == AnalyzerSettings::Mode::off)
+        return;
+
+    const auto range = AnalyzerSettings::ranges[static_cast<size_t> (settings.range)];
+    const auto plot = axis.getPlotArea();
+    auto yFor = [&] (double db) { return juce::jlimit (plot.getY(), plot.getBottom(), plot.getY() + static_cast<float> (-db / range) * plot.getHeight()); };
+
+    auto draw = [&] (const SpectrumAnalyzer& a, float fillAlpha, float lineAlpha)
+    {
+        juce::Path path;
+        path.startNewSubPath (axis.xForFrequency (a.frequency (0)), plot.getBottom());
+        for (int k = 0; k < SpectrumAnalyzer::numPoints; ++k)
+            path.lineTo (axis.xForFrequency (a.frequency (k)), yFor (a.displayDb (k)));
+        path.lineTo (axis.xForFrequency (a.frequency (SpectrumAnalyzer::numPoints - 1)), plot.getBottom());
+        path.closeSubPath();
+
+        const auto colour = juce::Colour { 0xffb8c4d6 };
+        g.setColour (colour.withAlpha (fillAlpha));
+        g.fillPath (path);
+        if (lineAlpha > 0.0f)
+        {
+            g.setColour (colour.withAlpha (lineAlpha));
+            g.strokePath (path, juce::PathStrokeType (1.0f));
+        }
+    };
+
+    if (mode == AnalyzerSettings::Mode::pre || mode == AnalyzerSettings::Mode::prePost)
+        draw (preAnalyzer, 0.07f, 0.0f);         // input: faint
+    if (mode == AnalyzerSettings::Mode::post || mode == AnalyzerSettings::Mode::prePost)
+        draw (postAnalyzer, 0.14f, 0.35f);       // output: brighter
+
+    // Analyzer dB scale, in its own column.
+    const auto step = range <= 60.0 ? 10.0 : range <= 90.0 ? 15.0 : 20.0;
+    g.setFont (juce::FontOptions (10.0f));
+    g.setColour (juce::Colour { 0xff6f6e7a });
+    const auto x = juce::roundToInt (plot.getRight()) + eqScaleWidth;
+    for (double db = 0.0; db >= -range - 1e-9; db -= step)
+    {
+        const auto y = juce::jlimit (7, getHeight() - labelStripHeight - 7, juce::roundToInt (yFor (db)));
+        g.drawText (juce::String (juce::roundToInt (db)), x, y - 6, analyzerScaleWidth - 6, 12, juce::Justification::centredRight);
+    }
+}
+
+void ResponseDisplay::paintMeter (juce::Graphics& g)
+{
+    // -60 to 0 dBFS; RMS as a bar, peak as a line, clip light on top.
+    constexpr double meterFloor = -60.0;
+    const auto area = getMeterArea();
+    const auto clipHeight = 5.0f;
+    auto bars = area.withTrimmedTop (clipHeight + 2.0f);
+    const auto barWidth = (bars.getWidth() - 2.0f) / 2.0f;
+
+    auto yFor = [&] (double db)
+    {
+        const auto t = static_cast<float> (juce::jlimit (0.0, 1.0, (db - meterFloor) / -meterFloor));
+        return bars.getBottom() - t * bars.getHeight();
+    };
+
+    for (int ch = 0; ch < 2; ++ch)
+    {
+        const auto x = bars.getX() + static_cast<float> (ch) * (barWidth + 2.0f);
+        const auto column = juce::Rectangle<float> (x, bars.getY(), barWidth, bars.getHeight());
+
+        g.setColour (juce::Colour { 0xff101014 });
+        g.fillRect (column);
+
+        const auto rmsY = yFor (meter.rmsDb (ch));
+        g.setGradientFill (juce::ColourGradient (juce::Colour { 0xff3fbf6f }, 0.0f, column.getBottom(),
+                                                 juce::Colour { 0xffe0c040 }, 0.0f, column.getY(), false));
+        g.fillRect (column.withTop (rmsY));
+
+        g.setColour (juce::Colours::white.withAlpha (0.85f));
+        g.fillRect (juce::Rectangle<float> (x, yFor (meter.peakDb (ch)) - 1.0f, barWidth, 2.0f));
+
+        g.setColour (meter.isClipped (ch) ? juce::Colour { 0xffe03a3a } : juce::Colour { 0xff2a2a33 });
+        g.fillRect (juce::Rectangle<float> (x, area.getY(), barWidth, clipHeight));
+    }
 }
 
 void ResponseDisplay::paintNodes (juce::Graphics& g, const FrequencyAxis& axis)

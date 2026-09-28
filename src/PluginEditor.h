@@ -39,11 +39,14 @@ public:
 private:
     void timerCallback() override { refreshControls(); }
 
+    ParametricEQAudioProcessor& eqProcessor;
+    double lastRefreshMs = 0.0;
     CompactLookAndFeel lookAndFeel;   // declared first: outlives every child
     TopBar topBar;
     ResponseDisplay display;
     BandPanel bandPanel;
     BottomBar bottomBar;
+    juce::TooltipWindow tooltips { this, 600 };
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ParametricEQAudioProcessorEditor)
 };

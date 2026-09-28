@@ -1,5 +1,7 @@
 #pragma once
 
+#include "AnalyzerSettings.h"
+
 #include <juce_audio_processors/juce_audio_processors.h>
 
 #include <functional>
@@ -16,6 +18,10 @@ public:
 
     /** Updates the Auto Gain readout. Message thread only. */
     void refresh();
+
+    /** Shows stored analyzer settings in the menus (without notifying). */
+    void showAnalyzerSettings (const AnalyzerSettings::Values& values);
+    AnalyzerSettings::Values getAnalyzerSettingsShown() const;
 
     void paint (juce::Graphics&) override;
     void resized() override;

@@ -186,6 +186,16 @@ TEST_CASE ("Bottom bar analyzer controls change the stored settings", "[analyzer
     CHECK (editor.getDisplay().getPreAnalyzer().isFrozen());
     CHECK (editor.getDisplay().getPostAnalyzer().isFrozen());
 
+    // Every analyzer menu shows distinct text, so they can be told apart at a glance.
+    bar.showAnalyzerSettings ({});
+    const juce::StringArray shown { bar.getAnalyzerModeBox().getText(), bar.getResolutionBox().getText(),
+                                    bar.getSpeedBox().getText(), bar.getRangeBox().getText() };
+    for (int i = 0; i < shown.size(); ++i)
+        for (int j = i + 1; j < shown.size(); ++j)
+            CHECK (shown[i] != shown[j]);
+    CHECK (bar.getResolutionBox().getTooltip().isNotEmpty());
+    CHECK (bar.getSpeedBox().getTooltip().isNotEmpty());
+
     // Bottom bar controls do not overlap, at the smallest window size too.
     editor.setSize (ParametricEQAudioProcessorEditor::minWidth, ParametricEQAudioProcessorEditor::minHeight);
     std::vector<juce::Rectangle<int>> boxes;

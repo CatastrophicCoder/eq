@@ -13,7 +13,7 @@ namespace AnalyzerSettings
 
     /** FFT sizes: Low 2048, Medium 4096, High 8192, Max 16384. */
     inline constexpr std::array<int, 4> fftOrders { 11, 12, 13, 14 };
-    inline constexpr std::array<const char*, 4> resolutionNames { "Low", "Medium", "High", "Max" };
+    inline constexpr std::array<const char*, 4> resolutionNames { "2048", "4096", "8192", "16384" };   // FFT points
 
     /** Release (fall) rates in dB per second. */
     inline constexpr std::array<double, 3> releaseDbPerSecond { 10.0, 25.0, 60.0 };

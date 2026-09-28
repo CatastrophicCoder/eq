@@ -348,10 +348,34 @@ TEST_CASE ("Editor snapshot (renders PNGs to $EQ_SNAPSHOT_DIR)", "[.snapshot]")
     f.editor.refreshControls();
     f.editor.getDisplay().setSelection ({ 8, 10 }, 8);
 
+    // Some audio through the plugin, so the analyzer and meter have something to show:
+    // noise with a falling (roughly pink) spectrum, from a one-pole lowpass on white noise.
+    f.processor.setPlayConfigDetails (2, 2, 48000.0, 512);
+    f.processor.prepareToPlay (48000.0, 512);
+    juce::Random random (9);
+    float state = 0.0f;
+    juce::MidiBuffer midi;
+    auto feed = [&]
+    {
+        for (int block = 0; block < 32; ++block)
+        {
+            juce::AudioBuffer<float> buffer (2, 512);
+            for (int i = 0; i < 512; ++i)
+            {
+                state = 0.97f * state + 0.03f * (random.nextFloat() * 2.0f - 1.0f);
+                const auto x = 0.25f * (0.5f * state * 8.0f + 0.1f * (random.nextFloat() * 2.0f - 1.0f));
+                buffer.setSample (0, i, x);
+                buffer.setSample (1, i, x);
+            }
+            f.processor.processBlock (buffer, midi);
+        }
+        f.editor.refreshControls();
+    };
+
     for (auto [w, h] : sizes)
     {
         f.editor.setSize (w, h);
-        f.editor.refreshControls();
+        feed();
         const auto image = f.editor.createComponentSnapshot (f.editor.getLocalBounds());
         juce::File file (dir + "/m3_" + juce::String (w) + "x" + juce::String (h) + ".png");
         file.deleteFile();
