@@ -35,6 +35,7 @@ target_sources(ParametricEQ
         src/ui/FrequencyAxis.cpp
         src/ui/ResponseCurves.cpp
         src/ui/ResponseDisplay.cpp
+        src/ui/SpectrumColour.cpp
         src/ui/BandPanel.cpp
         src/ui/TopBar.cpp
         src/ui/BottomBar.cpp
