@@ -1,18 +1,29 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 #include "Parameters.h"
+#include "dsp/CutSlope.h"
 
 //==============================================================================
 ParametricEQAudioProcessor::ParametricEQAudioProcessor()
     : AudioProcessor (BusesProperties()
                           .withInput  ("Input",  juce::AudioChannelSet::stereo(), true)
                           .withOutput ("Output", juce::AudioChannelSet::stereo(), true)),
-      parameters (*this, nullptr, "ParametricEQ", Parameters::createLayout()),
-      band1Freq (parameters.getRawParameterValue (Parameters::id (1, "freq"))),
-      band1Gain (parameters.getRawParameterValue (Parameters::id (1, "gain"))),
-      band1Q (parameters.getRawParameterValue (Parameters::id (1, "q")))
+      parameters (*this, nullptr, "ParametricEQ", Parameters::createLayout())
 {
-    jassert (band1Freq != nullptr && band1Gain != nullptr && band1Q != nullptr);
+    static_assert (std::tuple_size_v<decltype (bands)> == Parameters::numBands);
+
+    for (int band = 1; band <= Parameters::numBands; ++band)
+    {
+        auto& p = bandParameters[static_cast<size_t> (band - 1)];
+        p.frequency = parameters.getRawParameterValue (Parameters::id (band, "freq"));
+        p.gain      = parameters.getRawParameterValue (Parameters::id (band, "gain"));
+        p.q         = parameters.getRawParameterValue (Parameters::id (band, "q"));
+        p.type      = parameters.getRawParameterValue (Parameters::id (band, "type"));
+        p.slope     = parameters.getRawParameterValue (Parameters::id (band, "slope"));
+        p.enabled   = parameters.getRawParameterValue (Parameters::id (band, "enabled"));
+        jassert (p.frequency != nullptr && p.gain != nullptr && p.q != nullptr
+                 && p.type != nullptr && p.slope != nullptr && p.enabled != nullptr);
+    }
 }
 
 //==============================================================================
@@ -42,19 +53,28 @@ void ParametricEQAudioProcessor::prepareToPlay (double sampleRate, int samplesPe
 {
     juce::ignoreUnused (samplesPerBlock);
 
-    pushParametersToBand();
-    band1.prepare (sampleRate, getTotalNumOutputChannels());
+    pushParametersToBands();
+
+    for (auto& band : bands)
+        band.prepare (sampleRate, getTotalNumOutputChannels());
 }
 
-void ParametricEQAudioProcessor::pushParametersToBand() noexcept
+void ParametricEQAudioProcessor::pushParametersToBands() noexcept
 {
-    // Stage 2 of M2: band 1 is still a bell; types, slopes and enable get parameters in stage 3.
-    BandSettings settings;
-    settings.type = FilterType::bell;
-    settings.frequencyHz = band1Freq->load();
-    settings.gainDb = band1Gain->load();
-    settings.q = band1Q->load();
-    band1.setTargets (settings);
+    for (size_t i = 0; i < bands.size(); ++i)
+    {
+        const auto& p = bandParameters[i];
+
+        BandSettings settings;
+        settings.type = static_cast<FilterType> (juce::jlimit (0, FilterTypes::count - 1, juce::roundToInt (p.type->load())));
+        settings.frequencyHz = p.frequency->load();
+        settings.gainDb = p.gain->load();
+        settings.q = p.q->load();
+        settings.slopeIndex = juce::jlimit (0, CutSlope::count - 1, juce::roundToInt (p.slope->load()));
+        settings.enabled = p.enabled->load() >= 0.5f;
+
+        bands[i].setTargets (settings);
+    }
 }
 
 void ParametricEQAudioProcessor::releaseResources()
@@ -77,8 +97,10 @@ void ParametricEQAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     for (auto i = getTotalNumInputChannels(); i < getTotalNumOutputChannels(); ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
 
-    pushParametersToBand();
-    band1.process (buffer);
+    pushParametersToBands();
+
+    for (auto& band : bands)
+        band.process (buffer);
 }
 
 //==============================================================================
@@ -113,6 +135,19 @@ void ParametricEQAudioProcessor::setStateInformation (const void* data, int size
         return;
 
     parameters.replaceState (juce::ValueTree::fromXml (*xml));
+
+    // Version 1 (M1) had a single bell on band 1 and no type or enable parameters.
+    if (version == 1)
+    {
+        auto setParameter = [this] (const juce::String& id, float value)
+        {
+            if (auto* p = parameters.getParameter (id))
+                p->setValueNotifyingHost (p->convertTo0to1 (value));
+        };
+
+        setParameter (Parameters::id (1, "type"), static_cast<float> (FilterType::bell));
+        setParameter (Parameters::id (1, "enabled"), 1.0f);
+    }
 }
 
 //==============================================================================

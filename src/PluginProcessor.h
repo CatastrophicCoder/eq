@@ -46,20 +46,28 @@ public:
 
     //==============================================================================
     /** Version written into every saved state; bump when the state format changes. */
-    static constexpr int stateVersion = 1;
+    static constexpr int stateVersion = 2;
 
     juce::AudioProcessorValueTreeState& getValueTreeState() noexcept { return parameters; }
 
 private:
     //==============================================================================
-    void pushParametersToBand() noexcept;
+    void pushParametersToBands() noexcept;
+
+    /** Raw parameter values of one band, read on the audio thread. */
+    struct BandParameters
+    {
+        std::atomic<float>* frequency = nullptr;
+        std::atomic<float>* gain = nullptr;
+        std::atomic<float>* q = nullptr;
+        std::atomic<float>* type = nullptr;
+        std::atomic<float>* slope = nullptr;
+        std::atomic<float>* enabled = nullptr;
+    };
 
     juce::AudioProcessorValueTreeState parameters;
-    std::atomic<float>* band1Freq = nullptr;
-    std::atomic<float>* band1Gain = nullptr;
-    std::atomic<float>* band1Q = nullptr;
-
-    EqBand band1;
+    std::array<BandParameters, 16> bandParameters;
+    std::array<EqBand, 16> bands;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ParametricEQAudioProcessor)
 };

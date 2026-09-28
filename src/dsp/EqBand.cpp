@@ -77,6 +77,10 @@ void EqBand::process (juce::AudioBuffer<float>& buffer) noexcept
 
         if (! isCrossfading())
         {
+            // A bypassed band (no sections) leaves the audio untouched: skip the loop.
+            if (current.getCascade().numSections == 0)
+                continue;
+
             for (int ch = 0; ch < channels; ++ch)
             {
                 auto* x = buffer.getWritePointer (ch, start);

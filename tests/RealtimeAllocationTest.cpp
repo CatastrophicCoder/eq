@@ -11,6 +11,7 @@
 #include <atomic>
 #include <cstdlib>
 #include <new>
+#include <vector>
 
 namespace
 {
@@ -118,6 +119,15 @@ TEST_CASE ("Processor processBlock does not allocate with 16 active bands", "[re
     buffer.clear();
     juce::MidiBuffer midi;
 
+    // Look parameters up before counting: building ID strings allocates, and a host holds
+    // parameter pointers rather than looking them up per block.
+    struct Automated { juce::RangedAudioParameter* gain; juce::RangedAudioParameter* type; juce::RangedAudioParameter* enabled; };
+    std::vector<Automated> automated;
+    for (int band = 1; band <= Parameters::numBands; ++band)
+        automated.push_back ({ processor.getValueTreeState().getParameter (Parameters::id (band, "gain")),
+                               processor.getValueTreeState().getParameter (Parameters::id (band, "type")),
+                               processor.getValueTreeState().getParameter (Parameters::id (band, "enabled")) });
+
     ScopedAllocationCounter counter;
 
     for (int block = 0; block < 100; ++block)
@@ -125,10 +135,10 @@ TEST_CASE ("Processor processBlock does not allocate with 16 active bands", "[re
         // Raw normalised values, as a host sends automation: gain, type and enable changes.
         if (block % 10 == 0)
         {
-            const auto band = 1 + (block / 10) % Parameters::numBands;
-            processor.getValueTreeState().getParameter (Parameters::id (band, "gain"))->setValue (static_cast<float> (block % 20) / 20.0f);
-            processor.getValueTreeState().getParameter (Parameters::id (band, "type"))->setValue (static_cast<float> (block % 30) / 30.0f);
-            processor.getValueTreeState().getParameter (Parameters::id (band, "enabled"))->setValue (block % 40 < 20 ? 1.0f : 0.0f);
+            const auto& a = automated[static_cast<size_t> ((block / 10) % Parameters::numBands)];
+            a.gain->setValue (static_cast<float> (block % 20) / 20.0f);
+            a.type->setValue (static_cast<float> (block % 30) / 30.0f);
+            a.enabled->setValue (block % 40 < 20 ? 1.0f : 0.0f);
         }
 
         processor.processBlock (buffer, midi);
@@ -136,3 +146,4 @@ TEST_CASE ("Processor processBlock does not allocate with 16 active bands", "[re
 
     CHECK (counter.count() == 0);
 }
+
