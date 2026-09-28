@@ -15,7 +15,7 @@ Milestone definitions and "done when" criteria are in [PLAN.md](PLAN.md#mileston
 | 5 | Spectrum analyzer | Done | Built and validated (157 tests, pluginval, auval); owner tested in Logic |
 | 6 | Per-band stereo | Done | Built and validated (172 tests, pluginval, auval); owner tested in Logic |
 | 6b | Presets | Done | Built and validated (186 tests, pluginval, auval); owner tested in Logic |
-| 7 | Dynamic EQ | In progress | Stage 1 of 3: reset(), level detector, gain laws, parameters |
+| 7 | Dynamic EQ | In progress | Stage 1 of 3 done (reset, detector, gain laws, parameters). Next: stage 2, audio path and side-chain |
 | 8 | Linear phase mode | Not started | |
 | 9 | Deferred features | Not started | |
 
@@ -103,6 +103,17 @@ Newest first. Move each item here from "Open decisions" in `CLAUDE.md` once it i
 ## Session log
 
 Newest first. One entry per session, a few lines each.
+
+### 2026-09-28 — M7 stage 1
+
+- Done: processor `reset()` (band filters, crossfades, output ramp); `LevelDetector` (Peak/RMS, attack/release in dB);
+  `DynamicGainLaw` (Range and Ratio); nine dynamic parameters per band (hint 4), 259 parameters in total, not yet
+  used by the audio path.
+- Tests added / passing: 194/194. Detector time constants and readings; both gain laws (thresholds, knees, slope,
+  cap, sign); parameters and defaults; pre-M7 sessions load with dynamics off; reset() stops a ringing tail.
+  pluginval strictness 5 (VST3 in 4 s, AU) and auval pass.
+- Resolved: the missing reset() noted in M6.
+- Next step: stage 2, dynamic gain in EqBand (per channel, every 16 samples), detector filters, side-chain bus.
 
 ### 2026-09-28 — M6b
 
