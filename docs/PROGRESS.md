@@ -15,7 +15,7 @@ Milestone definitions and "done when" criteria are in [PLAN.md](PLAN.md#mileston
 | 5 | Spectrum analyzer | Done | Built and validated (157 tests, pluginval, auval); owner tested in Logic |
 | 6 | Per-band stereo | Done | Built and validated (172 tests, pluginval, auval); owner tested in Logic |
 | 6b | Presets | Done | Built and validated (186 tests, pluginval, auval); owner tested in Logic |
-| 7 | Dynamic EQ | Not started | |
+| 7 | Dynamic EQ | In progress | Stage 1 of 3: reset(), level detector, gain laws, parameters |
 | 8 | Linear phase mode | Not started | |
 | 9 | Deferred features | Not started | |
 
@@ -31,6 +31,15 @@ Newest first. Move each item here from "Open decisions" in `CLAUDE.md` once it i
 | 2026-09-28 | Colours similar in character to the reference; values chosen by us, not sampled from the reference image | Own palette; close to the reference | Chosen by owner |
 | 2026-09-28 | M3 band controls: reference-style band panel at the bottom of the display, with 16 band tabs until M4's click-to-select | Panel with tabs; display with the M2 grid below | Chosen by owner |
 | 2026-09-28 | Double-click on empty display space adds a Bell (first free band, at the clicked frequency and gain); with all 16 in use nothing is added and a message is shown | Always Bell; type by position | Chosen by owner |
+| 2026-09-28 | Dynamic gain law selectable per band: Range (full range 12 dB above threshold, smoothstep knee) or Ratio ((level - threshold)(1 - 1/ratio), 6 dB soft knee, capped at the range, sign of the range) | Threshold + range; ratio + range cap; selectable | Chosen by owner (law details proposed by Claude) |
+| 2026-09-28 | Dynamic types: Bell, Low Shelf, High Shelf | Bell + shelves; all gain types; bell only | Chosen by owner |
+| 2026-09-28 | Detector listens to the band's region (bell: band pass at f/Q; low shelf: lowpass; high shelf: highpass) or, per band, the external side-chain filtered the same way; a band set to side-chain with no side-chain connected falls back to its own region | Region + side-chain; region only | Chosen by owner (fallback proposed by Claude) |
+| 2026-09-28 | Detector Peak or RMS (10 ms), selectable per band; attack/release in the dB domain | Peak; RMS; selectable | Chosen by owner |
+| 2026-09-28 | Dynamic bands recompute their filters every 16 samples | 16; 32; every sample | Chosen by owner |
+| 2026-09-28 | Auto Gain uses static gains only (dynamic movement ignored) | Static only; follow live gain | Chosen by owner |
+| 2026-09-28 | Stereo dynamic bands detect and act per channel (a Stereo band can then give L and R different gains) | Linked; per channel | Chosen by owner |
+| 2026-09-28 | Display shows live dynamic gain plus the range | Live gain + range; range only | Chosen by owner |
+| 2026-09-28 | Dynamic parameters per band (hint 4): dyn, dynmode, thresh (-60..0 dB), range (-24..+24 dB), ratio (1-20), attack (0.1-200 ms), release (5-2000 ms), detector, sidechain; 259 parameters in total | - | Proposed by Claude, accepted by owner |
 | 2026-09-28 | Factory presets (11): Lead Vocal, Male Vocal, Female Vocal, Acoustic Guitar, Electric Clean, Electric Rhythm, Bass DI, Kick, Snare, Overheads, Mix Bus Polish. Frequencies and cut/boost directions from public mixing guides (at least two per preset); most dB and Q values are conservative choices, not from sources | All 13 proposed; drop the two weakest (Drum Bus, Piano); edit the list | Chosen by owner: drop Drum Bus and Piano |
 | 2026-09-28 | Preset sources are not cited in the repo (the brand-name rule would otherwise need an exception) | Rule exception for citations; titles only; no citations in the repo | Chosen by owner |
 | 2026-09-28 | Presets become milestone M6b, built before M7 (moved from the M9 list) | Now before M7; after M8; in M9 | Chosen by owner |
