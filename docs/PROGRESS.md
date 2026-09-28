@@ -15,7 +15,7 @@ Milestone definitions and "done when" criteria are in [PLAN.md](PLAN.md#mileston
 | 5 | Spectrum analyzer | Done | Built and validated (157 tests, pluginval, auval); owner tested in Logic |
 | 6 | Per-band stereo | Done | Built and validated (172 tests, pluginval, auval); owner tested in Logic |
 | 6b | Presets | Done | Built and validated (186 tests, pluginval, auval); owner tested in Logic |
-| 7 | Dynamic EQ | In progress | Stages 1-3 built and validated (223 tests, pluginval, auval); awaiting owner's Logic test and the Peak detector decision |
+| 7 | Dynamic EQ | Done | Built and validated (223 tests, pluginval, auval); owner tested in Logic except the side-chain (covered by unit tests only). Peak detector reading still an open decision |
 | 8 | Linear phase mode | Not started | |
 | 9 | Deferred features | Not started | |
 
@@ -106,6 +106,11 @@ Newest first. Move each item here from "Open decisions" in `CLAUDE.md` once it i
 ## Session log
 
 Newest first. One entry per session, a few lines each.
+
+### 2026-09-28 — M7 done
+
+- Owner tested dynamics in Logic and marked M7 done. The side-chain was not tried in Logic (routing not found); it is
+  covered by unit tests only. The Peak detector reading stays an open decision in CLAUDE.md.
 
 ### 2026-09-28 — M7 stage 3
 
