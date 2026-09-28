@@ -102,8 +102,9 @@ namespace
     }
 }
 
-void EqBand::process (juce::AudioBuffer<float>& buffer) noexcept
+void EqBand::process (juce::AudioBuffer<float>& buffer, const juce::AudioBuffer<float>* sidechain) noexcept
 {
+    juce::ignoreUnused (sidechain);   // Not implemented yet (M7 stage 2).
     const auto channels = std::min (buffer.getNumChannels(), numChannels);
     const auto twoChannels = channels >= 2;
     const auto numSamples = buffer.getNumSamples();

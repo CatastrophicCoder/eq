@@ -77,6 +77,9 @@ public:
     /** Current settings of all 16 bands, including their in-use flags. */
     std::array<BandSettings, 16> getBandSettings() const;
 
+    /** A band's current dynamic gain change in dB per filter channel (M7); any thread. */
+    float getLiveGainChangeDb (int band, int channel) const noexcept;
+
     //==============================================================================
     /** Analyzer taps (M5): stereo input (pre) and output (post), pushed from processBlock
         only while an editor is open. The editor is the single consumer.

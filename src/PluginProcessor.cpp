@@ -165,6 +165,12 @@ void ParametricEQAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
         postFifo.push (buffer.getArrayOfReadPointers(), tapChannels, buffer.getNumSamples());
 }
 
+float ParametricEQAudioProcessor::getLiveGainChangeDb (int band, int channel) const noexcept
+{
+    juce::ignoreUnused (band, channel);   // Not implemented yet (M7 stage 2).
+    return 0.0f;
+}
+
 float ParametricEQAudioProcessor::getAutoGainOffsetDb() const noexcept
 {
     return autoGainUpdater.getOffsetDb();

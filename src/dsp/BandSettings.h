@@ -1,6 +1,8 @@
 #pragma once
 
 #include "ChannelMode.h"
+#include "DynamicGainLaw.h"
+#include "LevelDetector.h"
 #include "FilterType.h"
 
 #include <juce_core/juce_core.h>
@@ -23,7 +25,30 @@ struct BandSettings
     bool inUse = true;
     ChannelMode channel = ChannelMode::stereo;
 
+    /** Dynamics (M7). Only Bell, Low Shelf and High Shelf can be dynamic. */
+    struct Dynamics
+    {
+        bool on = false;
+        DynamicGainLaw::Mode mode = DynamicGainLaw::Mode::range;
+        double thresholdDb = -20.0;
+        double rangeDb = -6.0;
+        double ratio = 2.0;
+        double attackMs = 10.0;
+        double releaseMs = 100.0;
+        LevelDetector::Mode detector = LevelDetector::Mode::peak;
+        bool sidechain = false;
+    };
+    Dynamics dynamics;
+
     bool isActive() const noexcept { return enabled && inUse; }
+
+    static constexpr bool typeCanBeDynamic (FilterType t) noexcept
+    {
+        return t == FilterType::bell || t == FilterType::lowShelf || t == FilterType::highShelf;
+    }
+
+    /** Active, dynamics switched on, and a type that supports it. */
+    bool isDynamic() const noexcept { return isActive() && dynamics.on && typeCanBeDynamic (type); }
 
     /** Exact comparison, used to detect any parameter change. */
     bool isIdenticalTo (const BandSettings& other) const noexcept
@@ -31,12 +56,19 @@ struct BandSettings
         return hasSameDiscreteSettings (other)
             && juce::exactlyEqual (frequencyHz, other.frequencyHz)
             && juce::exactlyEqual (gainDb, other.gainDb)
-            && juce::exactlyEqual (q, other.q);
+            && juce::exactlyEqual (q, other.q)
+            && dynamics.mode == other.dynamics.mode && dynamics.detector == other.dynamics.detector
+            && dynamics.sidechain == other.dynamics.sidechain
+            && juce::exactlyEqual (dynamics.thresholdDb, other.dynamics.thresholdDb)
+            && juce::exactlyEqual (dynamics.rangeDb, other.dynamics.rangeDb)
+            && juce::exactlyEqual (dynamics.ratio, other.dynamics.ratio)
+            && juce::exactlyEqual (dynamics.attackMs, other.dynamics.attackMs)
+            && juce::exactlyEqual (dynamics.releaseMs, other.dynamics.releaseMs);
     }
 
     bool hasSameDiscreteSettings (const BandSettings& other) const noexcept
     {
         return type == other.type && slopeIndex == other.slopeIndex && enabled == other.enabled && inUse == other.inUse
-            && channel == other.channel;
+            && channel == other.channel && dynamics.on == other.dynamics.on;
     }
 };

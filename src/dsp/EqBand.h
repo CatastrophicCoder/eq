@@ -37,7 +37,13 @@ public:
     void reset() noexcept;
 
     /** Filters the buffer in place (at most CascadeProcessor::maxChannels channels). */
-    void process (juce::AudioBuffer<float>& buffer) noexcept;
+    void process (juce::AudioBuffer<float>& buffer, const juce::AudioBuffer<float>* sidechain = nullptr) noexcept;
+
+    /** Current dynamic gain change in dB per filter channel (0 for static bands); any thread. */
+    float getLiveGainChangeDb (int channel) const noexcept
+    {
+        return liveGainChangeDb[static_cast<size_t> (juce::jlimit (0, 1, channel))].load (std::memory_order_relaxed);
+    }
 
     bool isCrossfading() const noexcept { return fadeRemaining > 0; }
 
@@ -68,4 +74,6 @@ private:
 
     juce::SmoothedValue<double, juce::ValueSmoothingTypes::Multiplicative> frequency, q;
     juce::SmoothedValue<double, juce::ValueSmoothingTypes::Linear> gainDb;
+
+    std::array<std::atomic<float>, 2> liveGainChangeDb {};
 };
