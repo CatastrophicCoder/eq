@@ -29,6 +29,8 @@ Newest first. Move each item here from "Open decisions" in `CLAUDE.md` once it i
 | 2026-09-28 | Look and feel: the overall layout follows the reference EQ (full-window display, dB scale and meter on the right, thin top and bottom bars, band panel over the lower display); components and styling our own; no names, logos or copied assets | Own look with functional conventions; close imitation kept private; close imitation in the public repo; decide later with neutral styling | Chosen by owner (option 3, limited to the overall layout). Trade-dress risk noted at decision time |
 | 2026-09-28 | Colours similar in character to the reference; values chosen by us, not sampled from the reference image | Own palette; close to the reference | Chosen by owner |
 | 2026-09-28 | M3 band controls: reference-style band panel at the bottom of the display, with 16 band tabs until M4's click-to-select | Panel with tabs; display with the M2 grid below | Chosen by owner |
+| 2026-09-28 | Band colours follow the visible spectrum: band 1 dark violet (390 nm) to band 16 red (645 nm), evenly spaced in wavelength (Bruton 1996); tab numbers use a lightened tint (WCAG contrast >= 4.5) | End at 645 nm; keep 390-700 nm (bands 14-16 identical red); even in hue. Tabs: lighter tint; exact band colour | Chosen by owner; replaces the golden-ratio hues |
+| 2026-09-28 | Text scaling with the window: not needed for now | Scale fonts and bar heights; leave | Owner: not an issue for now |
 | 2026-09-28 | Display range (3/6/12/30 dB) saved with the session as a non-automatable state property | Save in session; not saved | Chosen by owner |
 | 2026-09-28 | M2 editor: one resizable row (1000x360 to 2600x800, default 1480x440) | One row of 16; two rows of 8; one resizable row | Chosen by owner |
 | 2026-09-28 | Controls a type does not use are greyed out | Grey out; hide | Chosen by owner |
@@ -82,8 +84,9 @@ Newest first. One entry per session, a few lines each.
   fallback; layout at three sizes; tab re-attachment (and no writes to the previous band); menus readable;
   greying; curve clipping. pluginval strictness 5 (VST3, AU) and auval pass.
 - Checked by eye via snapshots: clipped "+12" scale label found and fixed.
-- Open issues: fonts and bar heights do not scale with the window (small text at 2400x1440); golden-ratio
-  band hues give a few similar greens (bands 3, 5, 8). Both are design choices for the owner.
+- Owner review: layout works well. Band colours changed to a violet-to-red spectrum (390-645 nm; 700 nm made
+  bands 14-16 identical, found in the snapshot, now covered by a distinctness test); tab numbers tinted for
+  contrast. Text scaling left as is (owner's call). 108/108 tests, pluginval passes.
 - Next step: owner check in Logic, then mark M3 done; M4 (interactive display).
 
 ### 2026-09-28 — M2 stage 5
