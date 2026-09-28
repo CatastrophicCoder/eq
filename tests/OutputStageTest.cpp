@@ -62,6 +62,30 @@ namespace
         return p.getAutoGainOffsetDb();
     }
 
+    /** Waits (up to 2 s) until the background thread has published the offset for exactly these
+        settings, so a test never processes audio with an offset from half-set parameters. */
+    bool waitForOffset (ParametricEQAudioProcessor& p, double fs)
+    {
+        std::array<BandSettings, 16> bands;
+        auto& state = p.getValueTreeState();
+        for (int band = 1; band <= Parameters::numBands; ++band)
+        {
+            auto raw = [&] (const char* field) { return state.getRawParameterValue (Parameters::id (band, field))->load(); };
+            bands[static_cast<size_t> (band - 1)] = Parameters::toBandSettings (raw ("type"), raw ("freq"), raw ("gain"),
+                                                                                raw ("q"), raw ("slope"), raw ("enabled"));
+        }
+
+        const auto expected = static_cast<float> (AutoGain::computeOffsetDb (bands, fs));
+
+        for (int i = 0; i < 200; ++i)
+        {
+            if (std::abs (p.getAutoGainOffsetDb() - expected) < 1e-5f)
+                return true;
+            juce::Thread::sleep (10);
+        }
+        return false;
+    }
+
     /** K-weighted pink-noise power ratio of a measured impulse response, in dB (same grid as AutoGain). */
     double measuredLoudnessChangeDb (const float* ir, int numSamples, double fs)
     {
@@ -186,7 +210,7 @@ TEST_CASE ("Auto Gain is computed off the audio thread", "[output][autogain]")
     CHECK_THAT (offset, WithinAbs (AutoGain::computeOffsetDb (bands, 48000.0), 1e-3));
 }
 
-TEST_CASE ("With Auto Gain on, the measured K-weighted loudness is unchanged apart from cuts", "[output][autogain]")
+TEST_CASE ("With Auto Gain on, measured K-weighted loudness matches the Auto Gain model", "[output][autogain]")
 {
     juce::ScopedJuceInitialiser_GUI juce;
     constexpr double fs = 48000.0;
@@ -203,7 +227,7 @@ TEST_CASE ("With Auto Gain on, the measured K-weighted loudness is unchanged apa
         set (p, Parameters::autoGain, 1.0f);
 
         prepare (p, fs);
-        waitForOffsetChange (p, 0.0f);
+        REQUIRE (waitForOffset (p, fs));
 
         // Let the output gain settle on the published offset, then measure.
         juce::AudioBuffer<float> settle (2, 4800);
@@ -216,23 +240,36 @@ TEST_CASE ("With Auto Gain on, the measured K-weighted loudness is unchanged apa
         ir.setSample (1, 0, 1.0f);
         process (p, ir);
 
-        auto expected = 0.0;
-        if (withCut)
+        // Auto Gain makes sum w |T|^2 neutral (T = tone bands). With an excluded cut C also in the
+        // path, the loudness change is sum w |T C|^2 / sum w |T|^2. Power weighting is not
+        // separable, so this is not the cut's contribution on its own where T and C overlap.
+        auto settingsOf = [] (FilterType t, double f, double g, double q, int slope)
         {
-            BandSettings cut;
-            cut.type = FilterType::highCut; cut.frequencyHz = 12000.0; cut.slopeIndex = 1;
-            const auto design = BandDesign::design (cut, fs);
+            BandSettings b;
+            b.type = t; b.frequencyHz = f; b.gainDb = g; b.q = q; b.slopeIndex = slope;
+            return b;
+        };
 
-            double num = 0.0, den = 0.0;
-            for (int k = 0; k < AutoGain::numPoints; ++k)
-            {
-                const auto f = 20.0 * std::pow (1000.0, k / (AutoGain::numPoints - 1.0));
-                const auto w = std::pow (10.0, KWeighting::magnitudeDb (f) / 10.0);
-                num += w * std::pow (10.0, design.magnitudeDb (f, fs) / 10.0);
-                den += w;
-            }
-            expected = 10.0 * std::log10 (num / den);
+        const SectionCascade tone[] { BandDesign::design (settingsOf (FilterType::bell, 1000.0, 6.0, 1.0, 3), fs),
+                                      BandDesign::design (settingsOf (FilterType::lowShelf, 100.0, 4.0, 0.71, 3), fs),
+                                      BandDesign::design (settingsOf (FilterType::highShelf, 9000.0, -3.0, 0.71, 3), fs) };
+        const auto cut = BandDesign::design (settingsOf (FilterType::highCut, 12000.0, 0.0, 0.71, 1), fs);
+
+        double withAll = 0.0, toneOnly = 0.0;
+        for (int k = 0; k < AutoGain::numPoints; ++k)
+        {
+            const auto f = 20.0 * std::pow (1000.0, k / (AutoGain::numPoints - 1.0));
+            const auto w = std::pow (10.0, KWeighting::magnitudeDb (f) / 10.0);
+
+            double toneDb = 0.0;
+            for (const auto& t : tone)
+                toneDb += t.magnitudeDb (f, fs);
+
+            const auto cutDb = withCut ? cut.magnitudeDb (f, fs) : 0.0;
+            withAll  += w * std::pow (10.0, (toneDb + cutDb) / 10.0);
+            toneOnly += w * std::pow (10.0, toneDb / 10.0);
         }
+        const auto expected = 10.0 * std::log10 (withAll / toneOnly);
 
         INFO ("with cut=" << withCut << " offset=" << p.getAutoGainOffsetDb());
         CHECK_THAT (measuredLoudnessChangeDb (ir.getReadPointer (0), numSamples, fs), WithinAbs (expected, 0.05));

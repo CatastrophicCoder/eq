@@ -86,5 +86,31 @@ juce::AudioProcessorValueTreeState::ParameterLayout Parameters::createLayout()
             juce::ParameterID { id (band, "enabled"), m2VersionHint }, name + "Enabled", d.enabled));
     }
 
+    layout.add (std::make_unique<juce::AudioParameterFloat> (
+        juce::ParameterID { outputGain, m2VersionHint }, "Output Gain",
+        // No snapping interval: a 0.01 step turns the 0 dB default into -6.7e-7 dB in float,
+        // and the output stage must be exactly unity (bit-exact bypass) at its default.
+        juce::NormalisableRange<float> (-30.0f, 30.0f), 0.0f,
+        FloatAttributes().withLabel ("dB")
+                         .withStringFromValueFunction ([] (float v, int) { return juce::String (v, 2); })));
+
+    layout.add (std::make_unique<juce::AudioParameterBool> (
+        juce::ParameterID { autoGain, m2VersionHint }, "Auto Gain", false));
+
+    layout.add (std::make_unique<juce::AudioParameterBool> (
+        juce::ParameterID { outputInvert, m2VersionHint }, "Phase Invert", false));
+
     return layout;
+}
+
+BandSettings Parameters::toBandSettings (float type, float frequencyHz, float gainDb, float q, float slope, float enabled) noexcept
+{
+    BandSettings s;
+    s.type = static_cast<FilterType> (juce::jlimit (0, FilterTypes::count - 1, juce::roundToInt (type)));
+    s.frequencyHz = frequencyHz;
+    s.gainDb = gainDb;
+    s.q = q;
+    s.slopeIndex = juce::jlimit (0, CutSlope::count - 1, juce::roundToInt (slope));
+    s.enabled = enabled >= 0.5f;
+    return s;
 }

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "dsp/BandSettings.h"
 #include "dsp/FilterType.h"
 
 #include <juce_audio_processors/juce_audio_processors.h>
@@ -41,4 +42,7 @@ namespace Parameters
     BandDefaults defaultsFor (int band);
 
     juce::AudioProcessorValueTreeState::ParameterLayout createLayout();
+
+    /** Turns one band's raw parameter values into BandSettings (choice indices rounded and clamped). */
+    BandSettings toBandSettings (float type, float frequencyHz, float gainDb, float q, float slope, float enabled) noexcept;
 }

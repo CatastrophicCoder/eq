@@ -69,9 +69,22 @@ private:
         std::atomic<float>* enabled = nullptr;
     };
 
+    /** Output gain x Auto Gain offset x polarity, as one linear gain. */
+    double targetOutputGain() const noexcept;
+    void applyOutputGain (juce::AudioBuffer<float>& buffer) noexcept;
+
     juce::AudioProcessorValueTreeState parameters;
     std::array<BandParameters, 16> bandParameters;
     std::array<EqBand, 16> bands;
+
+    std::atomic<float>* outputGainDb = nullptr;
+    std::atomic<float>* autoGainOn = nullptr;
+    std::atomic<float>* invertOn = nullptr;
+
+    /** One ramp for gain, Auto Gain and polarity; a polarity switch ramps through zero. */
+    juce::SmoothedValue<double, juce::ValueSmoothingTypes::Linear> outputGain;
+
+    AutoGainUpdater autoGainUpdater { parameters };
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ParametricEQAudioProcessor)
 };

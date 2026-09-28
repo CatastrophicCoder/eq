@@ -24,6 +24,11 @@ ParametricEQAudioProcessor::ParametricEQAudioProcessor()
         jassert (p.frequency != nullptr && p.gain != nullptr && p.q != nullptr
                  && p.type != nullptr && p.slope != nullptr && p.enabled != nullptr);
     }
+
+    outputGainDb = parameters.getRawParameterValue (Parameters::outputGain);
+    autoGainOn = parameters.getRawParameterValue (Parameters::autoGain);
+    invertOn = parameters.getRawParameterValue (Parameters::outputInvert);
+    jassert (outputGainDb != nullptr && autoGainOn != nullptr && invertOn != nullptr);
 }
 
 //==============================================================================
@@ -57,6 +62,43 @@ void ParametricEQAudioProcessor::prepareToPlay (double sampleRate, int samplesPe
 
     for (auto& band : bands)
         band.prepare (sampleRate, getTotalNumOutputChannels());
+
+    autoGainUpdater.setSampleRate (sampleRate);
+
+    outputGain.reset (sampleRate, EqBand::rampSeconds);
+    outputGain.setCurrentAndTargetValue (targetOutputGain());
+}
+
+double ParametricEQAudioProcessor::targetOutputGain() const noexcept
+{
+    const auto autoGainDb = autoGainOn->load() >= 0.5f ? static_cast<double> (autoGainUpdater.getOffsetDb()) : 0.0;
+    const auto polarity = invertOn->load() >= 0.5f ? -1.0 : 1.0;
+    return polarity * juce::Decibels::decibelsToGain (static_cast<double> (outputGainDb->load()) + autoGainDb, -1000.0);
+}
+
+void ParametricEQAudioProcessor::applyOutputGain (juce::AudioBuffer<float>& buffer) noexcept
+{
+    outputGain.setTargetValue (targetOutputGain());
+
+    if (! outputGain.isSmoothing())
+    {
+        // Exactly unity: leave the samples untouched, so a neutral instance stays bit-exact.
+        const auto gain = outputGain.getCurrentValue();
+        if (juce::exactlyEqual (gain, 1.0))
+            return;
+
+        for (int ch = 0; ch < buffer.getNumChannels(); ++ch)
+            juce::FloatVectorOperations::multiply (buffer.getWritePointer (ch), static_cast<float> (gain), buffer.getNumSamples());
+
+        return;
+    }
+
+    for (int i = 0; i < buffer.getNumSamples(); ++i)
+    {
+        const auto gain = static_cast<float> (outputGain.getNextValue());
+        for (int ch = 0; ch < buffer.getNumChannels(); ++ch)
+            buffer.getWritePointer (ch)[i] *= gain;
+    }
 }
 
 void ParametricEQAudioProcessor::pushParametersToBands() noexcept
@@ -64,16 +106,8 @@ void ParametricEQAudioProcessor::pushParametersToBands() noexcept
     for (size_t i = 0; i < bands.size(); ++i)
     {
         const auto& p = bandParameters[i];
-
-        BandSettings settings;
-        settings.type = static_cast<FilterType> (juce::jlimit (0, FilterTypes::count - 1, juce::roundToInt (p.type->load())));
-        settings.frequencyHz = p.frequency->load();
-        settings.gainDb = p.gain->load();
-        settings.q = p.q->load();
-        settings.slopeIndex = juce::jlimit (0, CutSlope::count - 1, juce::roundToInt (p.slope->load()));
-        settings.enabled = p.enabled->load() >= 0.5f;
-
-        bands[i].setTargets (settings);
+        bands[i].setTargets (Parameters::toBandSettings (p.type->load(), p.frequency->load(), p.gain->load(),
+                                                         p.q->load(), p.slope->load(), p.enabled->load()));
     }
 }
 
@@ -101,11 +135,13 @@ void ParametricEQAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
 
     for (auto& band : bands)
         band.process (buffer);
+
+    applyOutputGain (buffer);
 }
 
 float ParametricEQAudioProcessor::getAutoGainOffsetDb() const noexcept
 {
-    return 0.0f;   // Not implemented yet.
+    return autoGainUpdater.getOffsetDb();
 }
 
 //==============================================================================
