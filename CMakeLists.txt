@@ -32,6 +32,9 @@ target_sources(ParametricEQ
         src/PluginEditor.cpp
         src/Parameters.cpp
         src/AutoGainUpdater.cpp
+        src/presets/Preset.cpp
+        src/presets/FactoryPresets.cpp
+        src/presets/PresetManager.cpp
         src/ui/FrequencyAxis.cpp
         src/ui/ResponseCurves.cpp
         src/ui/ResponseDisplay.cpp

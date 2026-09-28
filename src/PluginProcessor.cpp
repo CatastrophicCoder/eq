@@ -35,6 +35,8 @@ ParametricEQAudioProcessor::ParametricEQAudioProcessor()
     autoGainOn = parameters.getRawParameterValue (Parameters::autoGain);
     invertOn = parameters.getRawParameterValue (Parameters::outputInvert);
     jassert (outputGainDb != nullptr && autoGainOn != nullptr && invertOn != nullptr);
+
+    presetManager = std::make_unique<PresetManager> (*this, PresetManager::defaultUserFolder());
 }
 
 //==============================================================================
@@ -253,6 +255,11 @@ void ParametricEQAudioProcessor::setAnalyzerSettings (const AnalyzerSettings::Va
     parameters.state.setProperty (analyzerSpeedProperty, values.speed, nullptr);
     parameters.state.setProperty (analyzerRangeProperty, values.range, nullptr);
 }
+
+// Not implemented yet (M6b).
+juce::String ParametricEQAudioProcessor::getStoredPresetName() const { return {}; }
+bool ParametricEQAudioProcessor::isStoredPresetFactory() const { return false; }
+void ParametricEQAudioProcessor::setStoredPreset (const juce::String&, bool) {}
 
 //==============================================================================
 bool ParametricEQAudioProcessor::hasEditor() const

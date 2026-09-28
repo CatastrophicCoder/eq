@@ -1,6 +1,7 @@
 #pragma once
 
 #include "AutoGainUpdater.h"
+#include "presets/PresetManager.h"
 #include "dsp/AnalyzerFifo.h"
 #include "dsp/EqBand.h"
 #include "ui/AnalyzerSettings.h"
@@ -83,6 +84,14 @@ public:
     AnalyzerFifo& getPostFifo() noexcept { return postFifo; }
     static constexpr int analyzerFifoCapacity = 32768;
 
+    /** Presets (M6b). Message thread only. */
+    PresetManager& getPresetManager() noexcept { return *presetManager; }
+
+    /** The current preset's name and whether it is a factory preset, stored in the session. */
+    juce::String getStoredPresetName() const;
+    bool isStoredPresetFactory() const;
+    void setStoredPreset (const juce::String& name, bool isFactory);
+
     /** Analyzer options, stored in the session (message thread only). Invalid values read as defaults. */
     AnalyzerSettings::Values getAnalyzerSettings() const;
     void setAnalyzerSettings (const AnalyzerSettings::Values& values);
@@ -122,6 +131,7 @@ private:
     juce::SmoothedValue<double, juce::ValueSmoothingTypes::Linear> outputGain;
 
     AutoGainUpdater autoGainUpdater { parameters, bandInUse };
+    std::unique_ptr<PresetManager> presetManager;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ParametricEQAudioProcessor)
 };

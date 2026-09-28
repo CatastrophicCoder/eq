@@ -2,10 +2,18 @@
 
 #include "ResponseDisplay.h"
 
-TopBar::TopBar()
+TopBar::TopBar (PresetManager& p) : presets (p)
 {
     setName ("topBar");
 }
+
+// Not implemented yet (M6b).
+void TopBar::refresh() {}
+juce::PopupMenu TopBar::buildPresetMenu() const { return {}; }
+void TopBar::applyPresetMenuResult (int) {}
+void TopBar::saveAs (const juce::String&) {}
+void TopBar::resized() {}
+void TopBar::showSaveDialog() {}
 
 void TopBar::paint (juce::Graphics& g)
 {

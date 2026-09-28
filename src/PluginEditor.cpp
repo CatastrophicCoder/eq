@@ -3,6 +3,7 @@
 ParametricEQAudioProcessorEditor::ParametricEQAudioProcessorEditor (ParametricEQAudioProcessor& p)
     : AudioProcessorEditor (&p),
       eqProcessor (p),
+      topBar (p.getPresetManager()),
       display (p),
       bandPanel (p.getValueTreeState()),
       bottomBar (p.getValueTreeState(), [&p] { return p.getAutoGainOffsetDb(); })
