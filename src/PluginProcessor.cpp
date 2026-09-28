@@ -103,6 +103,11 @@ void ParametricEQAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
         band.process (buffer);
 }
 
+float ParametricEQAudioProcessor::getAutoGainOffsetDb() const noexcept
+{
+    return 0.0f;   // Not implemented yet.
+}
+
 //==============================================================================
 bool ParametricEQAudioProcessor::hasEditor() const
 {

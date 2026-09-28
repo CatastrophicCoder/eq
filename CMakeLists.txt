@@ -31,6 +31,7 @@ target_sources(ParametricEQ
         src/PluginProcessor.cpp
         src/PluginEditor.cpp
         src/Parameters.cpp
+        src/AutoGainUpdater.cpp
         src/dsp/BiquadCoefficients.cpp
         src/dsp/MatchedPeakingDesign.cpp
         src/dsp/SectionCascade.cpp
@@ -47,7 +48,9 @@ target_sources(ParametricEQ
         src/dsp/FlatTiltDesign.cpp
         src/dsp/CascadeProcessor.cpp
         src/dsp/BandDesign.cpp
-        src/dsp/EqBand.cpp)
+        src/dsp/EqBand.cpp
+        src/dsp/KWeighting.cpp
+        src/dsp/AutoGain.cpp)
 
 target_include_directories(ParametricEQ
     PUBLIC

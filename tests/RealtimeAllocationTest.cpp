@@ -112,12 +112,17 @@ TEST_CASE ("Processor processBlock does not allocate with 16 active bands", "[re
         TestParameters::setBand (processor, band, static_cast<FilterType> (band % FilterTypes::count),
                                  50.0f * static_cast<float> (band), 3.0f, 1.0f, band % CutSlope::count, true);
 
+    TestParameters::set (processor, Parameters::autoGain, 1.0f);
+
     processor.setPlayConfigDetails (2, 2, 48000.0, 512);
     processor.prepareToPlay (48000.0, 512);
 
     juce::AudioBuffer<float> buffer (2, 512);
     buffer.clear();
     juce::MidiBuffer midi;
+
+    auto* outputGain = processor.getValueTreeState().getParameter (Parameters::outputGain);
+    auto* invert = processor.getValueTreeState().getParameter (Parameters::outputInvert);
 
     // Look parameters up before counting: building ID strings allocates, and a host holds
     // parameter pointers rather than looking them up per block.
@@ -139,6 +144,8 @@ TEST_CASE ("Processor processBlock does not allocate with 16 active bands", "[re
             a.gain->setValue (static_cast<float> (block % 20) / 20.0f);
             a.type->setValue (static_cast<float> (block % 30) / 30.0f);
             a.enabled->setValue (block % 40 < 20 ? 1.0f : 0.0f);
+            outputGain->setValue (static_cast<float> (block % 50) / 50.0f);
+            invert->setValue (block % 20 < 10 ? 1.0f : 0.0f);
         }
 
         processor.processBlock (buffer, midi);

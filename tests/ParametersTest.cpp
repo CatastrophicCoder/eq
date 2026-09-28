@@ -21,7 +21,7 @@ TEST_CASE ("Parameter IDs carry the band index", "[parameters]")
     CHECK (Parameters::numBands == 16);
 }
 
-TEST_CASE ("Every band has all six parameters and nothing else exists yet", "[parameters]")
+TEST_CASE ("Every band has all six parameters, plus the three output parameters", "[parameters]")
 {
     juce::ScopedJuceInitialiser_GUI juce;
     ParametricEQAudioProcessor p;
@@ -33,7 +33,29 @@ TEST_CASE ("Every band has all six parameters and nothing else exists yet", "[pa
             CHECK (p.getValueTreeState().getParameter (Parameters::id (band, field)) != nullptr);
         }
 
-    CHECK (p.getParameters().size() == 6 * Parameters::numBands);
+    CHECK (p.getValueTreeState().getParameter (Parameters::outputGain) != nullptr);
+    CHECK (p.getValueTreeState().getParameter (Parameters::autoGain) != nullptr);
+    CHECK (p.getValueTreeState().getParameter (Parameters::outputInvert) != nullptr);
+    CHECK (p.getParameters().size() == 6 * Parameters::numBands + 3);
+}
+
+TEST_CASE ("Output parameters have the planned ranges, defaults and hints", "[parameters]")
+{
+    juce::ScopedJuceInitialiser_GUI juce;
+    ParametricEQAudioProcessor p;
+
+    auto& gain = param (p, Parameters::outputGain);
+    CHECK_THAT (gain.getNormalisableRange().start, WithinRel (-30.0f));
+    CHECK_THAT (gain.getNormalisableRange().end, WithinRel (30.0f));
+    CHECK_THAT (value (p, Parameters::outputGain), WithinAbs (0.0f, 1e-6f));
+
+    CHECK (dynamic_cast<juce::AudioParameterBool*> (&param (p, Parameters::autoGain)) != nullptr);
+    CHECK (dynamic_cast<juce::AudioParameterBool*> (&param (p, Parameters::outputInvert)) != nullptr);
+    CHECK_THAT (value (p, Parameters::autoGain), WithinAbs (0.0f, 0.0f));
+    CHECK_THAT (value (p, Parameters::outputInvert), WithinAbs (0.0f, 0.0f));
+
+    for (auto* id : { Parameters::outputGain, Parameters::autoGain, Parameters::outputInvert })
+        CHECK (param (p, id).getVersionHint() == 2);
 }
 
 TEST_CASE ("Band parameters have the planned ranges and choices", "[parameters]")

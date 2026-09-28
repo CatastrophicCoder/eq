@@ -13,6 +13,11 @@ namespace Parameters
 {
     inline constexpr int numBands = 16;
 
+    /** Output stage (M2 stage 4). */
+    inline constexpr const char* outputGain   = "output_gain";
+    inline constexpr const char* autoGain     = "auto_gain";
+    inline constexpr const char* outputInvert = "output_invert";
+
     /** e.g. id (3, "freq") == "band3_freq". Fields: freq, gain, q, type, slope, enabled. */
     juce::String id (int band, const char* field);
 

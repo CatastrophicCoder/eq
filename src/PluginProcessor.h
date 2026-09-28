@@ -1,5 +1,6 @@
 #pragma once
 
+#include "AutoGainUpdater.h"
 #include "dsp/EqBand.h"
 
 #include <juce_audio_processors/juce_audio_processors.h>
@@ -49,6 +50,9 @@ public:
     static constexpr int stateVersion = 2;
 
     juce::AudioProcessorValueTreeState& getValueTreeState() noexcept { return parameters; }
+
+    /** Latest Auto Gain offset from the background thread, in dB (whether or not Auto Gain is on). */
+    float getAutoGainOffsetDb() const noexcept;
 
 private:
     //==============================================================================

@@ -169,3 +169,24 @@ TEST_CASE ("Invalid state is ignored and leaves the defaults", "[state]")
 
     checkDefaults (p);
 }
+
+TEST_CASE ("A version-2 state from before the output parameters loads their defaults", "[state]")
+{
+    juce::ScopedJuceInitialiser_GUI juce;
+
+    juce::XmlElement v2 ("ParametricEQ");
+    v2.setAttribute ("stateVersion", 2);
+    auto* child = v2.createNewChildElement ("PARAM");
+    child->setAttribute ("id", "band4_gain");
+    child->setAttribute ("value", 5.0);
+
+    const auto block = toBlock (v2);
+    ParametricEQAudioProcessor p;
+    set (p, Parameters::outputGain, 9.0f);   // must be reset to its default by the load
+    p.setStateInformation (block.getData(), static_cast<int> (block.getSize()));
+
+    CHECK_THAT (value (p, "band4_gain"), WithinAbs (5.0f, 0.01f));
+    CHECK_THAT (value (p, Parameters::outputGain), WithinAbs (0.0f, 1e-6f));
+    CHECK_THAT (value (p, Parameters::autoGain), WithinAbs (0.0f, 0.0f));
+    CHECK_THAT (value (p, Parameters::outputInvert), WithinAbs (0.0f, 0.0f));
+}
