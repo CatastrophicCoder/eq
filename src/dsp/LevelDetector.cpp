@@ -27,6 +27,7 @@ void LevelDetector::setTimes (double attackMs, double releaseMs) noexcept
 void LevelDetector::reset() noexcept
 {
     meanSquare = 0.0;
+    envelope = 0.0;
     envelopeDb = floorDb;
 }
 
@@ -44,10 +45,9 @@ double LevelDetector::process (double input) noexcept
         linear = std::abs (input);
     }
 
-    const auto levelDb = linear > 0.0 ? std::max (floorDb, 20.0 * std::log10 (linear)) : floorDb;
-
-    // Attack when rising, release when falling; both in dB.
-    const auto coeff = levelDb > envelopeDb ? attackCoeff : releaseCoeff;
-    envelopeDb = levelDb + coeff * (envelopeDb - levelDb);
+    // Attack when rising, release when falling, on the linear level; then dB.
+    const auto coeff = linear > envelope ? attackCoeff : releaseCoeff;
+    envelope = linear + coeff * (envelope - linear);
+    envelopeDb = envelope > 0.0 ? std::max (floorDb, 20.0 * std::log10 (envelope)) : floorDb;
     return envelopeDb;
 }

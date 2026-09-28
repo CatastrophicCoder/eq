@@ -121,8 +121,9 @@ TEST_CASE ("Ratio mode and positive ranges act as their laws say", "[dynamics][d
         auto x = sines (static_cast<int> (fs), 1000.0, -10.0, -10.0);
         run (p, x);
 
-        // The Peak detector smooths in dB, so a steady sine reads below its peak (about
-        // -10.9 dB here). The band pass is unity at 1 kHz: feed the raw tone to a detector.
+        // With a 1 ms attack the Peak follower does not fully catch each cycle, so a steady sine
+        // reads a little below its peak (about -10.4 dB here). The band pass is unity at 1 kHz:
+        // feed the raw tone to a detector.
         LevelDetector detector;
         detector.prepare (fs);
         detector.setTimes (d.attack, d.release);

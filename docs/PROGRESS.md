@@ -113,6 +113,17 @@ Newest first. Move each item here from "Open decisions" in `CLAUDE.md` once it i
 
 Newest first. One entry per session, a few lines each.
 
+### 2026-09-29 — M8 planning and detector change (step 0)
+
+- Decisions recorded (phase mode as state property; same tap count at every rate; 8k/16k/32k taps; dynamic bands as
+  IIR after the FIR, detecting the delayed signal; classic follower for Peak and RMS).
+- Done: `LevelDetector` now runs attack/release on the linear level and converts to dB afterwards.
+- Tests added / passing: 225/225. Attack/release time constants on the linear level; release falls 8.69 dB per
+  release time (RMS: analytic value with its 10 ms mean square, -6.78 dB after the first 100 ms); at default
+  10/100 ms a steady sine reads within 1.3 dB of its peak (worst measured -1.16 dB), RMS reads the RMS. Stage 2
+  processing tests pass unchanged. pluginval strictness 5 (VST3, AU) and auval pass.
+- Next step: M8 step 1, linear-phase FIR design.
+
 ### 2026-09-28 — M7 done
 
 - Owner tested dynamics in Logic and marked M7 done. The side-chain was not tried in Logic (routing not found); it is

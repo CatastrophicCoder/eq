@@ -2,8 +2,10 @@
 
 //==============================================================================
 /** Level detector for dynamic bands (M7): Peak (rectified signal) or RMS (10 ms
-    mean square), converted to dB, then an attack/release envelope in the dB
-    domain (one-pole each, time constant = the attack or release time).
+    mean square), followed by a classic attack/release envelope on the linear
+    level (one-pole each, time constant = the attack or release time), then
+    converted to dB (decision 2026-09-29; replaces smoothing in the dB domain).
+    After the signal stops, the level falls 8.69 dB per release time.
 */
 class LevelDetector
 {
@@ -27,5 +29,5 @@ private:
     double sampleRate = 48000.0;
     Mode mode = Mode::peak;
     double attackCoeff = 0.0, releaseCoeff = 0.0, rmsCoeff = 0.0;
-    double meanSquare = 0.0, envelopeDb = floorDb;
+    double meanSquare = 0.0, envelope = 0.0, envelopeDb = floorDb;
 };

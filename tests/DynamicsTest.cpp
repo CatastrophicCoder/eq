@@ -61,7 +61,8 @@ TEST_CASE ("After the signal stops the level falls 8.69 dB per release time", "[
             d.process (0.5);
         const auto start = d.getLevelDb();
 
-        // RMS first empties its 10 ms mean square, so allow it a little extra drop.
+        // RMS: the 10 ms mean square still feeds the follower as it empties (amplitude time constant
+        // ta = 20 ms), so after the first release time tr the level is (tr e^-1 - ta e^-tr/ta) / (tr - ta).
         for (int n = 0; n < static_cast<int> (0.1 * fs); ++n)
             d.process (0.0);
         const auto afterOne = d.getLevelDb();
@@ -74,7 +75,7 @@ TEST_CASE ("After the signal stops the level falls 8.69 dB per release time", "[
         if (mode == LevelDetector::Mode::peak)
             CHECK_THAT (start - afterOne, WithinAbs (perReleaseTime, 0.01));
         else
-            CHECK_THAT (start - afterOne, WithinAbs (perReleaseTime, 1.5));
+            CHECK_THAT (start - afterOne, WithinAbs (-20.0 * std::log10 ((100.0 * std::exp (-1.0) - 20.0 * std::exp (-5.0)) / 80.0), 0.05));
         CHECK_THAT (afterOne - afterTwo, WithinAbs (perReleaseTime, 0.2));
     }
 }

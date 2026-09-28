@@ -106,7 +106,7 @@ Decided; details and dates in `docs/PROGRESS.md`.
   in the repo (owner's decision).
 - Dynamic EQ (M7): Bell and shelves; gain law Range or Ratio per band; detector filtered to the band's region
   (bell band pass, shelves lowpass/highpass) from its own input or the optional "Sidechain" bus (falls back to
-  its own input); Peak or RMS with attack/release in dB; per-channel for Stereo bands; coefficients every 16
+  its own input); Peak or RMS followed by a linear-level attack/release follower, then dB (2026-09-29); per-channel for Stereo bands; coefficients every 16
   samples. Auto Gain uses static gains. Display shows live gain plus the range. Presets store dynamics (format 2).
 - Milestone order after 5: per-band stereo (6), dynamic EQ (7), linear phase (8).
 
