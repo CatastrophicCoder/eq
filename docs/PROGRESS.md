@@ -11,7 +11,7 @@ Milestone definitions and "done when" criteria are in [PLAN.md](PLAN.md#mileston
 | 1 | One bell band | Done | Knobs, smoothing, state save/load and measured response done; tests, pluginval and auval pass. Owner listening check in Logic: no clicks (session save/reopen not reported separately) |
 | 2 | Full band set, tier 1 | Done | All 5 stages built and validated (tests Debug + Release, pluginval, auval). Owner listening check in Logic: no clicks (other checklist items not reported separately) |
 | 3 | Response curve display | Done | Built and validated (108 tests, pluginval, auval); owner reviewed the layout and colours |
-| 4 | Interactive display | Not started | |
+| 4 | Interactive display | In progress | |
 | 5 | Spectrum analyzer | Not started | |
 | 6 | Per-band stereo | Not started | |
 | 7 | Dynamic EQ | Not started | |
@@ -29,6 +29,10 @@ Newest first. Move each item here from "Open decisions" in `CLAUDE.md` once it i
 | 2026-09-28 | Look and feel: the overall layout follows the reference EQ (full-window display, dB scale and meter on the right, thin top and bottom bars, band panel over the lower display); components and styling our own; no names, logos or copied assets | Own look with functional conventions; close imitation kept private; close imitation in the public repo; decide later with neutral styling | Chosen by owner (option 3, limited to the overall layout). Trade-dress risk noted at decision time |
 | 2026-09-28 | Colours similar in character to the reference; values chosen by us, not sampled from the reference image | Own palette; close to the reference | Chosen by owner |
 | 2026-09-28 | M3 band controls: reference-style band panel at the bottom of the display, with 16 band tabs until M4's click-to-select | Panel with tabs; display with the M2 grid below | Chosen by owner |
+| 2026-09-28 | Double-click on empty display space adds a Bell (first free band, at the clicked frequency and gain); with all 16 in use nothing is added and a message is shown | Always Bell; type by position | Chosen by owner |
+| 2026-09-28 | Double-click on a node disables that band | Disable; reset gain; nothing | Chosen by owner |
+| 2026-09-28 | Band tabs removed in M4: bands are selected on the display; the band panel shows the primary selection and hides when nothing is selected | Remove tabs; keep tabs too | Chosen by owner |
+| 2026-09-28 | Nodes of types without gain (cuts, notch, band pass, all pass) sit on the 0 dB line | 0 dB line; on the band's curve | Chosen by owner |
 | 2026-09-28 | Band colours follow the visible spectrum: band 1 dark violet (390 nm) to band 16 red (645 nm), evenly spaced in wavelength (Bruton 1996); tab numbers use a lightened tint (WCAG contrast >= 4.5) | End at 645 nm; keep 390-700 nm (bands 14-16 identical red); even in hue. Tabs: lighter tint; exact band colour | Chosen by owner; replaces the golden-ratio hues |
 | 2026-09-28 | Text scaling with the window: not needed for now | Scale fonts and bar heights; leave | Owner: not an issue for now |
 | 2026-09-28 | Display range (3/6/12/30 dB) saved with the session as a non-automatable state property | Save in session; not saved | Chosen by owner |
