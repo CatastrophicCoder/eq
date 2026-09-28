@@ -9,7 +9,7 @@ Milestone definitions and "done when" criteria are in [PLAN.md](PLAN.md#mileston
 | --- | --- | --- | --- |
 | 0 | Toolchain | Done | Command-line build, tests, pluginval and auval pass; owner confirmed CLion build and AU load in Logic (Standalone run not reported separately) |
 | 1 | One bell band | Done | Knobs, smoothing, state save/load and measured response done; tests, pluginval and auval pass. Owner listening check in Logic: no clicks (session save/reopen not reported separately) |
-| 2 | Full band set, tier 1 | In progress | All 5 stages built and validated (tests Debug + Release, pluginval, auval). Waiting on owner listening check in Logic |
+| 2 | Full band set, tier 1 | Done | All 5 stages built and validated (tests Debug + Release, pluginval, auval). Owner listening check in Logic: no clicks (other checklist items not reported separately) |
 | 3 | Response curve display | Not started | |
 | 4 | Interactive display | Not started | |
 | 5 | Spectrum analyzer | Not started | |
@@ -81,8 +81,8 @@ Newest first. One entry per session, a few lines each.
   `changeItemText`. The first fit test passed on blank menus; it now requires the shown text to equal the
   selected item. In Release, the allocation counter's self-test was optimised away (elided new/delete);
   it now calls `::operator new` directly.
-- Open issues: owner listening check in Logic.
-- Next step: listening check, then mark M2 done.
+- 2026-09-28: owner listening check in Logic, no clicks. M2 marked done.
+- Next step: M3 (response curve display).
 
 ### 2026-09-28 — M2 stage 4
 
