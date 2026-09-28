@@ -26,7 +26,8 @@ add_executable(SpectralFaultTests
     PresetTest.cpp
     DynamicsTest.cpp
     DynamicsProcessingTest.cpp
-    LinearPhaseDesignTest.cpp)
+    LinearPhaseDesignTest.cpp
+    LinearPhaseProcessingTest.cpp)
 
 # Link against the plugin's shared-code library. Its JUCE modules are linked
 # PRIVATE there, so take its include paths and defines explicitly instead of

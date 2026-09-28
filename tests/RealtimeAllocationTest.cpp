@@ -15,12 +15,14 @@
 
 namespace
 {
-    std::atomic<bool> counting { false };
+    // Counts only on the thread that opened the counter (the "audio" thread in these tests):
+    // background threads such as the linear-phase designer allocate by design.
+    thread_local bool counting = false;
     std::atomic<int> allocations { 0 };
 
     void* allocate (std::size_t size, std::size_t alignment = 0)
     {
-        if (counting.load (std::memory_order_relaxed))
+        if (counting)
             allocations.fetch_add (1, std::memory_order_relaxed);
 
         void* p = nullptr;
@@ -231,4 +233,51 @@ TEST_CASE ("AnalyzerFifo::push does not allocate", "[realtime]")
         fifo.push (channels, 2, 512);   // fills, then drops
 
     CHECK (counter.count() == 0);
+}
+
+
+TEST_CASE ("Processor processBlock does not allocate in Linear phase mode, including filter swaps", "[realtime][linearphase]")
+{
+    juce::ScopedJuceInitialiser_GUI juce;
+    ParametricEQAudioProcessor processor;
+    TestParameters::setBand (processor, 2, FilterType::bell, 800.0f, 4.0f, 1.0f, 3, true);
+    TestParameters::setBand (processor, 5, FilterType::highShelf, 6000.0f, -3.0f, 0.71f, 3, true);
+    TestParameters::set (processor, Parameters::id (5, "channel"), static_cast<float> (ChannelMode::side));   // cross terms
+    TestParameters::setBand (processor, 7, FilterType::bell, 2000.0f, 0.0f, 2.0f, 3, true);
+    TestParameters::set (processor, "band7_dyn", 1.0f);                                                        // IIR after the FIR
+    processor.setLinearPhase (true);
+    processor.setLinearPhaseLength (0);
+    processor.setPlayConfigDetails (2, 2, 48000.0, 512);
+    processor.prepareToPlay (48000.0, 512);
+
+    juce::AudioBuffer<float> buffer (2, 512);
+    juce::Random random (4);
+    juce::MidiBuffer midi;
+    auto* gain = processor.getValueTreeState().getParameter ("band2_gain");
+
+    // Let the first filter settle, then count while parameters change and new filters arrive.
+    for (int block = 0; block < 200 && ! processor.isPhaseModeSettled(); ++block)
+    {
+        processor.processBlock (buffer, midi);
+        juce::Thread::sleep (2);
+    }
+    REQUIRE (processor.isPhaseModeSettled());
+
+    ScopedAllocationCounter counter;
+
+    for (int block = 0; block < 300; ++block)
+    {
+        for (int ch = 0; ch < 2; ++ch)
+            for (int i = 0; i < 512; ++i)
+                buffer.setSample (ch, i, 0.25f * (random.nextFloat() - 0.5f));
+
+        if (block % 40 == 0)
+            gain->setValue (static_cast<float> (block % 120) / 120.0f);   // triggers a redesign and swap
+
+        processor.processBlock (buffer, midi);
+        juce::Thread::sleep (1);   // give the designer and loader threads time
+    }
+
+    CHECK (counter.count() == 0);
+    CHECK (processor.getLinearPhaseSwapCount() > 1);   // filters really were swapped while counting
 }

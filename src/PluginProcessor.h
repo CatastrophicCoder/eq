@@ -78,6 +78,21 @@ public:
     /** Current settings of all 16 bands, including their in-use flags. */
     std::array<BandSettings, 16> getBandSettings() const;
 
+    /** Phase mode (M8, decision 2026-09-29): hidden state properties "linearPhase" and
+        "linearPhaseLength" (index into LinearPhaseDesigner::tapCounts). Linear phase reports
+        tapCounts[length] / 2 samples of latency. Message thread only.
+    */
+    bool isLinearPhase() const;
+    void setLinearPhase (bool shouldBeLinear);
+    int getLinearPhaseLength() const;
+    void setLinearPhaseLength (int index);
+
+    /** True when the audio runs in the requested mode with its filter loaded and no fade pending; any thread. */
+    bool isPhaseModeSettled() const noexcept;
+
+    /** Number of linear-phase filters handed to the convolution so far (tests); any thread. */
+    int getLinearPhaseSwapCount() const noexcept;
+
     /** A band's current dynamic gain change in dB per filter channel (M7); any thread. */
     float getLiveGainChangeDb (int band, int channel) const noexcept;
 

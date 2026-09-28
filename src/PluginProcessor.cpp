@@ -387,3 +387,10 @@ juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {
     return new ParametricEQAudioProcessor();
 }
+
+bool ParametricEQAudioProcessor::isLinearPhase() const { return false; }
+void ParametricEQAudioProcessor::setLinearPhase (bool) {}
+int ParametricEQAudioProcessor::getLinearPhaseLength() const { return 0; }
+void ParametricEQAudioProcessor::setLinearPhaseLength (int) {}
+bool ParametricEQAudioProcessor::isPhaseModeSettled() const noexcept { return false; }
+int ParametricEQAudioProcessor::getLinearPhaseSwapCount() const noexcept { return 0; }

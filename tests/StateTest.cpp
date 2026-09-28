@@ -82,8 +82,8 @@ TEST_CASE ("Saved state carries version 3", "[state]")
 
     const auto xml = juce::AudioProcessor::getXmlFromBinary (saved.getData(), static_cast<int> (saved.getSize()));
     REQUIRE (xml != nullptr);
-    CHECK (xml->getIntAttribute ("stateVersion", -1) == 3);
-    CHECK (ParametricEQAudioProcessor::stateVersion == 3);
+    CHECK (xml->getIntAttribute ("stateVersion", -1) == 4);
+    CHECK (ParametricEQAudioProcessor::stateVersion == 4);
 }
 
 TEST_CASE ("A version-1 session (M1) loads as an enabled bell on band 1", "[state]")
