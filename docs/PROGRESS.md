@@ -13,7 +13,7 @@ Milestone definitions and "done when" criteria are in [PLAN.md](PLAN.md#mileston
 | 3 | Response curve display | Done | Built and validated (108 tests, pluginval, auval); owner reviewed the layout and colours |
 | 4 | Interactive display | Done | Built and validated (135 tests, pluginval, auval). Owner re-check in Logic: everything tested, looks good |
 | 5 | Spectrum analyzer | Done | Built and validated (157 tests, pluginval, auval); owner tested in Logic |
-| 6 | Per-band stereo | Not started | |
+| 6 | Per-band stereo | In progress | |
 | 7 | Dynamic EQ | Not started | |
 | 8 | Linear phase mode | Not started | |
 | 9 | Deferred features | Not started | |
@@ -30,6 +30,10 @@ Newest first. Move each item here from "Open decisions" in `CLAUDE.md` once it i
 | 2026-09-28 | Colours similar in character to the reference; values chosen by us, not sampled from the reference image | Own palette; close to the reference | Chosen by owner |
 | 2026-09-28 | M3 band controls: reference-style band panel at the bottom of the display, with 16 band tabs until M4's click-to-select | Panel with tabs; display with the M2 grid below | Chosen by owner |
 | 2026-09-28 | Double-click on empty display space adds a Bell (first free band, at the clicked frequency and gain); with all 16 in use nothing is added and a message is shown | Always Bell; type by position | Chosen by owner |
+| 2026-09-28 | Per-band channel mode Stereo / Left / Right / Mid / Side (band<n>_channel, hint 3, default Stereo); Mid/Side encoded and decoded around each M/S band | - | Planned by Claude: per-band transform so L/R and M/S bands can be mixed in one chain |
+| 2026-09-28 | Auto Gain with channel modes: exact 2x2 transfer-matrix model (power gain ||M||^2/2, K-weighted), assuming uncorrelated equal-level L and R | Exact 2x2 model; half weight; ignore one-channel bands | Chosen by owner |
+| 2026-09-28 | Summed curve with channel modes: one curve for Stereo only; L and R curves with L/R bands; M and S curves with M/S bands only; mixed: L and R from the matrix diagonal (approximate) | Two curves as needed; one curve with all bands; one curve with Stereo bands only | Chosen by owner |
+| 2026-09-28 | Nodes show their channel mode as a letter badge (L/R/M/S, none for Stereo) | Letter badge; panel and menu only | Chosen by owner |
 | 2026-09-28 | Analyzer modes Off / Pre / Post / Pre+Post (default Pre+Post) | Selectable four modes; post only; pre+post always | Chosen by owner |
 | 2026-09-28 | Analyzer slope compensation 4.5 dB/oct, pivot 1 kHz | 4.5; 3; none; selectable | Chosen by owner |
 | 2026-09-28 | Analyzer dB range selectable 60 / 90 / 120 dB (default 90) | 0 to -90 fixed; 0 to -120 fixed; selectable | Chosen by owner |
