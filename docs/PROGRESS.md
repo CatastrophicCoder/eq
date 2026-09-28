@@ -9,7 +9,7 @@ Milestone definitions and "done when" criteria are in [PLAN.md](PLAN.md#mileston
 | --- | --- | --- | --- |
 | 0 | Toolchain | Done | Command-line build, tests, pluginval and auval pass; owner confirmed CLion build and AU load in Logic (Standalone run not reported separately) |
 | 1 | One bell band | Done | Knobs, smoothing, state save/load and measured response done; tests, pluginval and auval pass. Owner listening check in Logic: no clicks (session save/reopen not reported separately) |
-| 2 | Full band set, tier 1 | In progress | Stages 1-3 of 5 done (shape designs; EqBand; 16 bands, parameters, state v2). Next: stage 4, output gain, Auto Gain, phase invert |
+| 2 | Full band set, tier 1 | In progress | Stages 1-4 of 5 done (shape designs; EqBand; 16 bands and state v2; output gain, Auto Gain, phase invert). Next: stage 5, grid editor and validation |
 | 3 | Response curve display | Not started | |
 | 4 | Interactive display | Not started | |
 | 5 | Spectrum analyzer | Not started | |
@@ -26,6 +26,10 @@ Newest first. Move each item here from "Open decisions" in `CLAUDE.md` once it i
 
 | Date | Decision | Options considered | Reason |
 | --- | --- | --- | --- |
+| 2026-09-28 | Auto Gain formula: K-weighted (BS.1770-5) pink-noise power average | Unweighted power average; K-weighted power; mean dB with clamp (mean dB breaks with deep cuts) | Chosen by owner |
+| 2026-09-28 | Auto Gain excludes Low Cut and High Cut | All enabled bands; exclude cuts | Chosen by owner |
+| 2026-09-28 | Auto Gain limit +-24 dB | +-12; +-24; +-30 dB | Chosen by owner |
+| 2026-09-28 | Auto Gain computed on a background thread | Background thread; message-thread timer; coarse on the audio thread | Chosen by owner. Implementation polls parameters every 20 ms instead of using listeners (listeners can fire on the audio thread and depend on the host's notification path) |
 | 2026-09-28 | Band defaults: per-type presets, all disabled (1 Low Cut 30 Hz, 2 Low Shelf 80 Hz, 3-14 Bells 120 Hz-12 kHz log-spaced, 15 High Shelf 10 kHz, 16 High Cut 18 kHz; 0 dB; bells Q 1, others Q 0.71; cuts 24 dB/oct) | Off and spread; off at 1 kHz; off with per-type presets | Chosen by owner |
 | 2026-09-28 | Band 1 is disabled in a new instance (a new instance is a bit-exact pass-through); M1 sessions migrate to band 1 = enabled bell | Enabled bell at 0 dB; disabled like the rest | Chosen by owner |
 | 2026-09-28 | CPU check is an always-on test: 16 Brickwall bands at 96 kHz stereo must run faster than real time in any build | Hidden Release-only benchmark; always-on; skip | Chosen by owner |
@@ -57,6 +61,22 @@ Newest first. Move each item here from "Open decisions" in `CLAUDE.md` once it i
 ## Session log
 
 Newest first. One entry per session, a few lines each.
+
+### 2026-09-28 — M2 stage 4
+
+- Done: `output_gain` (-30..+30 dB, continuous), `auto_gain`, `output_invert` (hint 2, no state bump).
+  `KWeighting` (BS.1770-5 Tables 1-2, read from the standard's PDF), `AutoGain`, `AutoGainUpdater` thread,
+  output stage with one smoothed gain. `Parameters::toBandSettings` shared by processor and thread.
+- Tests added / passing: 79/79. K-weighting +0.691 dB at 997 Hz (the standard's note 1); Auto Gain vs an
+  independent 8192-point integration within 0.05 dB; measured K-weighted loudness of the whole plugin vs the
+  model: 4.5e-7 dB (tone bands only) and 9e-8 dB (with an excluded cut); bit-exact invert and bypass;
+  click-free gain and polarity changes; offset published with no processBlock calls; zero allocations with
+  Auto Gain on. pluginval strictness 5 (VST3, AU) and auval pass.
+- Found: a 0.01 dB snapping interval turns 0 dB into -6.7e-7 dB in float; output_gain made continuous.
+  Band gains keep the M1 interval (a "0 dB" bell is -6.7e-7 dB; inaudible, not changed).
+  Two test mistakes fixed: waiting for any non-zero offset raced the thread; the expectation with an excluded
+  cut assumed K-weighted power is separable, which it is not where tone bands and the cut overlap.
+- Next step: stage 5, grid editor for 16 bands plus output controls, then M2 validation.
 
 ### 2026-09-28 — M2 stage 3
 

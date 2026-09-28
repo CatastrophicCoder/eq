@@ -70,7 +70,11 @@ Decided; details and dates in `docs/PROGRESS.md`.
 - Notch, All Pass and first-order cut sections have no published matched formula; they are our own
   derivation from Vicanek 2016's building blocks, marked as such in the code.
 - Type, slope and enable changes crossfade old and new filter over ~20 ms.
-- Auto Gain is static: an offset computed from the summed EQ curve, not measured from the audio.
+- Auto Gain is static: an offset computed from the EQ curve, not measured from the audio.
+  Formula: -10 log10 of the K-weighted (ITU-R BS.1770-5 Tables 1-2, as a weight) pink-noise power ratio
+  over 256 log-spaced points 20 Hz-20 kHz, Low Cut and High Cut excluded, clamped to +-24 dB.
+  Computed on a background thread (`AutoGainUpdater`, polls parameters every 20 ms), published via an atomic.
+- Output stage: bands -> output gain x Auto Gain x polarity, one 20 ms linear ramp (polarity ramps through zero).
 - Output has one global phase-invert switch.
 - Milestone order after 5: per-band stereo (6), dynamic EQ (7), linear phase (8).
 
