@@ -215,6 +215,7 @@ TEST_CASE ("Controls a type does not use are greyed out", "[editor]")
 {
     EditorFixture f;
     auto& panel = f.editor.getBandPanel();
+    setBand (f.processor, 3, FilterType::bell, 500.0f, 0.0f, 1.0f, 3, true);   // enabled: disabled bands grey everything
     panel.setBand (3);
 
     for (int t = 0; t < FilterTypes::count; ++t)
@@ -343,6 +344,7 @@ TEST_CASE ("Editor snapshot (renders PNGs to $EQ_SNAPSHOT_DIR)", "[.snapshot]")
     setBand (f.processor, 8, FilterType::bell, 800.0f, 9.0f, 0.8f, 3, true);
     setBand (f.processor, 10, FilterType::bell, 2500.0f, -6.0f, 1.2f, 3, true);
     setBand (f.processor, 15, FilterType::highShelf, 9000.0f, 3.0f, 0.71f, 3, true);
+    setBand (f.processor, 12, FilterType::bell, 5500.0f, 6.0f, 2.0f, 3, false);   // disabled: grey
     f.editor.refreshControls();
     f.editor.getDisplay().setSelection ({ 8, 10 }, 8);
 

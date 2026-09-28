@@ -108,7 +108,8 @@ void ParametricEQAudioProcessor::pushParametersToBands() noexcept
     {
         const auto& p = bandParameters[i];
         bands[i].setTargets (Parameters::toBandSettings (p.type->load(), p.frequency->load(), p.gain->load(),
-                                                         p.q->load(), p.slope->load(), p.enabled->load(), true));
+                                                         p.q->load(), p.slope->load(), p.enabled->load(),
+                                                         bandInUse[i].load (std::memory_order_relaxed)));
     }
 }
 
@@ -163,26 +164,40 @@ void ParametricEQAudioProcessor::setDisplayRangeDb (double rangeDb)
         parameters.state.setProperty (displayRangeProperty, rangeDb, nullptr);
 }
 
-// Not implemented yet (M4 band states).
+namespace
+{
+    juce::Identifier inUseProperty (int band)
+    {
+        return juce::Identifier ("band" + juce::String (band) + "_used");
+    }
+}
+
 bool ParametricEQAudioProcessor::isBandInUse (int band) const noexcept
 {
-    return parameters.getRawParameterValue (Parameters::id (band, "enabled"))->load() >= 0.5f;
+    return band >= 1 && band <= static_cast<int> (bandInUse.size())
+        && bandInUse[static_cast<size_t> (band - 1)].load (std::memory_order_relaxed);
 }
 
 void ParametricEQAudioProcessor::setBandInUse (int band, bool inUse)
 {
-    juce::ignoreUnused (band, inUse);
+    if (band < 1 || band > static_cast<int> (bandInUse.size()))
+        return;
+
+    parameters.state.setProperty (inUseProperty (band), inUse, nullptr);
+    bandInUse[static_cast<size_t> (band - 1)].store (inUse, std::memory_order_relaxed);
 }
 
 std::array<BandSettings, 16> ParametricEQAudioProcessor::getBandSettings() const
 {
     std::array<BandSettings, 16> result;
+
     for (size_t i = 0; i < result.size(); ++i)
     {
         const auto& p = bandParameters[i];
-        result[i] = Parameters::toBandSettings (p.type->load(), p.frequency->load(), p.gain->load(),
-                                                p.q->load(), p.slope->load(), p.enabled->load(), true);
+        result[i] = Parameters::toBandSettings (p.type->load(), p.frequency->load(), p.gain->load(), p.q->load(),
+                                                p.slope->load(), p.enabled->load(), bandInUse[i].load (std::memory_order_relaxed));
     }
+
     return result;
 }
 
@@ -230,6 +245,15 @@ void ParametricEQAudioProcessor::setStateInformation (const void* data, int size
 
         setParameter (Parameters::id (1, "type"), static_cast<float> (FilterType::bell));
         setParameter (Parameters::id (1, "enabled"), 1.0f);
+    }
+
+    // Version 3 stores which bands are in use; before that, a band was in use when it was enabled.
+    for (int band = 1; band <= Parameters::numBands; ++band)
+    {
+        const auto inUse = version >= 3
+                             ? static_cast<bool> (parameters.state.getProperty (inUseProperty (band), false))
+                             : parameters.getRawParameterValue (Parameters::id (band, "enabled"))->load() >= 0.5f;
+        setBandInUse (band, inUse);
     }
 }
 

@@ -10,7 +10,7 @@ std::vector<NodeLayout::Node> NodeLayout::compute (std::span<const BandSettings>
     for (size_t i = 0; i < bands.size(); ++i)
     {
         const auto& b = bands[i];
-        if (! b.enabled)
+        if (! b.inUse)
             continue;
 
         const auto usesGain = FilterTypes::usesGain (b.type);
@@ -19,7 +19,8 @@ std::vector<NodeLayout::Node> NodeLayout::compute (std::span<const BandSettings>
 
         nodes.push_back ({ static_cast<int> (i) + 1,
                            { axis.xForFrequency (f), juce::jlimit (plot.getY(), plot.getBottom(), y) },
-                           usesGain });
+                           usesGain,
+                           b.enabled });
     }
 
     return nodes;

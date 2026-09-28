@@ -84,11 +84,17 @@ void BandPanel::refreshControlStates()
     const auto raw = state.getRawParameterValue (Parameters::id (band, "type"))->load();
     const auto t = static_cast<FilterType> (juce::jlimit (0, FilterTypes::count - 1, juce::roundToInt (raw)));
 
-    gain.setEnabled (FilterTypes::usesGain (t));
-    gainCaption.setEnabled (FilterTypes::usesGain (t));
-    q.setEnabled (FilterTypes::usesQ (t));
-    qCaption.setEnabled (FilterTypes::usesQ (t));
-    slope.setEnabled (FilterTypes::usesSlope (t));
+    // A disabled band cannot be edited until it is enabled again: only its On switch stays active.
+    const auto on = state.getRawParameterValue (Parameters::id (band, "enabled"))->load() >= 0.5f;
+
+    type.setEnabled (on);
+    frequency.setEnabled (on);
+    frequencyCaption.setEnabled (on);
+    gain.setEnabled (on && FilterTypes::usesGain (t));
+    gainCaption.setEnabled (on && FilterTypes::usesGain (t));
+    q.setEnabled (on && FilterTypes::usesQ (t));
+    qCaption.setEnabled (on && FilterTypes::usesQ (t));
+    slope.setEnabled (on && FilterTypes::usesSlope (t));
 }
 
 void BandPanel::paint (juce::Graphics& g)

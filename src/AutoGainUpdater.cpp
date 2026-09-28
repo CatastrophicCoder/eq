@@ -5,8 +5,8 @@
 
 #include <algorithm>
 
-AutoGainUpdater::AutoGainUpdater (juce::AudioProcessorValueTreeState& state)
-    : juce::Thread ("Auto Gain")
+AutoGainUpdater::AutoGainUpdater (juce::AudioProcessorValueTreeState& state, const std::array<std::atomic<bool>, 16>& bandInUse)
+    : juce::Thread ("Auto Gain"), inUse (bandInUse)
 {
     for (int band = 1; band <= Parameters::numBands; ++band)
     {
@@ -69,7 +69,8 @@ std::array<BandSettings, 16> AutoGainUpdater::snapshot() const
     {
         const auto& p = bandParameters[i];
         result[i] = Parameters::toBandSettings (p.type->load(), p.frequency->load(), p.gain->load(),
-                                                p.q->load(), p.slope->load(), p.enabled->load(), true);
+                                                p.q->load(), p.slope->load(), p.enabled->load(),
+                                                inUse[i].load (std::memory_order_relaxed));
     }
 
     return result;

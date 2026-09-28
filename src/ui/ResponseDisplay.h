@@ -17,12 +17,14 @@ class ParametricEQAudioProcessor;
 /** The log-frequency / dB display: grid, labels, each enabled band's filled
     curve, the summed curve, the dB scale on the right and the range switch.
 
-    Interactive (M4): a node per enabled band. Click selects, Cmd-click toggles,
-    dragging empty space draws a selection rectangle (Shift adds to the
-    selection). Dragging a node moves every selected band (Shift: fine). Wheel
-    or pinch changes Q. Double-click on empty space adds a Bell, on a node
-    disables the band. Right-click opens the type/slope menu. Delete or
-    Backspace disables the selected bands. Every edit is a host gesture.
+    Interactive (M4): a node per band in use (grey when disabled). Click selects,
+    Cmd-click toggles, dragging empty space draws a selection rectangle (Shift
+    adds to the selection). Dragging a node moves every selected enabled band
+    (Shift: fine). Wheel or pinch changes Q. Double-click on empty space adds a
+    Bell in a free slot; on a node it toggles enable/disable. Right-click opens
+    the type/slope/enable/delete menu. Delete or Backspace frees the selected
+    bands. Disabled bands are not editable until enabled. Every edit is a host
+    gesture.
 */
 class ResponseDisplay final : public juce::Component
 {
@@ -51,6 +53,7 @@ public:
 
     static juce::Colour bandColour (int bandNumber);
     static juce::Colour sumColour();
+    static juce::Colour disabledColour();   // disabled bands: grey
 
     //==============================================================================
     // Interaction entry points. The mouse and key callbacks forward here; tests call them directly.
@@ -103,7 +106,8 @@ private:
     std::array<BandSettings, ResponseCurves::numBands> currentBands() const;
     void selectionChanged();
     void addBandAt (juce::Point<float> position);
-    void disableBands (const std::vector<int>& bands);
+    void deleteBands (const std::vector<int>& bands);
+    void setEnabled (const std::vector<int>& bands, bool enabled);
     void scaleQ (juce::Point<float> position, double factor);
     void showMessage (const juce::String& text);
     void paintNodes (juce::Graphics&, const FrequencyAxis&);

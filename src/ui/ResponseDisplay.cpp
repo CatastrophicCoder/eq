@@ -38,6 +38,11 @@ juce::Colour ResponseDisplay::bandColour (int bandNumber)
     return SpectrumColour::fromWavelength (SpectrumColour::wavelengthForBand (bandNumber, ResponseCurves::numBands));
 }
 
+juce::Colour ResponseDisplay::disabledColour()
+{
+    return juce::Colour { 0xff7a7a82 };
+}
+
 juce::Colour ResponseDisplay::sumColour()
 {
     return juce::Colour { 0xfff0b43c };   // amber
@@ -47,10 +52,10 @@ void ResponseDisplay::refresh()
 {
     const auto bands = currentBands();
 
-    // Bands switched off elsewhere (panel, automation, host) leave the selection.
+    // Bands deleted elsewhere leave the selection; disabled ones stay selected.
     auto pruned = false;
     for (auto b : std::vector<int> (selection.getSelected()))
-        if (! bands[static_cast<size_t> (b - 1)].enabled)
+        if (! bands[static_cast<size_t> (b - 1)].inUse)
         {
             selection.remove (b);
             pruned = true;
@@ -164,10 +169,19 @@ void ResponseDisplay::paint (juce::Graphics& g)
 
         for (int b = 0; b < ResponseCurves::numBands; ++b)
         {
-            if (! curves.isBandActive (b))
+            if (! curves.isBandShown (b))
                 continue;
 
             auto outline = curvePath (axis, curves, [this, b] (int k) { return curves.bandDb (b, k); });
+
+            // Disabled: grey outline only, no fill (and not part of the sum).
+            if (! curves.isBandActive (b))
+            {
+                g.setColour (disabledColour().withAlpha (0.6f));
+                g.strokePath (outline, juce::PathStrokeType (1.0f));
+                continue;
+            }
+
             auto fill = outline;
             fill.lineTo (axis.xForFrequency (FrequencyAxis::maxHz), zeroY);
             fill.lineTo (axis.xForFrequency (FrequencyAxis::minHz), zeroY);
@@ -246,7 +260,7 @@ void ResponseDisplay::handlePress (juce::Point<float> position, juce::ModifierKe
     if (numClicks >= 2)
     {
         if (band != 0)
-            disableBands ({ band });
+            setEnabled ({ band }, ! currentBands()[static_cast<size_t> (band - 1)].enabled);
         else
             addBandAt (position);
         return;
@@ -286,13 +300,16 @@ void ResponseDisplay::handlePress (juce::Point<float> position, juce::ModifierKe
         selectionChanged();
     }
 
-    // Drag every selected band, inside one gesture per parameter.
+    // Drag every selected enabled band, inside one gesture per parameter. Disabled bands stay put.
     const auto bands = currentBands();
     std::vector<NodeDragController::BandStart> starts;
 
     for (auto b : selection.getSelected())
     {
         const auto& settings = bands[static_cast<size_t> (b - 1)];
+        if (! settings.isActive())
+            continue;
+
         const auto usesGain = FilterTypes::usesGain (settings.type);
         starts.push_back ({ b, settings.frequencyHz, settings.gainDb, usesGain });
 
@@ -370,7 +387,7 @@ void ResponseDisplay::scaleQ (juce::Point<float> position, double factor)
     for (auto b : targets)
     {
         const auto& settings = bands[static_cast<size_t> (b - 1)];
-        if (FilterTypes::usesQ (settings.type))
+        if (settings.isActive() && FilterTypes::usesQ (settings.type))
             writer.setOnce (b, "q", static_cast<float> (NodeDragController::scaleQ (settings.q, factor)));
     }
 
@@ -394,7 +411,7 @@ bool ResponseDisplay::handleKey (const juce::KeyPress& key)
         if (selection.isEmpty())
             return false;
 
-        disableBands (selection.getSelected());
+        deleteBands (selection.getSelected());
         return true;
     }
 
@@ -407,7 +424,7 @@ void ResponseDisplay::addBandAt (juce::Point<float> position)
     int free = 0;
 
     for (int b = 1; b <= ResponseCurves::numBands && free == 0; ++b)
-        if (! bands[static_cast<size_t> (b - 1)].enabled)
+        if (! bands[static_cast<size_t> (b - 1)].inUse)
             free = b;
 
     if (free == 0)
@@ -425,19 +442,21 @@ void ResponseDisplay::addBandAt (juce::Point<float> position)
     writer.setOnce (free, "gain", static_cast<float> (g));
     writer.setOnce (free, "q", 1.0f);
     writer.setOnce (free, "enabled", 1.0f);
+    processor.setBandInUse (free, true);
 
     selection.select (free);
     selectionChanged();
     refresh();
 }
 
-void ResponseDisplay::disableBands (const std::vector<int>& bands)
+void ResponseDisplay::deleteBands (const std::vector<int>& bands)
 {
     const auto targets = bands;   // copy: the selection may be what we were given
 
     for (auto b : targets)
     {
         writer.setOnce (b, "enabled", 0.0f);
+        processor.setBandInUse (b, false);
         selection.remove (b);
     }
 
@@ -445,25 +464,36 @@ void ResponseDisplay::disableBands (const std::vector<int>& bands)
     refresh();
 }
 
+void ResponseDisplay::setEnabled (const std::vector<int>& bands, bool enabled)
+{
+    for (auto b : bands)
+        writer.setOnce (b, "enabled", enabled ? 1.0f : 0.0f);
+
+    repaint();
+    refresh();
+}
+
 juce::PopupMenu ResponseDisplay::buildNodeMenu (int band) const
 {
     const auto settings = currentBands()[static_cast<size_t> (band - 1)];
+    const auto on = settings.enabled;   // a disabled band: only Enable and Delete are available
     juce::PopupMenu menu;
 
     for (int t = 0; t < FilterTypes::count; ++t)
-        menu.addItem (menuTypeBase + t, FilterTypes::names[t], true, static_cast<int> (settings.type) == t);
+        menu.addItem (menuTypeBase + t, FilterTypes::names[t], on, static_cast<int> (settings.type) == t);
 
     if (FilterTypes::usesSlope (settings.type))
     {
         juce::PopupMenu slopes;
         for (int sl = 0; sl < CutSlope::count; ++sl)
-            slopes.addItem (menuSlopeBase + sl, CutSlope::labels[sl], true, settings.slopeIndex == sl);
+            slopes.addItem (menuSlopeBase + sl, CutSlope::labels[sl], on, settings.slopeIndex == sl);
         menu.addSeparator();
-        menu.addSubMenu ("Slope", slopes);
+        menu.addSubMenu ("Slope", slopes, on);
     }
 
     menu.addSeparator();
-    menu.addItem (menuToggleEnable, "Disable");
+    menu.addItem (menuToggleEnable, on ? "Disable" : "Enable");
+    menu.addItem (menuDelete, "Delete");
     return menu;
 }
 
@@ -473,21 +503,30 @@ void ResponseDisplay::applyNodeMenuResult (int band, int itemId)
         return;   // menu dismissed
 
     const auto targets = selection.contains (band) ? selection.getSelected() : std::vector<int> { band };
+    const auto bands = currentBands();
 
-    if (itemId == menuToggleEnable)
+    if (itemId == menuDelete)
     {
-        disableBands (targets);
+        deleteBands (targets);
         return;
     }
 
-    if (itemId >= menuSlopeBase && itemId < menuSlopeBase + CutSlope::count)
+    if (itemId == menuToggleEnable)
     {
-        for (auto b : targets)
-            writer.setOnce (b, "slope", static_cast<float> (itemId - menuSlopeBase));
+        // Every target follows the clicked band: "Disable" disables them all, "Enable" enables them all.
+        setEnabled (targets, ! bands[static_cast<size_t> (band - 1)].enabled);
+        return;
     }
-    else if (itemId >= menuTypeBase && itemId < menuTypeBase + FilterTypes::count)
+
+    // Type and slope changes skip disabled bands.
+    for (auto b : targets)
     {
-        for (auto b : targets)
+        if (! bands[static_cast<size_t> (b - 1)].enabled)
+            continue;
+
+        if (itemId >= menuSlopeBase && itemId < menuSlopeBase + CutSlope::count)
+            writer.setOnce (b, "slope", static_cast<float> (itemId - menuSlopeBase));
+        else if (itemId >= menuTypeBase && itemId < menuTypeBase + FilterTypes::count)
             writer.setOnce (b, "type", static_cast<float> (itemId - menuTypeBase));
     }
 
@@ -590,7 +629,7 @@ void ResponseDisplay::paintNodes (juce::Graphics& g, const FrequencyAxis& axis)
 
     for (const auto& n : NodeLayout::compute (bands, axis))
     {
-        const auto colour = bandColour (n.band);
+        const auto colour = n.enabled ? bandColour (n.band) : disabledColour();
         const auto isSelected = selection.contains (n.band);
         const auto radius = (n.band == hovered || isSelected) ? 7.5f : 6.0f;
 
@@ -607,7 +646,7 @@ void ResponseDisplay::paintNodes (juce::Graphics& g, const FrequencyAxis& axis)
 
     // Readout for the hovered band, else the primary one.
     const auto shown = hovered != 0 ? hovered : selection.getPrimary();
-    if (shown != 0 && bands[static_cast<size_t> (shown - 1)].enabled)
+    if (shown != 0 && bands[static_cast<size_t> (shown - 1)].inUse)
     {
         const auto& b = bands[static_cast<size_t> (shown - 1)];
         auto text = (b.frequencyHz >= 1000.0 ? juce::String (b.frequencyHz / 1000.0, 2) + " kHz"
@@ -625,7 +664,7 @@ void ResponseDisplay::paintNodes (juce::Graphics& g, const FrequencyAxis& axis)
                                      .constrainedWithin (axis.getPlotArea());
                 g.setColour (juce::Colour { 0xd0101014 });
                 g.fillRoundedRectangle (box, 4.0f);
-                g.setColour (bandColour (shown));
+                g.setColour (b.enabled ? bandColour (shown) : disabledColour());
                 g.setFont (juce::FontOptions (12.0f));
                 g.drawText (text, box, juce::Justification::centred);
             }

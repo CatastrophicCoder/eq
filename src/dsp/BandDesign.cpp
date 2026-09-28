@@ -16,7 +16,7 @@ SectionCascade BandDesign::design (const BandSettings& settings, double sampleRa
 {
     SectionCascade cascade;
 
-    if (! settings.enabled)
+    if (! settings.isActive())
         return cascade;
 
     const auto f = std::min (settings.frequencyHz, maxFrequencyRatio * sampleRate);

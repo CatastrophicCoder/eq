@@ -28,7 +28,7 @@ public:
     /** In use and enabled: part of the sum. */
     bool isBandActive (int band) const noexcept   { return active[static_cast<size_t> (band)]; }
     /** In use (enabled or not): has a curve to draw. */
-    bool isBandShown (int band) const noexcept    { return active[static_cast<size_t> (band)]; }   // Not implemented yet.
+    bool isBandShown (int band) const noexcept    { return shown[static_cast<size_t> (band)]; }
     double bandDb (int band, int point) const noexcept;
     double sumDb (int point) const noexcept       { return sum[static_cast<size_t> (point)]; }
 
@@ -37,6 +37,7 @@ private:
     std::array<std::array<double, numPoints>, numBands> curves {};
     std::array<double, numPoints> sum {};
     std::array<bool, numBands> active {};
+    std::array<bool, numBands> shown {};
 
     std::array<BandSettings, numBands> lastBands {};
     double lastSampleRate = 0.0;

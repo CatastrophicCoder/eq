@@ -47,7 +47,7 @@ public:
 
     //==============================================================================
     /** Version written into every saved state; bump when the state format changes. */
-    static constexpr int stateVersion = 2;
+    static constexpr int stateVersion = 3;
 
     juce::AudioProcessorValueTreeState& getValueTreeState() noexcept { return parameters; }
 
@@ -102,7 +102,7 @@ private:
     /** One ramp for gain, Auto Gain and polarity; a polarity switch ramps through zero. */
     juce::SmoothedValue<double, juce::ValueSmoothingTypes::Linear> outputGain;
 
-    AutoGainUpdater autoGainUpdater { parameters };
+    AutoGainUpdater autoGainUpdater { parameters, bandInUse };
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ParametricEQAudioProcessor)
 };

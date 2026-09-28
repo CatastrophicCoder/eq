@@ -19,7 +19,7 @@ class AutoGainUpdater final : private juce::Thread
 public:
     static constexpr int pollIntervalMs = 20;
 
-    explicit AutoGainUpdater (juce::AudioProcessorValueTreeState& state);
+    AutoGainUpdater (juce::AudioProcessorValueTreeState& state, const std::array<std::atomic<bool>, 16>& bandInUse);
     ~AutoGainUpdater() override;
 
     void setSampleRate (double newSampleRate) noexcept;
@@ -42,6 +42,7 @@ private:
     };
 
     std::array<BandParameters, 16> bandParameters {};
+    const std::array<std::atomic<bool>, 16>& inUse;
     std::atomic<double> sampleRate { 48000.0 };
     std::atomic<float> offsetDb { 0.0f };
 };

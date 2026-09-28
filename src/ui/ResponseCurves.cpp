@@ -26,23 +26,28 @@ bool ResponseCurves::update (std::span<const BandSettings> bands, double sampleR
 
     for (size_t b = 0; b < static_cast<size_t> (numBands); ++b)
     {
-        active[b] = b < count && bands[b].enabled;
+        shown[b] = b < count && bands[b].inUse;
+        active[b] = b < count && bands[b].isActive();
         lastBands[b] = b < count ? bands[b] : BandSettings {};
 
-        if (! active[b])
+        if (! shown[b])
         {
             curves[b].fill (0.0);
             continue;
         }
 
-        const auto design = BandDesign::design (bands[b], sampleRate);
+        // A disabled band is drawn with the curve it would have when enabled.
+        auto asIfEnabled = bands[b];
+        asIfEnabled.enabled = true;
+        const auto design = BandDesign::design (asIfEnabled, sampleRate);
 
         for (size_t k = 0; k < static_cast<size_t> (numPoints); ++k)
         {
             // Points at or above Nyquist (only at sample rates below 40 kHz) repeat the last valid value.
             const auto f = std::min (frequencies[k], 0.499 * sampleRate);
             curves[b][k] = design.magnitudeDb (f, sampleRate);
-            sum[k] += curves[b][k];
+            if (active[b])
+                sum[k] += curves[b][k];
         }
     }
 
