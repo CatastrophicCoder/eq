@@ -1,7 +1,9 @@
 #pragma once
 
 #include "AutoGainUpdater.h"
+#include "dsp/AnalyzerFifo.h"
 #include "dsp/EqBand.h"
+#include "ui/AnalyzerSettings.h"
 
 #include <juce_audio_processors/juce_audio_processors.h>
 
@@ -71,6 +73,20 @@ public:
     /** Current settings of all 16 bands, including their in-use flags. */
     std::array<BandSettings, 16> getBandSettings() const;
 
+    //==============================================================================
+    /** Analyzer taps (M5): stereo input (pre) and output (post), pushed from processBlock
+        only while an editor is open. The editor is the single consumer.
+    */
+    void setAnalyzerActive (bool shouldBeActive) noexcept;
+    bool isAnalyzerActive() const noexcept { return analyzerActive.load (std::memory_order_relaxed); }
+    AnalyzerFifo& getPreFifo() noexcept  { return preFifo; }
+    AnalyzerFifo& getPostFifo() noexcept { return postFifo; }
+    static constexpr int analyzerFifoCapacity = 32768;
+
+    /** Analyzer options, stored in the session (message thread only). Invalid values read as defaults. */
+    AnalyzerSettings::Values getAnalyzerSettings() const;
+    void setAnalyzerSettings (const AnalyzerSettings::Values& values);
+
 private:
     //==============================================================================
     void pushParametersToBands() noexcept;
@@ -92,6 +108,8 @@ private:
 
     juce::AudioProcessorValueTreeState parameters;
     std::array<std::atomic<bool>, 16> bandInUse {};
+    AnalyzerFifo preFifo, postFifo;
+    std::atomic<bool> analyzerActive { false };
     std::array<BandParameters, 16> bandParameters;
     std::array<EqBand, 16> bands;
 

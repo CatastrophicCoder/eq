@@ -201,6 +201,22 @@ std::array<BandSettings, 16> ParametricEQAudioProcessor::getBandSettings() const
     return result;
 }
 
+// Not implemented yet (M5 analyzer).
+void ParametricEQAudioProcessor::setAnalyzerActive (bool shouldBeActive) noexcept
+{
+    analyzerActive.store (shouldBeActive, std::memory_order_relaxed);
+}
+
+AnalyzerSettings::Values ParametricEQAudioProcessor::getAnalyzerSettings() const
+{
+    return {};
+}
+
+void ParametricEQAudioProcessor::setAnalyzerSettings (const AnalyzerSettings::Values& values)
+{
+    juce::ignoreUnused (values);
+}
+
 //==============================================================================
 bool ParametricEQAudioProcessor::hasEditor() const
 {

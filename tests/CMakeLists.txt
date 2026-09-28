@@ -17,7 +17,11 @@ add_executable(ParametricEQTests
     FrequencyAxisTest.cpp
     ResponseCurvesTest.cpp
     SpectrumColourTest.cpp
-    InteractionTest.cpp)
+    InteractionTest.cpp
+    AnalyzerFifoTest.cpp
+    SpectrumAnalyzerTest.cpp
+    LevelMeterTest.cpp
+    AnalyzerProcessorTest.cpp)
 
 # Link against the plugin's shared-code library. Its JUCE modules are linked
 # PRIVATE there, so take its include paths and defines explicitly instead of

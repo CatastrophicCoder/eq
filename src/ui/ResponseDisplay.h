@@ -5,7 +5,9 @@
 #include "NodeDragController.h"
 #include "NodeLayout.h"
 #include "ResponseCurves.h"
+#include "LevelMeter.h"
 #include "SelectionModel.h"
+#include "SpectrumAnalyzer.h"
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
@@ -84,6 +86,14 @@ public:
     bool isSelectingArea() const noexcept { return selectingArea; }
     int getHoveredBand() const noexcept { return hovered; }
 
+    //==============================================================================
+    /** Pulls the analyzer taps, updates the analyzers and the meter, and repaints (M5). */
+    void refreshAnalyzer (double elapsedSeconds);
+
+    SpectrumAnalyzer& getPreAnalyzer() noexcept  { return preAnalyzer; }
+    SpectrumAnalyzer& getPostAnalyzer() noexcept { return postAnalyzer; }
+    LevelMeter& getMeter() noexcept              { return meter; }
+
     /** Called whenever the selection changes. */
     std::function<void()> onSelectionChanged;
 
@@ -126,6 +136,9 @@ private:
 
     juce::String message;
     juce::uint32 messageTime = 0;
+
+    SpectrumAnalyzer preAnalyzer, postAnalyzer;
+    LevelMeter meter;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ResponseDisplay)
 };

@@ -25,6 +25,15 @@ public:
     juce::ToggleButton& getInvertButton() noexcept   { return invert; }
     juce::Label& getOffsetLabel() noexcept           { return offsetLabel; }
 
+    juce::ComboBox& getAnalyzerModeBox() noexcept    { return analyzerMode; }
+    juce::ComboBox& getResolutionBox() noexcept      { return resolution; }
+    juce::ComboBox& getSpeedBox() noexcept           { return speed; }
+    juce::ComboBox& getRangeBox() noexcept           { return range; }
+    juce::ToggleButton& getFreezeButton() noexcept   { return freeze; }
+
+    /** Called when an analyzer control changes (the editor stores the settings). */
+    std::function<void()> onAnalyzerSettingsChanged;
+
 private:
     juce::AudioProcessorValueTreeState& state;
     std::function<float()> offsetDb;
@@ -32,6 +41,8 @@ private:
     juce::Slider gain;
     juce::Label gainCaption, offsetLabel;
     juce::ToggleButton autoGain, invert;
+    juce::ComboBox analyzerMode, resolution, speed, range;
+    juce::ToggleButton freeze;
 
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> gainAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> autoGainAttachment, invertAttachment;

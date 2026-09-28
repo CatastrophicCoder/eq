@@ -40,6 +40,8 @@ target_sources(ParametricEQ
         src/ui/SelectionModel.cpp
         src/ui/NodeDragController.cpp
         src/ui/BandParameterWriter.cpp
+        src/ui/SpectrumAnalyzer.cpp
+        src/ui/LevelMeter.cpp
         src/ui/BandPanel.cpp
         src/ui/TopBar.cpp
         src/ui/BottomBar.cpp
@@ -62,7 +64,8 @@ target_sources(ParametricEQ
         src/dsp/BandDesign.cpp
         src/dsp/EqBand.cpp
         src/dsp/KWeighting.cpp
-        src/dsp/AutoGain.cpp)
+        src/dsp/AutoGain.cpp
+        src/dsp/AnalyzerFifo.cpp)
 
 target_include_directories(ParametricEQ
     PUBLIC

@@ -623,6 +623,11 @@ bool ResponseDisplay::keyPressed (const juce::KeyPress& key)
 }
 
 //==============================================================================
+void ResponseDisplay::refreshAnalyzer (double elapsedSeconds)
+{
+    juce::ignoreUnused (elapsedSeconds);   // Not implemented yet.
+}
+
 void ResponseDisplay::paintNodes (juce::Graphics& g, const FrequencyAxis& axis)
 {
     const auto bands = currentBands();

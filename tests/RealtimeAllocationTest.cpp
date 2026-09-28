@@ -118,6 +118,7 @@ TEST_CASE ("Processor processBlock does not allocate with 16 active bands", "[re
 
     processor.setPlayConfigDetails (2, 2, 48000.0, 512);
     processor.prepareToPlay (48000.0, 512);
+    processor.setAnalyzerActive (true);   // taps on: pushing to the FIFOs must not allocate either
 
     juce::AudioBuffer<float> buffer (2, 512);
     buffer.clear();
@@ -156,3 +157,17 @@ TEST_CASE ("Processor processBlock does not allocate with 16 active bands", "[re
     CHECK (counter.count() == 0);
 }
 
+
+TEST_CASE ("AnalyzerFifo::push does not allocate", "[realtime]")
+{
+    AnalyzerFifo fifo;
+    fifo.prepare (2, 4096);
+    std::vector<float> data (512, 0.25f);
+    const float* channels[] { data.data(), data.data() };
+
+    ScopedAllocationCounter counter;
+    for (int i = 0; i < 20; ++i)
+        fifo.push (channels, 2, 512);   // fills, then drops
+
+    CHECK (counter.count() == 0);
+}
