@@ -5,19 +5,15 @@
 #include <array>
 
 //==============================================================================
-/** Controls for one band at a time, with 16 tabs to pick the band (until M4 adds
-    click-to-select on the display): on/off, type, frequency, gain, Q, slope.
-    Changing the band re-attaches the controls to band<n>_* parameters.
+/** Controls for one band: on/off, type, frequency, gain, Q, slope. The band is
+    chosen on the display (M4: tabs removed, decision 2026-09-28); changing it
+    re-attaches the controls to band<n>_* parameters.
 */
 class BandPanel final : public juce::Component
 {
 public:
     explicit BandPanel (juce::AudioProcessorValueTreeState& state);
     ~BandPanel() override;
-
-    /** Tab text: the band's colour, lightened where needed to stay readable on the tab. */
-    static juce::Colour tabTextColour (int bandNumber);
-    static juce::Colour tabBackground();
 
     void setBand (int bandNumber);
     int getBand() const noexcept { return band; }
@@ -28,7 +24,6 @@ public:
     void paint (juce::Graphics&) override;
     void resized() override;
 
-    juce::TextButton& getTab (int bandNumber) noexcept { return tabs[static_cast<size_t> (bandNumber - 1)]; }
     juce::ToggleButton& getEnableButton() noexcept     { return enable; }
     juce::ComboBox& getTypeBox() noexcept              { return type; }
     juce::Slider& getFrequencySlider() noexcept        { return frequency; }
@@ -46,7 +41,6 @@ private:
     juce::AudioProcessorValueTreeState& state;
     int band = 1;
 
-    std::array<juce::TextButton, 16> tabs;
     juce::ToggleButton enable;
     juce::ComboBox type, slope;
     juce::Slider frequency, gain, q;

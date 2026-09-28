@@ -21,7 +21,7 @@ juce_add_plugin(ParametricEQ
     NEEDS_MIDI_INPUT FALSE
     NEEDS_MIDI_OUTPUT FALSE
     IS_MIDI_EFFECT FALSE
-    EDITOR_WANTS_KEYBOARD_FOCUS FALSE
+    EDITOR_WANTS_KEYBOARD_FOCUS TRUE
     COPY_PLUGIN_AFTER_BUILD TRUE
     NEEDS_WEB_BROWSER FALSE
     NEEDS_CURL FALSE)
@@ -36,6 +36,10 @@ target_sources(ParametricEQ
         src/ui/ResponseCurves.cpp
         src/ui/ResponseDisplay.cpp
         src/ui/SpectrumColour.cpp
+        src/ui/NodeLayout.cpp
+        src/ui/SelectionModel.cpp
+        src/ui/NodeDragController.cpp
+        src/ui/BandParameterWriter.cpp
         src/ui/BandPanel.cpp
         src/ui/TopBar.cpp
         src/ui/BottomBar.cpp

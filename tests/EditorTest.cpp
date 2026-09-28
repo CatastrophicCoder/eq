@@ -80,13 +80,25 @@ TEST_CASE ("Editor has a top bar, display, band panel and bottom bar at the plan
 
     CHECK (f.editor.getTopBar().isVisible());
     CHECK (f.editor.getDisplay().isVisible());
-    CHECK (f.editor.getBandPanel().isVisible());
     CHECK (f.editor.getBottomBar().isVisible());
+
+    // With nothing selected the band panel is hidden; it opens on the selected band.
+    CHECK_FALSE (f.editor.getBandPanel().isVisible());
+    setBand (f.processor, 6, FilterType::bell, 700.0f, 3.0f, 1.0f, 3, true);
+    f.editor.refreshControls();
+    f.editor.getDisplay().setSelection ({ 6 }, 6);
+    CHECK (f.editor.getBandPanel().isVisible());
+    CHECK (f.editor.getBandPanel().getBand() == 6);
+    f.editor.getDisplay().setSelection ({}, 0);
+    CHECK_FALSE (f.editor.getBandPanel().isVisible());
 }
 
 TEST_CASE ("Layout follows the planned arrangement at every size", "[editor]")
 {
     EditorFixture f;
+    setBand (f.processor, 4, FilterType::bell, 500.0f, 3.0f, 1.0f, 3, true);
+    f.editor.refreshControls();
+    f.editor.getDisplay().setSelection ({ 4 }, 4);   // the panel shows only with a selection
 
     for (auto [w, h] : sizes)
     {
@@ -126,25 +138,17 @@ TEST_CASE ("Layout follows the planned arrangement at every size", "[editor]")
     }
 }
 
-TEST_CASE ("The band panel has 16 tabs and follows the selected band", "[editor]")
+TEST_CASE ("The band panel's controls follow the band it shows", "[editor]")
 {
     EditorFixture f;
     auto& panel = f.editor.getBandPanel();
     auto& p = f.processor;
 
-    CHECK (panel.getBand() == 1);
-    CHECK (panel.getTab (1).getToggleState());
-
     for (int band = 1; band <= Parameters::numBands; ++band)
     {
         INFO ("band " << band);
-        // triggerClick() is asynchronous; call the click handler directly.
-        REQUIRE (panel.getTab (band).onClick != nullptr);
-        panel.getTab (band).onClick();
+        panel.setBand (band);
         CHECK (panel.getBand() == band);
-
-        for (int other = 1; other <= Parameters::numBands; ++other)
-            CHECK (panel.getTab (other).getToggleState() == (other == band));
 
         // Control -> parameter.
         panel.getFrequencySlider().setValue (2345.0, juce::sendNotificationSync);
@@ -177,14 +181,6 @@ TEST_CASE ("The band panel has 16 tabs and follows the selected band", "[editor]
     panel.getFrequencySlider().setValue (777.0, juce::sendNotificationSync);
     CHECK_THAT (value (p, Parameters::id (2, "freq")), WithinAbs (before, 0.0f));
     CHECK_THAT (value (p, Parameters::id (3, "freq")), WithinRel (777.0f, 1e-3f));
-}
-
-TEST_CASE ("Band tabs carry their band's colour", "[editor]")
-{
-    EditorFixture f;
-    for (int band = 1; band <= Parameters::numBands; ++band)
-        CHECK (f.editor.getBandPanel().getTab (band).findColour (juce::TextButton::textColourOffId)
-               == BandPanel::tabTextColour (band));
 }
 
 TEST_CASE ("Menus list the parameter choices and stay readable at every size", "[editor]")
@@ -347,8 +343,8 @@ TEST_CASE ("Editor snapshot (renders PNGs to $EQ_SNAPSHOT_DIR)", "[.snapshot]")
     setBand (f.processor, 8, FilterType::bell, 800.0f, 9.0f, 0.8f, 3, true);
     setBand (f.processor, 10, FilterType::bell, 2500.0f, -6.0f, 1.2f, 3, true);
     setBand (f.processor, 15, FilterType::highShelf, 9000.0f, 3.0f, 0.71f, 3, true);
-    f.editor.getBandPanel().setBand (8);
     f.editor.refreshControls();
+    f.editor.getDisplay().setSelection ({ 8, 10 }, 8);
 
     for (auto [w, h] : sizes)
     {

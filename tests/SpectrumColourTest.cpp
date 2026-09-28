@@ -1,5 +1,4 @@
 #include "ui/ResponseDisplay.h"
-#include "ui/BandPanel.h"
 #include "ui/SpectrumColour.h"
 
 #include <catch2/catch_test_macros.hpp>
@@ -78,37 +77,3 @@ TEST_CASE ("Band colours go from dark violet (band 1) to red (band 16)", "[colou
     }
 }
 
-namespace
-{
-    /** WCAG 2 relative luminance and contrast ratio. */
-    double luminance (juce::Colour c)
-    {
-        auto lin = [] (juce::uint8 v)
-        {
-            const auto s = v / 255.0;
-            return s <= 0.03928 ? s / 12.92 : std::pow ((s + 0.055) / 1.055, 2.4);
-        };
-        return 0.2126 * lin (c.getRed()) + 0.7152 * lin (c.getGreen()) + 0.0722 * lin (c.getBlue());
-    }
-
-    double contrast (juce::Colour a, juce::Colour b)
-    {
-        const auto la = luminance (a), lb = luminance (b);
-        return (std::max (la, lb) + 0.05) / (std::min (la, lb) + 0.05);
-    }
-}
-
-TEST_CASE ("Tab text uses a readable tint of the band colour", "[colour]")
-{
-    const auto background = BandPanel::tabBackground();
-
-    for (int b = 1; b <= 16; ++b)
-    {
-        const auto band = ResponseDisplay::bandColour (b);
-        const auto text = BandPanel::tabTextColour (b);
-        INFO ("band " << b << " contrast " << contrast (text, background));
-
-        CHECK_THAT (text.getHue(), WithinAbs (band.getHue(), 0.02));   // same hue family
-        CHECK (contrast (text, background) >= 4.5);                    // WCAG AA for small text
-    }
-}

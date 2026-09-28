@@ -18,8 +18,9 @@ namespace
 }
 
 ResponseDisplay::ResponseDisplay (ParametricEQAudioProcessor& p)
-    : processor (p)
+    : processor (p), writer (p.getValueTreeState())
 {
+    setWantsKeyboardFocus (true);
     setName ("display");
     rangeButton.setName ("range");
     rangeButton.onClick = [this] { cycleRange(); };
@@ -202,3 +203,32 @@ void ResponseDisplay::updateRangeButton()
 {
     rangeButton.setButtonText (juce::String (juce::roundToInt (processor.getDisplayRangeDb())) + " dB");
 }
+
+//==============================================================================
+// Not implemented yet (M4 interaction).
+void ResponseDisplay::handlePress (juce::Point<float>, juce::ModifierKeys, int) {}
+void ResponseDisplay::handleDrag (juce::Point<float>, juce::ModifierKeys) {}
+void ResponseDisplay::handleRelease() {}
+void ResponseDisplay::handleWheel (juce::Point<float>, float) {}
+void ResponseDisplay::handleMagnify (juce::Point<float>, float) {}
+bool ResponseDisplay::handleKey (const juce::KeyPress&) { return false; }
+juce::PopupMenu ResponseDisplay::buildNodeMenu (int) const { return {}; }
+void ResponseDisplay::applyNodeMenuResult (int, int) {}
+std::vector<NodeLayout::Node> ResponseDisplay::getNodes() const { return {}; }
+void ResponseDisplay::setSelection (std::vector<int>, int) {}
+juce::String ResponseDisplay::getMessage() const { return {}; }
+void ResponseDisplay::mouseDown (const juce::MouseEvent&) {}
+void ResponseDisplay::mouseDrag (const juce::MouseEvent&) {}
+void ResponseDisplay::mouseUp (const juce::MouseEvent&) {}
+void ResponseDisplay::mouseMove (const juce::MouseEvent&) {}
+void ResponseDisplay::mouseExit (const juce::MouseEvent&) {}
+void ResponseDisplay::mouseWheelMove (const juce::MouseEvent&, const juce::MouseWheelDetails&) {}
+void ResponseDisplay::mouseMagnify (const juce::MouseEvent&, float) {}
+bool ResponseDisplay::keyPressed (const juce::KeyPress&) { return false; }
+std::array<BandSettings, ResponseCurves::numBands> ResponseDisplay::currentBands() const { return {}; }
+void ResponseDisplay::selectionChanged() {}
+void ResponseDisplay::addBandAt (juce::Point<float>) {}
+void ResponseDisplay::disableBands (const std::vector<int>&) {}
+void ResponseDisplay::scaleQ (juce::Point<float>, double) {}
+void ResponseDisplay::showMessage (const juce::String&) {}
+void ResponseDisplay::paintNodes (juce::Graphics&, const FrequencyAxis&) {}
