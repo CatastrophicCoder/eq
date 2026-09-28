@@ -131,14 +131,7 @@ TEST_CASE ("Displayed sum matches the measured response of the plugin", "[curves
             p.processBlock (view, midi);
         }
 
-        std::array<BandSettings, 16> bands;
-        auto& state = p.getValueTreeState();
-        for (int band = 1; band <= 16; ++band)
-        {
-            auto raw = [&] (const char* field) { return state.getRawParameterValue (Parameters::id (band, field))->load(); };
-            bands[static_cast<size_t> (band - 1)] = Parameters::toBandSettings (raw ("type"), raw ("freq"), raw ("gain"),
-                                                                                raw ("q"), raw ("slope"), raw ("enabled"));
-        }
+        const auto bands = p.getBandSettings();
 
         ResponseCurves curves;
         curves.update (bands, fs);
@@ -163,5 +156,38 @@ TEST_CASE ("Displayed sum matches the measured response of the plugin", "[curves
             INFO ("fs=" << fs << " f=" << f);
             CHECK_THAT (20.0 * std::log10 (std::abs (sum)), WithinAbs (curves.sumDb (k), 0.1));
         }
+    }
+}
+
+TEST_CASE ("Disabled bands are drawn but not summed; free bands are neither", "[curves][bandstate]")
+{
+    constexpr double fs = 48000.0;
+    auto bands = disabledBands();
+    for (auto& b : bands)
+        b.inUse = false;
+
+    bands[2] = make (FilterType::bell, 1000.0, 6.0, 1.0);           // in use, enabled
+    bands[5] = make (FilterType::bell, 4000.0, -6.0, 1.0);          // in use, disabled
+    bands[5].enabled = false;
+    bands[8] = make (FilterType::bell, 200.0, 9.0, 1.0);            // enabled but free
+    bands[8].inUse = false;
+
+    ResponseCurves curves;
+    curves.update (bands, fs);
+
+    CHECK (curves.isBandShown (2));
+    CHECK (curves.isBandActive (2));
+    CHECK (curves.isBandShown (5));
+    CHECK_FALSE (curves.isBandActive (5));
+    CHECK_FALSE (curves.isBandShown (8));
+    CHECK_FALSE (curves.isBandActive (8));
+
+    auto asIfEnabled = bands[5];
+    asIfEnabled.enabled = true;
+    for (int k = 0; k < ResponseCurves::numPoints; k += 11)
+    {
+        const auto f = curves.frequency (k);
+        CHECK_THAT (curves.bandDb (5, k), WithinAbs (BandDesign::design (asIfEnabled, fs).magnitudeDb (f, fs), 1e-12));
+        CHECK_THAT (curves.sumDb (k), WithinAbs (BandDesign::design (bands[2], fs).magnitudeDb (f, fs), 1e-9));
     }
 }

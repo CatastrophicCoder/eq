@@ -60,6 +60,17 @@ public:
     double getDisplayRangeDb() const;
     void setDisplayRangeDb (double rangeDb);
 
+    /** Whether a band's slot is in use (not deleted). Stored in the session as the hidden
+        state property band<n>_used; an atomic copy serves the audio and Auto Gain threads.
+        setBandInUse: message thread only.
+    */
+    bool isBandInUse (int band) const noexcept;
+    void setBandInUse (int band, bool inUse);
+    const std::array<std::atomic<bool>, 16>& getInUseFlags() const noexcept { return bandInUse; }
+
+    /** Current settings of all 16 bands, including their in-use flags. */
+    std::array<BandSettings, 16> getBandSettings() const;
+
 private:
     //==============================================================================
     void pushParametersToBands() noexcept;
@@ -80,6 +91,7 @@ private:
     void applyOutputGain (juce::AudioBuffer<float>& buffer) noexcept;
 
     juce::AudioProcessorValueTreeState parameters;
+    std::array<std::atomic<bool>, 16> bandInUse {};
     std::array<BandParameters, 16> bandParameters;
     std::array<EqBand, 16> bands;
 

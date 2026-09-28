@@ -217,17 +217,7 @@ void ResponseDisplay::updateRangeButton()
 
 std::array<BandSettings, ResponseCurves::numBands> ResponseDisplay::currentBands() const
 {
-    std::array<BandSettings, ResponseCurves::numBands> bands;
-    auto& state = processor.getValueTreeState();
-
-    for (int band = 1; band <= ResponseCurves::numBands; ++band)
-    {
-        auto raw = [&] (const char* field) { return state.getRawParameterValue (Parameters::id (band, field))->load(); };
-        bands[static_cast<size_t> (band - 1)] = Parameters::toBandSettings (raw ("type"), raw ("freq"), raw ("gain"),
-                                                                            raw ("q"), raw ("slope"), raw ("enabled"));
-    }
-
-    return bands;
+    return processor.getBandSettings();
 }
 
 std::vector<NodeLayout::Node> ResponseDisplay::getNodes() const
@@ -473,7 +463,7 @@ juce::PopupMenu ResponseDisplay::buildNodeMenu (int band) const
     }
 
     menu.addSeparator();
-    menu.addItem (menuDisable, "Disable band");
+    menu.addItem (menuToggleEnable, "Disable");
     return menu;
 }
 
@@ -484,7 +474,7 @@ void ResponseDisplay::applyNodeMenuResult (int band, int itemId)
 
     const auto targets = selection.contains (band) ? selection.getSelected() : std::vector<int> { band };
 
-    if (itemId == menuDisable)
+    if (itemId == menuToggleEnable)
     {
         disableBands (targets);
         return;

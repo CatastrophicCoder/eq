@@ -72,7 +72,7 @@ TEST_CASE ("State survives a save and load into a fresh processor", "[state]")
     }
 }
 
-TEST_CASE ("Saved state carries version 2", "[state]")
+TEST_CASE ("Saved state carries version 3", "[state]")
 {
     juce::ScopedJuceInitialiser_GUI juce;
     ParametricEQAudioProcessor p;
@@ -82,8 +82,8 @@ TEST_CASE ("Saved state carries version 2", "[state]")
 
     const auto xml = juce::AudioProcessor::getXmlFromBinary (saved.getData(), static_cast<int> (saved.getSize()));
     REQUIRE (xml != nullptr);
-    CHECK (xml->getIntAttribute ("stateVersion", -1) == 2);
-    CHECK (ParametricEQAudioProcessor::stateVersion == 2);
+    CHECK (xml->getIntAttribute ("stateVersion", -1) == 3);
+    CHECK (ParametricEQAudioProcessor::stateVersion == 3);
 }
 
 TEST_CASE ("A version-1 session (M1) loads as an enabled bell on band 1", "[state]")
@@ -109,6 +109,9 @@ TEST_CASE ("A version-1 session (M1) loads as an enabled bell on band 1", "[stat
     CHECK_THAT (value (p, "band1_q"), WithinRel (2.2f, 1e-3f));
     CHECK_THAT (value (p, "band1_type"), WithinAbs (static_cast<float> (FilterType::bell), 0.0f));
     CHECK_THAT (value (p, "band1_enabled"), WithinAbs (1.0f, 0.0f));
+    CHECK (p.isBandInUse (1));
+    for (int band = 2; band <= Parameters::numBands; ++band)
+        CHECK_FALSE (p.isBandInUse (band));
 
     // Bands 2-16 keep their defaults.
     for (int band = 2; band <= Parameters::numBands; ++band)
@@ -230,5 +233,87 @@ TEST_CASE ("A missing or invalid display range falls back to 12 dB", "[state]")
         p.setStateInformation (block.getData(), static_cast<int> (block.getSize()));
         INFO ("stored " << stored.toString());
         CHECK_THAT (p.getDisplayRangeDb(), WithinAbs (12.0, 0.0));
+    }
+}
+
+TEST_CASE ("A new instance has no band in use", "[state][bandstate]")
+{
+    juce::ScopedJuceInitialiser_GUI juce;
+    ParametricEQAudioProcessor p;
+
+    for (int band = 1; band <= Parameters::numBands; ++band)
+        CHECK_FALSE (p.isBandInUse (band));
+}
+
+TEST_CASE ("In-use flags are saved with the session, separately from enabled", "[state][bandstate]")
+{
+    juce::ScopedJuceInitialiser_GUI juce;
+
+    juce::MemoryBlock saved;
+    {
+        ParametricEQAudioProcessor source;
+        setBand (source, 3, FilterType::bell, 300.0f, 3.0f, 1.0f, 3, true);    // in use, enabled
+        setBand (source, 7, FilterType::bell, 700.0f, 3.0f, 1.0f, 3, false);   // in use, disabled
+        set (source, Parameters::id (9, "enabled"), 1.0f);                     // enabled but free
+        source.getStateInformation (saved);
+    }
+
+    ParametricEQAudioProcessor target;
+    target.setStateInformation (saved.getData(), static_cast<int> (saved.getSize()));
+
+    for (int band = 1; band <= Parameters::numBands; ++band)
+    {
+        INFO ("band " << band);
+        CHECK (target.isBandInUse (band) == (band == 3 || band == 7));
+    }
+
+    CHECK_THAT (value (target, "band7_enabled"), WithinAbs (0.0f, 0.0f));
+    CHECK_THAT (value (target, "band9_enabled"), WithinAbs (1.0f, 0.0f));
+}
+
+TEST_CASE ("A version-2 session marks its enabled bands as in use", "[state][bandstate]")
+{
+    juce::ScopedJuceInitialiser_GUI juce;
+
+    juce::XmlElement v2 ("ParametricEQ");
+    v2.setAttribute ("stateVersion", 2);
+    for (auto [id, v] : { std::pair { "band2_enabled", 1.0 }, { "band5_enabled", 0.0 }, { "band11_enabled", 1.0 } })
+    {
+        auto* child = v2.createNewChildElement ("PARAM");
+        child->setAttribute ("id", id);
+        child->setAttribute ("value", v);
+    }
+
+    const auto block = toBlock (v2);
+    ParametricEQAudioProcessor p;
+    p.setStateInformation (block.getData(), static_cast<int> (block.getSize()));
+
+    for (int band = 1; band <= Parameters::numBands; ++band)
+    {
+        INFO ("band " << band);
+        CHECK (p.isBandInUse (band) == (band == 2 || band == 11));
+    }
+}
+
+TEST_CASE ("A version-3 session without an in-use flag leaves that band free", "[state][bandstate]")
+{
+    juce::ScopedJuceInitialiser_GUI juce;
+
+    juce::XmlElement v3 ("ParametricEQ");
+    v3.setAttribute ("stateVersion", 3);
+    v3.setAttribute ("band4_used", 1);
+    auto* child = v3.createNewChildElement ("PARAM");
+    child->setAttribute ("id", "band6_enabled");
+    child->setAttribute ("value", 1.0);
+
+    const auto block = toBlock (v3);
+    ParametricEQAudioProcessor p;
+    p.setBandInUse (8, true);   // must be replaced by the load
+    p.setStateInformation (block.getData(), static_cast<int> (block.getSize()));
+
+    for (int band = 1; band <= Parameters::numBands; ++band)
+    {
+        INFO ("band " << band);
+        CHECK (p.isBandInUse (band) == (band == 4));
     }
 }

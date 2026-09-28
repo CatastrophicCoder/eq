@@ -148,3 +148,58 @@ TEST_CASE ("16 Brickwall bands at 96 kHz run faster than real time", "[multiband
     for (int ch = 0; ch < 2; ++ch)
         CHECK (std::isfinite (buffer.getMagnitude (ch, 0, buffer.getNumSamples())));
 }
+
+TEST_CASE ("A band that is not in use is bypassed even when its On switch is set", "[multiband][bandstate]")
+{
+    juce::ScopedJuceInitialiser_GUI juce;
+    ParametricEQAudioProcessor p;
+    setBand (p, 4, FilterType::bell, 1000.0f, 12.0f, 1.0f, 3, true);
+    p.setBandInUse (4, false);   // deleted: the parameters stay, the slot is free
+
+    p.setPlayConfigDetails (2, 2, 48000.0, 512);
+    p.prepareToPlay (48000.0, 512);
+
+    juce::AudioBuffer<float> buffer (2, 2048), original;
+    juce::Random random (11);
+    for (int ch = 0; ch < 2; ++ch)
+        for (int i = 0; i < 2048; ++i)
+            buffer.setSample (ch, i, random.nextFloat() * 2.0f - 1.0f);
+    original.makeCopyOf (buffer);
+    processInBlocks (p, buffer, 512);
+
+    for (int ch = 0; ch < 2; ++ch)
+        for (int i = 0; i < 2048; ++i)
+            REQUIRE (juce::exactlyEqual (buffer.getSample (ch, i), original.getSample (ch, i)));
+}
+
+TEST_CASE ("Deleting a band while playing crossfades", "[multiband][bandstate]")
+{
+    juce::ScopedJuceInitialiser_GUI juce;
+    constexpr double fs = 44100.0;
+    ParametricEQAudioProcessor p;
+    setBand (p, 4, FilterType::bell, 1000.0f, 12.0f, 1.0f, 3, true);
+    p.setPlayConfigDetails (2, 2, fs, 512);
+    p.prepareToPlay (fs, 512);
+
+    juce::AudioBuffer<float> buffer (2, 8192);
+    for (int ch = 0; ch < 2; ++ch)
+        for (int i = 0; i < 8192; ++i)
+            buffer.setSample (ch, i, static_cast<float> (0.25 * std::sin (2.0 * std::numbers::pi * 1000.0 * i / fs)));
+
+    juce::MidiBuffer midi;
+    for (int start = 0; start < 8192; start += 512)
+    {
+        if (start == 2048)
+            p.setBandInUse (4, false);
+        juce::AudioBuffer<float> view (buffer.getArrayOfWritePointers(), 2, start, 512);
+        p.processBlock (view, midi);
+    }
+
+    double step = 0.0;
+    for (int i = 1; i < 8192; ++i)
+        step = std::max (step, std::abs (static_cast<double> (buffer.getSample (0, i)) - buffer.getSample (0, i - 1)));
+    CHECK (step < 0.2);
+
+    // Afterwards the band is gone: 1 kHz passes at unity.
+    CHECK_THAT (buffer.getMagnitude (0, 6000, 2000), WithinAbs (0.25f, 0.002f));
+}

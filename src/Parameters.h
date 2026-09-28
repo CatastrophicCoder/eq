@@ -43,6 +43,8 @@ namespace Parameters
 
     juce::AudioProcessorValueTreeState::ParameterLayout createLayout();
 
-    /** Turns one band's raw parameter values into BandSettings (choice indices rounded and clamped). */
-    BandSettings toBandSettings (float type, float frequencyHz, float gainDb, float q, float slope, float enabled) noexcept;
+    /** Turns one band's raw parameter values and its in-use flag into BandSettings
+        (choice indices rounded and clamped). */
+    BandSettings toBandSettings (float type, float frequencyHz, float gainDb, float q, float slope, float enabled,
+                                 bool inUse) noexcept;
 }

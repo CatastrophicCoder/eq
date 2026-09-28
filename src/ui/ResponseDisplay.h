@@ -68,7 +68,8 @@ public:
 
     static constexpr int menuTypeBase = 1;      // + FilterType index
     static constexpr int menuSlopeBase = 100;   // + slope index
-    static constexpr int menuDisable = 1000;
+    static constexpr int menuToggleEnable = 1000;
+    static constexpr int menuDelete = 1001;
 
     std::vector<NodeLayout::Node> getNodes() const;
     const SelectionModel& getSelection() const noexcept { return selection; }

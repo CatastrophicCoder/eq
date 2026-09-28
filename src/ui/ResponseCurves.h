@@ -25,7 +25,10 @@ public:
     int getNumRecomputes() const noexcept { return recomputes; }
 
     double frequency (int point) const noexcept   { return frequencies[static_cast<size_t> (point)]; }
+    /** In use and enabled: part of the sum. */
     bool isBandActive (int band) const noexcept   { return active[static_cast<size_t> (band)]; }
+    /** In use (enabled or not): has a curve to draw. */
+    bool isBandShown (int band) const noexcept    { return active[static_cast<size_t> (band)]; }   // Not implemented yet.
     double bandDb (int band, int point) const noexcept;
     double sumDb (int point) const noexcept       { return sum[static_cast<size_t> (point)]; }
 

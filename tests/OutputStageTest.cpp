@@ -66,14 +66,7 @@ namespace
         settings, so a test never processes audio with an offset from half-set parameters. */
     bool waitForOffset (ParametricEQAudioProcessor& p, double fs)
     {
-        std::array<BandSettings, 16> bands;
-        auto& state = p.getValueTreeState();
-        for (int band = 1; band <= Parameters::numBands; ++band)
-        {
-            auto raw = [&] (const char* field) { return state.getRawParameterValue (Parameters::id (band, field))->load(); };
-            bands[static_cast<size_t> (band - 1)] = Parameters::toBandSettings (raw ("type"), raw ("freq"), raw ("gain"),
-                                                                                raw ("q"), raw ("slope"), raw ("enabled"));
-        }
+        const auto bands = p.getBandSettings();
 
         const auto expected = static_cast<float> (AutoGain::computeOffsetDb (bands, fs));
 
@@ -291,4 +284,17 @@ TEST_CASE ("With Auto Gain off, the offset is not applied", "[output][autogain]"
 
     // ... but not applied.
     CHECK_THAT (juce::Decibels::gainToDecibels (buffer.getMagnitude (0, 4800, 4800) / 0.1f), WithinAbs (0.0, 0.1));
+}
+
+TEST_CASE ("Auto Gain ignores bands that are not in use", "[output][autogain][bandstate]")
+{
+    juce::ScopedJuceInitialiser_GUI juce;
+    ParametricEQAudioProcessor p;
+    prepare (p, 48000.0);
+
+    setBand (p, 5, FilterType::bell, 1000.0f, 9.0f, 1.0f, 3, true);
+    REQUIRE (std::abs (waitForOffsetChange (p, 0.0f)) > 0.5f);
+
+    p.setBandInUse (5, false);
+    CHECK_THAT (waitForOffsetChange (p, p.getAutoGainOffsetDb()), WithinAbs (0.0f, 1e-6f));
 }

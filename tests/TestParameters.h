@@ -27,10 +27,11 @@ namespace TestParameters
         parameter.setValueNotifyingHost (parameter.convertTo0to1 (newValue));
     }
 
-    /** Sets every parameter of one band. */
+    /** Sets every parameter of one band and marks it in use (enabled or disabled). */
     inline void setBand (ParametricEQAudioProcessor& p, int band, FilterType type, float freq,
                          float gain, float q, int slope, bool enabled)
     {
+        p.setBandInUse (band, true);
         set (p, Parameters::id (band, "type"), static_cast<float> (type));
         set (p, Parameters::id (band, "freq"), freq);
         set (p, Parameters::id (band, "gain"), gain);

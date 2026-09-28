@@ -108,7 +108,7 @@ void ParametricEQAudioProcessor::pushParametersToBands() noexcept
     {
         const auto& p = bandParameters[i];
         bands[i].setTargets (Parameters::toBandSettings (p.type->load(), p.frequency->load(), p.gain->load(),
-                                                         p.q->load(), p.slope->load(), p.enabled->load()));
+                                                         p.q->load(), p.slope->load(), p.enabled->load(), true));
     }
 }
 
@@ -161,6 +161,29 @@ void ParametricEQAudioProcessor::setDisplayRangeDb (double rangeDb)
 {
     if (FrequencyAxis::isValidRange (rangeDb))
         parameters.state.setProperty (displayRangeProperty, rangeDb, nullptr);
+}
+
+// Not implemented yet (M4 band states).
+bool ParametricEQAudioProcessor::isBandInUse (int band) const noexcept
+{
+    return parameters.getRawParameterValue (Parameters::id (band, "enabled"))->load() >= 0.5f;
+}
+
+void ParametricEQAudioProcessor::setBandInUse (int band, bool inUse)
+{
+    juce::ignoreUnused (band, inUse);
+}
+
+std::array<BandSettings, 16> ParametricEQAudioProcessor::getBandSettings() const
+{
+    std::array<BandSettings, 16> result;
+    for (size_t i = 0; i < result.size(); ++i)
+    {
+        const auto& p = bandParameters[i];
+        result[i] = Parameters::toBandSettings (p.type->load(), p.frequency->load(), p.gain->load(),
+                                                p.q->load(), p.slope->load(), p.enabled->load(), true);
+    }
+    return result;
 }
 
 //==============================================================================

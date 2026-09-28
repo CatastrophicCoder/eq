@@ -23,6 +23,7 @@ public:
         int band;                       // 1-based
         juce::Point<float> position;
         bool usesGain;
+        bool enabled = true;            // false: in use but disabled (drawn grey, not editable)
     };
 
     static std::vector<Node> compute (std::span<const BandSettings> bands, const FrequencyAxis& axis);
