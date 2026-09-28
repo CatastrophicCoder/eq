@@ -105,7 +105,9 @@ Newest first. One entry per session, a few lines each.
   continue). Candidate for a later small fix.
 - 2026-09-28: owner tested in Logic. M6 marked done. Owner feedback: pre and post analyzer curves are both grey
   and hard to tell apart (to fix before M7).
-- Next step: analyzer colours, then M7 (dynamic EQ).
+- Analyzer colours fixed (owner's choice: different colours): pre muted blue, post warm light grey; a test keeps
+  them apart. Where a band's fill overlaps the analyzer the tints mix with the band colour (bands are drawn on top).
+- Next step: M7 (dynamic EQ).
 
 ### 2026-09-28 — M5
 
