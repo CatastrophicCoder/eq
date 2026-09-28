@@ -22,8 +22,9 @@ namespace
 }
 
 //==============================================================================
-TEST_CASE ("Detector attack and release follow their time constants in dB", "[dynamics][detector]")
+TEST_CASE ("Detector attack and release are one-pole followers on the linear level", "[dynamics][detector]")
 {
+    // Decision 2026-09-29: classic follower on the rectified (Peak) or RMS level, converted to dB afterwards.
     LevelDetector d;
     d.prepare (fs);
     d.setMode (LevelDetector::Mode::peak);
@@ -31,22 +32,87 @@ TEST_CASE ("Detector attack and release follow their time constants in dB", "[dy
     d.reset();
     CHECK_THAT (d.getLevelDb(), WithinAbs (LevelDetector::floorDb, 0.0));
 
-    // A step from silence to a constant 1.0 (0 dB): after one attack time, 63.2 % of the way in dB.
+    // A step from silence to a constant 1.0: after one attack time, 63.2 % of the way in linear level (-3.98 dB).
     const auto attackSamples = static_cast<int> (0.010 * fs);
     for (int n = 0; n < attackSamples; ++n)
         d.process (1.0);
-    const auto expected = LevelDetector::floorDb + (1.0 - std::exp (-1.0)) * (0.0 - LevelDetector::floorDb);
-    CHECK_THAT (d.getLevelDb(), WithinAbs (expected, 0.5));
+    CHECK_THAT (d.getLevelDb(), WithinAbs (20.0 * std::log10 (1.0 - std::exp (-1.0)), 0.05));
 
     for (int n = 0; n < static_cast<int> (fs); ++n)
         d.process (1.0);
     CHECK_THAT (d.getLevelDb(), WithinAbs (0.0, 0.01));
 
-    // Then down to 0.1 (-20 dB): after one release time, 63.2 % of the 20 dB.
+    // Then down to 0.1: after one release time, 0.1 + 0.9 e^-1 in linear level (-7.30 dB).
     const auto releaseSamples = static_cast<int> (0.100 * fs);
     for (int n = 0; n < releaseSamples; ++n)
         d.process (0.1);
-    CHECK_THAT (d.getLevelDb(), WithinAbs (-20.0 * (1.0 - std::exp (-1.0)), 0.2));
+    CHECK_THAT (d.getLevelDb(), WithinAbs (20.0 * std::log10 (0.1 + 0.9 * std::exp (-1.0)), 0.05));
+}
+
+TEST_CASE ("After the signal stops the level falls 8.69 dB per release time", "[dynamics][detector]")
+{
+    for (auto mode : { LevelDetector::Mode::peak, LevelDetector::Mode::rms })
+    {
+        LevelDetector d;
+        d.prepare (fs);
+        d.setMode (mode);
+        d.setTimes (1.0, 100.0);
+        for (int n = 0; n < static_cast<int> (fs); ++n)
+            d.process (0.5);
+        const auto start = d.getLevelDb();
+
+        // RMS first empties its 10 ms mean square, so allow it a little extra drop.
+        for (int n = 0; n < static_cast<int> (0.1 * fs); ++n)
+            d.process (0.0);
+        const auto afterOne = d.getLevelDb();
+        for (int n = 0; n < static_cast<int> (0.1 * fs); ++n)
+            d.process (0.0);
+        const auto afterTwo = d.getLevelDb();
+
+        INFO ((mode == LevelDetector::Mode::peak ? "Peak" : "RMS"));
+        const auto perReleaseTime = 20.0 * std::log10 (std::exp (1.0));   // 8.686 dB
+        if (mode == LevelDetector::Mode::peak)
+            CHECK_THAT (start - afterOne, WithinAbs (perReleaseTime, 0.01));
+        else
+            CHECK_THAT (start - afterOne, WithinAbs (perReleaseTime, 1.5));
+        CHECK_THAT (afterOne - afterTwo, WithinAbs (perReleaseTime, 0.2));
+    }
+}
+
+TEST_CASE ("At default times a steady tone reads close to its level", "[dynamics][detector]")
+{
+    // Default attack 10 ms, release 100 ms, 1 kHz and 100 Hz sines at -10 dBFS.
+    // Peak reads below the peak because a 10 ms attack does not fully catch each cycle:
+    // worst measured -1.16 dB (bound 1.3 dB). RMS reads the RMS (-13.01 dB).
+    for (double f : { 100.0, 1000.0 })
+    {
+        LevelDetector peak, rms;
+        for (auto* d : { &peak, &rms })
+        {
+            d->prepare (fs);
+            d->setTimes (10.0, 100.0);
+        }
+        peak.setMode (LevelDetector::Mode::peak);
+        rms.setMode (LevelDetector::Mode::rms);
+
+        double lowest = 0.0, highest = -200.0;
+        for (int n = 0; n < static_cast<int> (fs); ++n)
+        {
+            const auto x = sine (n, f, std::pow (10.0, -10.0 / 20.0));
+            const auto level = peak.process (x);
+            rms.process (x);
+            if (n > static_cast<int> (0.8 * fs))
+            {
+                lowest = std::min (lowest, level);
+                highest = std::max (highest, level);
+            }
+        }
+
+        INFO (f << " Hz: Peak " << lowest << " .. " << highest << " dB, RMS " << rms.getLevelDb() << " dB");
+        CHECK (lowest > -10.0 - 1.3);
+        CHECK (highest <= -10.0 + 1e-6);
+        CHECK_THAT (rms.getLevelDb(), WithinAbs (-13.01, f < 500.0 ? 0.3 : 0.1));
+    }
 }
 
 TEST_CASE ("Peak reads a sine's peak, RMS its RMS", "[dynamics][detector]")
