@@ -95,6 +95,11 @@ Decided; details and dates in `docs/PROGRESS.md`.
   smoothing and metering happen on the message thread (`SpectrumAnalyzer`, `LevelMeter`). Analyzer settings
   (mode, resolution, speed, range) are state properties; tilt is fixed at 4.5 dB/oct around 1 kHz.
 - Output has one global phase-invert switch.
+- Presets (M6b): `src/presets/`. A preset holds all 16 bands and the output section (not view settings). Eleven
+  factory presets are compiled in; user presets are XML files in ~/Library/Audio/Presets/CatastrophicCoder/ParametricEQ/.
+  Presets are shown in the plugin's own browser only (not host programs). Preset code runs on the message thread;
+  tests use a temporary folder (`PresetManager::setUserFolder`), never the real one. Preset sources are not cited
+  in the repo (owner's decision).
 - Milestone order after 5: per-band stereo (6), dynamic EQ (7), linear phase (8).
 
 ## Hard rules: real-time audio thread
