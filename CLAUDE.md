@@ -104,6 +104,10 @@ Decided; details and dates in `docs/PROGRESS.md`.
   Presets are shown in the plugin's own browser only (not host programs). Preset code runs on the message thread;
   tests use a temporary folder (`PresetManager::setUserFolder`), never the real one. Preset sources are not cited
   in the repo (owner's decision).
+- Dynamic EQ (M7): Bell and shelves; gain law Range or Ratio per band; detector filtered to the band's region
+  (bell band pass, shelves lowpass/highpass) from its own input or the optional "Sidechain" bus (falls back to
+  its own input); Peak or RMS with attack/release in dB; per-channel for Stereo bands; coefficients every 16
+  samples. Auto Gain uses static gains. Display shows live gain plus the range. Presets store dynamics (format 2).
 - Milestone order after 5: per-band stereo (6), dynamic EQ (7), linear phase (8).
 
 ## Hard rules: real-time audio thread

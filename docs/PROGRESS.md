@@ -15,7 +15,7 @@ Milestone definitions and "done when" criteria are in [PLAN.md](PLAN.md#mileston
 | 5 | Spectrum analyzer | Done | Built and validated (157 tests, pluginval, auval); owner tested in Logic |
 | 6 | Per-band stereo | Done | Built and validated (172 tests, pluginval, auval); owner tested in Logic |
 | 6b | Presets | Done | Built and validated (186 tests, pluginval, auval); owner tested in Logic |
-| 7 | Dynamic EQ | In progress | Stages 1-2 of 3 done (detector, gain laws, parameters, audio path, side-chain). Next: stage 3, UI and presets |
+| 7 | Dynamic EQ | In progress | Stages 1-3 built and validated (223 tests, pluginval, auval); awaiting owner's Logic test and the Peak detector decision |
 | 8 | Linear phase mode | Not started | |
 | 9 | Deferred features | Not started | |
 
@@ -106,6 +106,21 @@ Newest first. Move each item here from "Open decisions" in `CLAUDE.md` once it i
 ## Session log
 
 Newest first. One entry per session, a few lines each.
+
+### 2026-09-28 — M7 stage 3
+
+- Done: band panel dynamics section (Dynamic switch, Range/Ratio, Peak/RMS, Side-chain, Thresh, Range, Ratio, Attack,
+  Release); the switch is active for Bell and shelves, its settings only while it is on, Ratio only in Ratio mode.
+  Panel widened to 780-1240 px. Display: a dynamic band's curve follows its live gain (of L and R, the channel moving
+  further), with a thin static curve and a faint area to static + range edged by a dashed line; the sum follows the
+  live curves; curves recompute when a live change moves 0.05 dB or more. Preset format 2 stores dynamics
+  (<Dynamics> per band); format 1 files load with dynamics off; factory presets unchanged (dynamics off).
+- Tests added / passing: 223/223. Preset format 2 round trip, format 1 compatibility, clamping, capture/apply and
+  modified state; live, static and range curves, 0.05 dB recompute step, non-dynamic bands ignore live gain; panel
+  attachments both ways, greying rules, layout and menu readability at three sizes; display curve at the processor's
+  live gain after real audio. pluginval strictness 5 (VST3, AU) and auval pass. Snapshots checked at three sizes.
+- Simplification: a Stereo band whose L and R move differently is drawn with the larger change, not as split curves.
+- Next step: owner's listening check in Logic; Peak detector decision (open).
 
 ### 2026-09-28 — Rename to Spectral Fault (under M7)
 

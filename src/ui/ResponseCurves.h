@@ -9,13 +9,18 @@
 /** Magnitude curves for the display: each band and their sum, at numPoints
     log-spaced frequencies from 20 Hz to 20 kHz, from BandDesign.
 
-    update() recomputes only when a band's settings or the sample rate changed.
+    Dynamic bands (M7, decision 2026-09-28: live gain plus the range) are drawn at
+    static gain + live change; their static and static + range curves are kept too.
+
+    update() recomputes only when a band's settings or the sample rate changed, or
+    a dynamic band's live change moved by liveGainStepDb or more.
 */
 class ResponseCurves
 {
 public:
     static constexpr int numPoints = 512;
     static constexpr int numBands = 16;
+    static constexpr double liveGainStepDb = 0.05;
 
     ResponseCurves();
 
@@ -50,7 +55,8 @@ public:
 
 private:
     std::array<double, numPoints> frequencies {};
-    std::array<std::array<double, numPoints>, numBands> curves {};
+    std::array<std::array<double, numPoints>, numBands> curves {}, staticCurves {}, rangeCurves {};
+    std::array<double, numBands> lastLive {};
     std::array<double, numPoints> sum {}, secondSum {};
     SumLayout layout = SumLayout::single;
     std::array<bool, numBands> active {};

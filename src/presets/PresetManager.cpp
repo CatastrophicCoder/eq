@@ -101,7 +101,7 @@ Preset PresetManager::capture (const juce::String& name) const
     {
         const auto& s = bands[i];
         p.bands[i] = { s.inUse, s.enabled, s.type, static_cast<float> (s.frequencyHz), static_cast<float> (s.gainDb),
-                       static_cast<float> (s.q), s.slopeIndex, s.channel };
+                       static_cast<float> (s.q), s.slopeIndex, s.channel, s.dynamics };
     }
 
     auto& state = processor.getValueTreeState();
@@ -132,6 +132,15 @@ void PresetManager::apply (const Preset& preset)
         setWithGesture (state, Parameters::id (band, "q"), b.q);
         setWithGesture (state, Parameters::id (band, "slope"), static_cast<float> (b.slopeIndex));
         setWithGesture (state, Parameters::id (band, "channel"), static_cast<float> (b.channel));
+
+        const auto& d = b.dynamics;
+        const float dynamics[] { d.on ? 1.0f : 0.0f, d.mode == DynamicGainLaw::Mode::ratio ? 1.0f : 0.0f,
+                                 static_cast<float> (d.thresholdDb), static_cast<float> (d.rangeDb), static_cast<float> (d.ratio),
+                                 static_cast<float> (d.attackMs), static_cast<float> (d.releaseMs),
+                                 d.detector == LevelDetector::Mode::rms ? 1.0f : 0.0f, d.sidechain ? 1.0f : 0.0f };
+        static_assert (std::size (dynamics) == std::size (Parameters::dynamicFields));
+        for (size_t i = 0; i < std::size (dynamics); ++i)
+            setWithGesture (state, Parameters::id (band, Parameters::dynamicFields[i]), dynamics[i]);
         setWithGesture (state, Parameters::id (band, "enabled"), b.enabled ? 1.0f : 0.0f);
         processor.setBandInUse (band, true);
     }

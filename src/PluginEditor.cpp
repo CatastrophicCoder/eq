@@ -63,7 +63,8 @@ void ParametricEQAudioProcessorEditor::resized()
     display.setBounds (area);
 
     // Band panel: centred over the lower part of the display, above the frequency labels.
-    const auto panelWidth = juce::jlimit (520, 820, w * 40 / 100);
+    // Wide enough for the filter and dynamics sections (M7).
+    const auto panelWidth = juce::jlimit (780, 1240, w * 58 / 100);
     const auto panelHeight = juce::jlimit (118, 190, h * 19 / 100);
     const auto panelBottom = display.getBottom() - ResponseDisplay::labelStripHeight - 8;
     bandPanel.setBounds (display.getX() + (display.getWidth() - panelWidth) / 2, panelBottom - panelHeight,

@@ -14,11 +14,17 @@ ResponseCurves::ResponseCurves()
 
 bool ResponseCurves::update (std::span<const BandSettings> bands, double sampleRate)
 {
+    return update (bands, sampleRate, {});
+}
+
+bool ResponseCurves::update (std::span<const BandSettings> bands, double sampleRate, std::span<const double> liveGainDb)
+{
     const auto count = std::min (bands.size(), static_cast<size_t> (numBands));
+    auto liveFor = [&] (size_t b) { return b < count && bands[b].isDynamic() && b < liveGainDb.size() ? liveGainDb[b] : 0.0; };
 
     auto unchanged = hasComputed && juce::exactlyEqual (sampleRate, lastSampleRate);
     for (size_t b = 0; b < count && unchanged; ++b)
-        unchanged = bands[b].isIdenticalTo (lastBands[b]);
+        unchanged = bands[b].isIdenticalTo (lastBands[b]) && std::abs (liveFor (b) - lastLive[b]) < liveGainStepDb;
 
     if (unchanged)
         return false;
@@ -30,19 +36,34 @@ bool ResponseCurves::update (std::span<const BandSettings> bands, double sampleR
     {
         shown[b] = b < count && bands[b].inUse;
         active[b] = b < count && bands[b].isActive();
+        dynamic[b] = b < count && bands[b].isDynamic();
         lastBands[b] = b < count ? bands[b] : BandSettings {};
+        lastLive[b] = liveFor (b);
 
         if (! shown[b])
         {
             curves[b].fill (0.0);
+            staticCurves[b].fill (0.0);
+            rangeCurves[b].fill (0.0);
             continue;
         }
 
-        // A disabled band is drawn with the curve it would have when enabled.
+        // A disabled band is drawn with the curve it would have when enabled; a dynamic one at its live gain.
         auto asIfEnabled = bands[b];
         asIfEnabled.enabled = true;
-        const auto design = BandDesign::design (asIfEnabled, sampleRate);
+        auto live = asIfEnabled;
+        live.gainDb += lastLive[b];
+        const auto design = BandDesign::design (live, sampleRate);
         designs[b] = design;
+
+        SectionCascade staticDesign, rangeDesign;
+        if (dynamic[b])
+        {
+            auto range = asIfEnabled;
+            range.gainDb += asIfEnabled.dynamics.rangeDb;
+            staticDesign = BandDesign::design (asIfEnabled, sampleRate);
+            rangeDesign = BandDesign::design (range, sampleRate);
+        }
 
         for (size_t k = 0; k < static_cast<size_t> (numPoints); ++k)
         {
@@ -51,6 +72,9 @@ bool ResponseCurves::update (std::span<const BandSettings> bands, double sampleR
             curves[b][k] = design.magnitudeDb (f, sampleRate);
             if (active[b])
                 sum[k] += curves[b][k];
+
+            staticCurves[b][k] = dynamic[b] ? staticDesign.magnitudeDb (f, sampleRate) : curves[b][k];
+            rangeCurves[b][k] = dynamic[b] ? rangeDesign.magnitudeDb (f, sampleRate) : curves[b][k];
         }
     }
 
@@ -102,10 +126,12 @@ double ResponseCurves::bandDb (int band, int point) const noexcept
     return curves[static_cast<size_t> (band)][static_cast<size_t> (point)];
 }
 
-bool ResponseCurves::update (std::span<const BandSettings> bands, double sampleRate, std::span<const double>)
+double ResponseCurves::staticBandDb (int band, int point) const noexcept
 {
-    return update (bands, sampleRate);
+    return staticCurves[static_cast<size_t> (band)][static_cast<size_t> (point)];
 }
 
-double ResponseCurves::staticBandDb (int, int) const noexcept { return 0.0; }
-double ResponseCurves::rangeBandDb (int, int) const noexcept { return 0.0; }
+double ResponseCurves::rangeBandDb (int band, int point) const noexcept
+{
+    return rangeCurves[static_cast<size_t> (band)][static_cast<size_t> (point)];
+}

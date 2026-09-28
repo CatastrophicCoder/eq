@@ -15,6 +15,29 @@ namespace
                 return static_cast<int> (i);
         return -1;
     }
+
+    // Choice names as the parameters show them (Parameters.cpp).
+    const char* const modeNames[] { "Range", "Ratio" };
+    const char* const detectorNames[] { "Peak", "RMS" };
+
+    /** Format 2 dynamics, clamped to the parameter ranges; defaults for anything missing or unknown. */
+    BandSettings::Dynamics readDynamics (const juce::XmlElement* e)
+    {
+        BandSettings::Dynamics d;
+        if (e == nullptr)
+            return d;
+
+        d.on = e->getBoolAttribute ("on", d.on);
+        d.mode = indexOf (modeNames, e->getStringAttribute ("mode")) == 1 ? DynamicGainLaw::Mode::ratio : DynamicGainLaw::Mode::range;
+        d.thresholdDb = std::clamp (e->getDoubleAttribute ("threshold", d.thresholdDb), -60.0, 0.0);
+        d.rangeDb = std::clamp (e->getDoubleAttribute ("range", d.rangeDb), -24.0, 24.0);
+        d.ratio = std::clamp (e->getDoubleAttribute ("ratio", d.ratio), 1.0, 20.0);
+        d.attackMs = std::clamp (e->getDoubleAttribute ("attack", d.attackMs), 0.1, 200.0);
+        d.releaseMs = std::clamp (e->getDoubleAttribute ("release", d.releaseMs), 5.0, 2000.0);
+        d.detector = indexOf (detectorNames, e->getStringAttribute ("detector")) == 1 ? LevelDetector::Mode::rms : LevelDetector::Mode::peak;
+        d.sidechain = e->getBoolAttribute ("sidechain", d.sidechain);
+        return d;
+    }
 }
 
 std::unique_ptr<juce::XmlElement> Preset::toXml() const
@@ -42,6 +65,18 @@ std::unique_ptr<juce::XmlElement> Preset::toXml() const
         e->setAttribute ("q", static_cast<double> (b.q));
         e->setAttribute ("slope", b.slopeIndex);
         e->setAttribute ("channel", ChannelModes::names[static_cast<int> (b.channel)]);
+
+        const auto& d = b.dynamics;
+        auto* dyn = e->createNewChildElement ("Dynamics");
+        dyn->setAttribute ("on", d.on);
+        dyn->setAttribute ("mode", modeNames[d.mode == DynamicGainLaw::Mode::ratio ? 1 : 0]);
+        dyn->setAttribute ("threshold", d.thresholdDb);
+        dyn->setAttribute ("range", d.rangeDb);
+        dyn->setAttribute ("ratio", d.ratio);
+        dyn->setAttribute ("attack", d.attackMs);
+        dyn->setAttribute ("release", d.releaseMs);
+        dyn->setAttribute ("detector", detectorNames[d.detector == LevelDetector::Mode::rms ? 1 : 0]);
+        dyn->setAttribute ("sidechain", d.sidechain);
     }
 
     return xml;
@@ -82,6 +117,7 @@ std::optional<Preset> Preset::fromXml (const juce::XmlElement& xml)
         b.q = std::clamp (static_cast<float> (e->getDoubleAttribute ("q", 0.71)), 0.1f, 18.0f);
         b.slopeIndex = std::clamp (e->getIntAttribute ("slope", 3), 0, CutSlope::count - 1);
         b.channel = static_cast<ChannelMode> (std::max (0, indexOf (ChannelModes::names, e->getStringAttribute ("channel", "Stereo"))));
+        b.dynamics = readDynamics (version >= 2 ? e->getChildByName ("Dynamics") : nullptr);
     }
 
     return p;
@@ -107,6 +143,15 @@ bool Preset::hasSameSettingsAs (const Preset& other) const noexcept
 
         if (a.enabled != b.enabled || a.type != b.type || a.channel != b.channel || a.slopeIndex != b.slopeIndex
             || ! sameRatio (a.frequencyHz, b.frequencyHz) || ! sameDb (a.gainDb, b.gainDb) || ! sameRatio (a.q, b.q))
+            return false;
+
+        const auto& da = a.dynamics;
+        const auto& db = b.dynamics;
+        auto f = [] (double v) { return static_cast<float> (v); };
+        if (da.on != db.on || da.mode != db.mode || da.detector != db.detector || da.sidechain != db.sidechain
+            || ! sameDb (f (da.thresholdDb), f (db.thresholdDb)) || ! sameDb (f (da.rangeDb), f (db.rangeDb))
+            || ! sameRatio (f (da.ratio), f (db.ratio)) || ! sameRatio (f (da.attackMs), f (db.attackMs))
+            || ! sameRatio (f (da.releaseMs), f (db.releaseMs)))
             return false;
     }
 

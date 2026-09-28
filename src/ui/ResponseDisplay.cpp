@@ -75,7 +75,16 @@ void ResponseDisplay::refresh()
     if (rangeChanged)
         updateRangeButton();
 
-    if (curves.update (bands, rate) || rangeChanged)
+    // Live dynamic gain per band (M7): of the two channels, the one moving further.
+    std::array<double, ResponseCurves::numBands> live {};
+    for (int b = 0; b < ResponseCurves::numBands; ++b)
+    {
+        const auto l = processor.getLiveGainChangeDb (b + 1, 0);
+        const auto r = processor.getLiveGainChangeDb (b + 1, 1);
+        live[static_cast<size_t> (b)] = std::abs (r) > std::abs (l) ? r : l;
+    }
+
+    if (curves.update (bands, rate, live) || rangeChanged)
         repaint();
 }
 
@@ -199,12 +208,42 @@ void ResponseDisplay::paint (juce::Graphics& g)
                 continue;
             }
 
+            const auto colour = bandColour (b + 1);
+
+            // Dynamic: the range as a faint band from the static curve to static + range, edged by a dashed line.
+            if (curves.isBandDynamic (b))
+            {
+                const auto plotY = [&] (double db) { return juce::jlimit (plot.getY(), plot.getBottom(), axis.yForDb (db)); };
+                juce::Path range;
+                for (int k = 0; k < ResponseCurves::numPoints; ++k)
+                {
+                    const juce::Point<float> pt { axis.xForFrequency (curves.frequency (k)), plotY (curves.staticBandDb (b, k)) };
+                    k == 0 ? range.startNewSubPath (pt) : range.lineTo (pt);
+                }
+                for (int k = ResponseCurves::numPoints - 1; k >= 0; --k)
+                    range.lineTo (axis.xForFrequency (curves.frequency (k)), plotY (curves.rangeBandDb (b, k)));
+                range.closeSubPath();
+
+                g.setColour (colour.withAlpha (0.1f));
+                g.fillPath (range);
+
+                // The static curve (where the node sits), thin, so the live curve reads as the moving one.
+                g.setColour (colour.withAlpha (0.45f));
+                g.strokePath (curvePath (axis, curves, [this, b] (int k) { return curves.staticBandDb (b, k); }), juce::PathStrokeType (0.8f));
+
+                const auto rangeEdge = curvePath (axis, curves, [this, b] (int k) { return curves.rangeBandDb (b, k); });
+                juce::Path dashed;
+                const float dashes[] { 4.0f, 3.0f };
+                juce::PathStrokeType (1.0f).createDashedStroke (dashed, rangeEdge, dashes, 2);
+                g.setColour (colour.withAlpha (0.6f));
+                g.fillPath (dashed);
+            }
+
             auto fill = outline;
             fill.lineTo (axis.xForFrequency (FrequencyAxis::maxHz), zeroY);
             fill.lineTo (axis.xForFrequency (FrequencyAxis::minHz), zeroY);
             fill.closeSubPath();
 
-            const auto colour = bandColour (b + 1);
             g.setColour (colour.withAlpha (0.22f));
             g.fillPath (fill);
             g.setColour (colour.withAlpha (0.75f));

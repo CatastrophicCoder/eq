@@ -5,9 +5,10 @@
 #include <array>
 
 //==============================================================================
-/** Controls for one band: on/off, type, frequency, gain, Q, slope. The band is
-    chosen on the display (M4: tabs removed, decision 2026-09-28); changing it
-    re-attaches the controls to band<n>_* parameters.
+/** Controls for one band: on/off, type, frequency, gain, Q, slope, and (M7) a
+    dynamics section: switch, mode, detector, side-chain, threshold, range, ratio,
+    attack, release. The band is chosen on the display (M4: tabs removed, decision
+    2026-09-28); changing it re-attaches the controls to band<n>_* parameters.
 */
 class BandPanel final : public juce::Component
 {
@@ -61,10 +62,16 @@ private:
     juce::ToggleButton dynamic, sidechain;
     juce::ComboBox dynamicMode, detector;
     juce::Slider threshold, range, ratio, attack, release;
+    juce::Label thresholdCaption, rangeCaption, ratioCaption, attackCaption, releaseCaption;
+    int dividerX = 0;
 
     std::unique_ptr<ButtonAttachment> enableAttachment;
     std::unique_ptr<ComboBoxAttachment> typeAttachment, slopeAttachment, channelAttachment;
     std::unique_ptr<SliderAttachment> frequencyAttachment, gainAttachment, qAttachment;
+
+    std::unique_ptr<ButtonAttachment> dynamicAttachment, sidechainAttachment;
+    std::unique_ptr<ComboBoxAttachment> dynamicModeAttachment, detectorAttachment;
+    std::unique_ptr<SliderAttachment> thresholdAttachment, rangeAttachment, ratioAttachment, attackAttachment, releaseAttachment;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (BandPanel)
 };
