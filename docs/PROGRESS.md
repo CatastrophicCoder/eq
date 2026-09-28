@@ -14,7 +14,7 @@ Milestone definitions and "done when" criteria are in [PLAN.md](PLAN.md#mileston
 | 4 | Interactive display | Done | Built and validated (135 tests, pluginval, auval). Owner re-check in Logic: everything tested, looks good |
 | 5 | Spectrum analyzer | Done | Built and validated (157 tests, pluginval, auval); owner tested in Logic |
 | 6 | Per-band stereo | Done | Built and validated (172 tests, pluginval, auval); owner tested in Logic |
-| 6b | Presets | In progress | Built and validated (186 tests, pluginval, auval). Waiting on owner check in Logic |
+| 6b | Presets | Done | Built and validated (186 tests, pluginval, auval); owner tested in Logic |
 | 7 | Dynamic EQ | Not started | |
 | 8 | Linear phase mode | Not started | |
 | 9 | Deferred features | Not started | |
@@ -107,7 +107,8 @@ Newest first. One entry per session, a few lines each.
   temporary folder (save, overwrite, sort, load, delete, file names); next/previous; session restore of the name
   and modified state; top-bar wiring. pluginval strictness 5 (VST3, AU) and auval pass.
 - Checked: the real preset folder stays empty (it was created by Logic on 2026-09-27, before M6b).
-- Next step: owner check in Logic, then mark M6b done; M7 (dynamic EQ).
+- 2026-09-28: owner tested in Logic. M6b marked done.
+- Next step: M7 (dynamic EQ).
 
 ### 2026-09-28 — M6
 
