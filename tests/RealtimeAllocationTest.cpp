@@ -64,9 +64,11 @@ void operator delete[] (void* p, std::size_t, std::align_val_t) noexcept { std::
 
 TEST_CASE ("Allocation counter sees allocations", "[realtime]")
 {
+    // A plain new-expression may be optimised away in Release (C++14 allows eliding new/delete
+    // pairs); a direct call of the allocation function may not.
     ScopedAllocationCounter counter;
-    auto* p = new int (42);
-    delete p;
+    void* p = ::operator new (64);
+    ::operator delete (p);
     CHECK (counter.count() >= 1);
 }
 

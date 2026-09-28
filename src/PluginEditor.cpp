@@ -10,7 +10,6 @@ namespace
 
 ParametricEQAudioProcessorEditor::ParametricEQAudioProcessorEditor (ParametricEQAudioProcessor& p)
     : AudioProcessorEditor (&p),
-      eqProcessor (p),
       output (p.getValueTreeState(), [&p] { return p.getAutoGainOffsetDb(); })
 {
     setLookAndFeel (&lookAndFeel);

@@ -35,7 +35,6 @@ public:
 private:
     void timerCallback() override { refreshControls(); }
 
-    ParametricEQAudioProcessor& eqProcessor;
     CompactLookAndFeel lookAndFeel;   // declared before the strips: outlives them
     std::array<std::unique_ptr<BandStrip>, 16> strips;
     OutputStrip output;
