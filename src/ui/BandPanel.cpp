@@ -4,6 +4,8 @@
 #include "Parameters.h"
 #include "ResponseDisplay.h"
 
+#include <cmath>
+
 namespace
 {
     constexpr int tabRadioGroup = 1601;
@@ -18,9 +20,47 @@ namespace
     }
 }
 
-// Not implemented yet.
-juce::Colour BandPanel::tabTextColour (int bandNumber) { return ResponseDisplay::bandColour (bandNumber); }
-juce::Colour BandPanel::tabBackground() { return juce::Colours::black; }
+namespace
+{
+    /** WCAG 2 contrast ratio between two colours. */
+    double contrastRatio (juce::Colour a, juce::Colour b)
+    {
+        auto luminance = [] (juce::Colour c)
+        {
+            auto lin = [] (juce::uint8 v)
+            {
+                const auto s = v / 255.0;
+                return s <= 0.03928 ? s / 12.92 : std::pow ((s + 0.055) / 1.055, 2.4);
+            };
+            return 0.2126 * lin (c.getRed()) + 0.7152 * lin (c.getGreen()) + 0.0722 * lin (c.getBlue());
+        };
+
+        const auto la = luminance (a), lb = luminance (b);
+        return (std::max (la, lb) + 0.05) / (std::min (la, lb) + 0.05);
+    }
+}
+
+juce::Colour BandPanel::tabBackground()
+{
+    return juce::Colour { 0xff2a2a33 };
+}
+
+juce::Colour BandPanel::tabTextColour (int bandNumber)
+{
+    // Same hue as the band; raise brightness, then lower saturation, until the number is readable
+    // (WCAG contrast 4.5 for small text, with a little margin).
+    auto colour = ResponseDisplay::bandColour (bandNumber);
+
+    for (int step = 0; step < 40 && contrastRatio (colour, tabBackground()) < 4.8; ++step)
+    {
+        if (colour.getBrightness() < 1.0f)
+            colour = colour.withBrightness (juce::jmin (1.0f, colour.getBrightness() + 0.05f));
+        else
+            colour = colour.withSaturation (juce::jmax (0.2f, colour.getSaturation() - 0.05f));
+    }
+
+    return colour;
+}
 
 BandPanel::BandPanel (juce::AudioProcessorValueTreeState& s)
     : state (s)
@@ -34,7 +74,8 @@ BandPanel::BandPanel (juce::AudioProcessorValueTreeState& s)
         tab.setName ("tab" + juce::String (i));
         tab.setRadioGroupId (tabRadioGroup, juce::dontSendNotification);
         tab.setClickingTogglesState (false);
-        tab.setColour (juce::TextButton::textColourOffId, ResponseDisplay::bandColour (i));
+        tab.setColour (juce::TextButton::buttonColourId, tabBackground());
+        tab.setColour (juce::TextButton::textColourOffId, tabTextColour (i));
         tab.setColour (juce::TextButton::textColourOnId, juce::Colours::white);
         tab.setColour (juce::TextButton::buttonOnColourId, ResponseDisplay::bandColour (i).withAlpha (0.45f));
         tab.onClick = [this, i] { setBand (i); };

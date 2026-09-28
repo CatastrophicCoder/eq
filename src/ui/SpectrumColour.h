@@ -13,7 +13,7 @@
 namespace SpectrumColour
 {
     inline constexpr double firstWavelengthNm = 390.0;   // band 1: dark violet
-    inline constexpr double lastWavelengthNm = 700.0;    // band 16: red
+    inline constexpr double lastWavelengthNm = 645.0;    // band 16: red (the model is pure red from 645 nm)
 
     juce::Colour fromWavelength (double nanometres);
 
