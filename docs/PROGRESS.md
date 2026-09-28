@@ -14,6 +14,7 @@ Milestone definitions and "done when" criteria are in [PLAN.md](PLAN.md#mileston
 | 4 | Interactive display | Done | Built and validated (135 tests, pluginval, auval). Owner re-check in Logic: everything tested, looks good |
 | 5 | Spectrum analyzer | Done | Built and validated (157 tests, pluginval, auval); owner tested in Logic |
 | 6 | Per-band stereo | Done | Built and validated (172 tests, pluginval, auval); owner tested in Logic |
+| 6b | Presets | In progress | Planning; factory content being researched from public sources |
 | 7 | Dynamic EQ | Not started | |
 | 8 | Linear phase mode | Not started | |
 | 9 | Deferred features | Not started | |
@@ -30,6 +31,10 @@ Newest first. Move each item here from "Open decisions" in `CLAUDE.md` once it i
 | 2026-09-28 | Colours similar in character to the reference; values chosen by us, not sampled from the reference image | Own palette; close to the reference | Chosen by owner |
 | 2026-09-28 | M3 band controls: reference-style band panel at the bottom of the display, with 16 band tabs until M4's click-to-select | Panel with tabs; display with the M2 grid below | Chosen by owner |
 | 2026-09-28 | Double-click on empty display space adds a Bell (first free band, at the clicked frequency and gain); with all 16 in use nothing is added and a message is shown | Always Bell; type by position | Chosen by owner |
+| 2026-09-28 | Presets become milestone M6b, built before M7 (moved from the M9 list) | Now before M7; after M8; in M9 | Chosen by owner |
+| 2026-09-28 | A preset stores all 16 bands (in use, enabled, settings, channel) plus output gain, Auto Gain and invert; not view settings | Bands and output; bands only; everything | Chosen by owner |
+| 2026-09-28 | User presets are XML files in ~/Library/Audio/Presets/CatastrophicCoder/ParametricEQ/ | Preset files; host presets only | Chosen by owner |
+| 2026-09-28 | Presets are listed in the plugin's own browser only (not exposed as host programs) | Plugin browser only; also as host programs | Chosen by owner |
 | 2026-09-28 | Per-band channel mode Stereo / Left / Right / Mid / Side (band<n>_channel, hint 3, default Stereo); Mid/Side encoded and decoded around each M/S band | - | Planned by Claude: per-band transform so L/R and M/S bands can be mixed in one chain |
 | 2026-09-28 | Auto Gain with channel modes: exact 2x2 transfer-matrix model (power gain ||M||^2/2, K-weighted), assuming uncorrelated equal-level L and R | Exact 2x2 model; half weight; ignore one-channel bands | Chosen by owner |
 | 2026-09-28 | Summed curve with channel modes: one curve for Stereo only; L and R curves with L/R bands; M and S curves with M/S bands only; mixed: L and R from the matrix diagonal (approximate) | Two curves as needed; one curve with all bands; one curve with Stereo bands only | Chosen by owner |

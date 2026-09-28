@@ -44,6 +44,7 @@ The milestones follow the tiers: a working multi-band EQ with knobs first, then 
 | 4 | Interactive display | Drag nodes to set frequency/gain, scroll or pinch for Q, double-click to add a band, right-click menu for shape and slope, multi-select | 4–6 weeks |
 | 5 | Spectrum analyzer | Pre/post FFT analyzer drawn under the curve, adjustable speed and resolution, freeze | 2–3 weeks |
 | 6 | Per-band stereo | Each band set to Stereo, Left, Right, Mid or Side | 1–2 weeks |
+| 6b | Presets (added 2026-09-28) | Factory presets for common instruments and vocals, built from cited public sources; user presets saved as files; preset browser in the top bar | 1–2 weeks |
 | 7 | Dynamic EQ | Per-band threshold, ratio or range, attack, release; optional external side-chain input | 3–5 weeks |
 | 8 | Linear phase mode | FIR generated from the summed magnitude response, FFT convolution, latency reported to the host, selectable latency | 4–6 weeks |
 | 9 | Deferred | Natural-phase-style mode, spectral dynamics, EQ Match, EQ Sketch, Spectrum Grab, MIDI Learn, undo/redo, A/B, presets | As interest dictates |
