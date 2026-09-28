@@ -217,3 +217,66 @@ TEST_CASE ("Editors can be opened and closed repeatedly", "[editor]")
         editor->setSize (1200, 400);
     }
 }
+
+TEST_CASE ("Editor snapshot (renders PNGs to $EQ_SNAPSHOT_DIR)", "[.snapshot]")
+{
+    // Hidden: run with  EQ_SNAPSHOT_DIR=<dir> ParametricEQTests "[.snapshot]"  to look at the layout.
+    const auto dir = juce::SystemStats::getEnvironmentVariable ("EQ_SNAPSHOT_DIR", {});
+    if (dir.isEmpty())
+        SKIP ("EQ_SNAPSHOT_DIR not set");
+
+    EditorFixture f;
+    setBand (f.processor, 1, FilterType::lowCut, 40.0f, 0.0f, 0.71f, 3, true);
+    setBand (f.processor, 4, FilterType::bell, 400.0f, 6.0f, 2.0f, 3, true);
+    setBand (f.processor, 16, FilterType::highCut, 16000.0f, 0.0f, 0.71f, CutSlope::brickwallIndex, true);
+    set (f.processor, Parameters::autoGain, 1.0f);
+    f.editor.refreshControls();
+
+    using E = ParametricEQAudioProcessorEditor;
+    for (auto [w, h] : { std::pair { E::defaultWidth, E::defaultHeight }, { E::minWidth, E::minHeight } })
+    {
+        f.editor.setSize (w, h);
+        const auto image = f.editor.createComponentSnapshot (f.editor.getLocalBounds());
+        juce::File file (dir + "/editor_" + juce::String (w) + "x" + juce::String (h) + ".png");
+        file.deleteFile();
+        juce::FileOutputStream stream (file);
+        REQUIRE (juce::PNGImageFormat().writeImageToStream (image, stream));
+    }
+}
+
+TEST_CASE ("Menu text fits its box at minimum, default and maximum size", "[editor]")
+{
+    // The ComboBox's own Label decides what is visible; measure the shown text against its text area.
+    EditorFixture f;
+    auto& p = f.processor;
+    using E = ParametricEQAudioProcessorEditor;
+
+    auto fits = [] (juce::ComboBox& box)
+    {
+        auto* label = dynamic_cast<juce::Label*> (box.getChildComponent (0));
+        REQUIRE (label != nullptr);
+        const auto textArea = label->getBorderSize().subtractedFrom (label->getLocalBounds());
+        const auto width = juce::GlyphArrangement::getStringWidth (label->getFont(), box.getText());
+        INFO ("'" << box.getText() << "' needs " << width << " px, has " << textArea.getWidth());
+        return width <= static_cast<float> (textArea.getWidth());
+    };
+
+    for (auto [w, h] : { std::pair { E::minWidth, E::minHeight }, { E::defaultWidth, E::defaultHeight },
+                         { E::maxWidth, E::maxHeight } })
+    {
+        f.editor.setSize (w, h);
+        INFO ("size " << w << "x" << h);
+
+        for (int t = 0; t < FilterTypes::count; ++t)
+        {
+            set (p, Parameters::id (1, "type"), static_cast<float> (t));
+            CHECK (fits (f.editor.getBandStrip (1).getTypeBox()));
+        }
+
+        for (int s = 0; s < CutSlope::count; ++s)
+        {
+            set (p, Parameters::id (1, "slope"), static_cast<float> (s));
+            CHECK (fits (f.editor.getBandStrip (1).getSlopeBox()));
+        }
+    }
+}

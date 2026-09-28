@@ -148,3 +148,21 @@ TEST_CASE ("Version hints: M1 parameters keep 1, M2 parameters are 2", "[paramet
             CHECK (param (p, Parameters::id (band, field)).getVersionHint() == (isM1 ? 1 : 2));
         }
 }
+
+TEST_CASE ("Gain values display without a negative zero", "[parameters]")
+{
+    // A 0.01 dB snapping step turns 0 dB into -6.7e-7 dB in float; its text must still read 0.00.
+    juce::ScopedJuceInitialiser_GUI juce;
+    ParametricEQAudioProcessor p;
+
+    for (int band = 1; band <= Parameters::numBands; ++band)
+    {
+        auto& gain = param (p, Parameters::id (band, "gain"));
+        INFO ("band " << band);
+        CHECK (gain.getText (gain.convertTo0to1 (0.0f), 16) == "0.00");
+        CHECK (gain.getText (gain.convertTo0to1 (-4.5f), 16) == "-4.50");
+    }
+
+    auto& output = param (p, Parameters::outputGain);
+    CHECK (output.getText (output.convertTo0to1 (0.0f), 16) == "0.00");
+}
