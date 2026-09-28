@@ -62,6 +62,8 @@ public:
     static juce::Colour bandColour (int bandNumber);
     static juce::Colour sumColour();
     static juce::Colour disabledColour();   // disabled bands: grey
+    static juce::Colour preAnalyzerColour();    // input spectrum
+    static juce::Colour postAnalyzerColour();   // output spectrum
 
     //==============================================================================
     // Interaction entry points. The mouse and key callbacks forward here; tests call them directly.

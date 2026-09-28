@@ -194,3 +194,21 @@ TEST_CASE ("Changing resolution and resetting", "[analyzer]")
     for (int k = 0; k < SpectrumAnalyzer::numPoints; ++k)
         CHECK_THAT (a.levelDb (k), WithinAbs (SpectrumAnalyzer::floorDb, 0.0));
 }
+
+#include "ui/ResponseDisplay.h"
+
+TEST_CASE ("Pre and post analyzer colours are clearly different", "[analyzer][colour]")
+{
+    // Owner feedback after M6: both were grey and hard to tell apart.
+    const auto pre = ResponseDisplay::preAnalyzerColour();
+    const auto post = ResponseDisplay::postAnalyzerColour();
+
+    const auto distance = std::hypot (pre.getRed() - post.getRed(), pre.getGreen() - post.getGreen(), pre.getBlue() - post.getBlue());
+    INFO ("RGB distance " << distance);
+    CHECK (distance > 80.0);
+
+    // Pre is a (muted) blue, post a warm light grey.
+    CHECK (pre.getBlue() > pre.getRed() + 40);
+    CHECK (post.getRed() >= post.getBlue());
+    CHECK (post.getBrightness() > pre.getBrightness());
+}

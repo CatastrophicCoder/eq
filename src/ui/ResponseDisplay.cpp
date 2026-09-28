@@ -39,6 +39,10 @@ juce::Colour ResponseDisplay::bandColour (int bandNumber)
     return SpectrumColour::fromWavelength (SpectrumColour::wavelengthForBand (bandNumber, ResponseCurves::numBands));
 }
 
+// Pre and post in different colours (owner feedback after M6: both grey, hard to tell apart).
+juce::Colour ResponseDisplay::preAnalyzerColour()  { return juce::Colour { 0xff4f7fc6 }; }   // muted blue
+juce::Colour ResponseDisplay::postAnalyzerColour() { return juce::Colour { 0xffddd4c6 }; }   // warm light grey
+
 juce::Colour ResponseDisplay::disabledColour()
 {
     return juce::Colour { 0xff7a7a82 };
@@ -751,7 +755,7 @@ void ResponseDisplay::paintAnalyzer (juce::Graphics& g, const FrequencyAxis& axi
     const auto plot = axis.getPlotArea();
     auto yFor = [&] (double db) { return juce::jlimit (plot.getY(), plot.getBottom(), plot.getY() + static_cast<float> (-db / range) * plot.getHeight()); };
 
-    auto draw = [&] (const SpectrumAnalyzer& a, float fillAlpha, float lineAlpha)
+    auto draw = [&] (const SpectrumAnalyzer& a, juce::Colour colour, float fillAlpha, float lineAlpha)
     {
         juce::Path path;
         path.startNewSubPath (axis.xForFrequency (a.frequency (0)), plot.getBottom());
@@ -760,7 +764,6 @@ void ResponseDisplay::paintAnalyzer (juce::Graphics& g, const FrequencyAxis& axi
         path.lineTo (axis.xForFrequency (a.frequency (SpectrumAnalyzer::numPoints - 1)), plot.getBottom());
         path.closeSubPath();
 
-        const auto colour = juce::Colour { 0xffb8c4d6 };
         g.setColour (colour.withAlpha (fillAlpha));
         g.fillPath (path);
         if (lineAlpha > 0.0f)
@@ -771,9 +774,9 @@ void ResponseDisplay::paintAnalyzer (juce::Graphics& g, const FrequencyAxis& axi
     };
 
     if (mode == AnalyzerSettings::Mode::pre || mode == AnalyzerSettings::Mode::prePost)
-        draw (preAnalyzer, 0.07f, 0.0f);         // input: faint
+        draw (preAnalyzer, preAnalyzerColour(), 0.16f, 0.45f);     // input
     if (mode == AnalyzerSettings::Mode::post || mode == AnalyzerSettings::Mode::prePost)
-        draw (postAnalyzer, 0.14f, 0.35f);       // output: brighter
+        draw (postAnalyzer, postAnalyzerColour(), 0.14f, 0.45f);   // output
 
     // Analyzer dB scale, in its own column.
     const auto step = range <= 60.0 ? 10.0 : range <= 90.0 ? 15.0 : 20.0;

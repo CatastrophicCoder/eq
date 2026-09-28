@@ -347,6 +347,7 @@ TEST_CASE ("Editor snapshot (renders PNGs to $EQ_SNAPSHOT_DIR)", "[.snapshot]")
     setBand (f.processor, 12, FilterType::bell, 5500.0f, 6.0f, 2.0f, 3, false);   // disabled: grey
     set (f.processor, Parameters::id (10, "channel"), static_cast<float> (ChannelMode::left));
     set (f.processor, Parameters::id (15, "channel"), static_cast<float> (ChannelMode::side));
+    setBand (f.processor, 14, FilterType::highCut, 6000.0f, 0.0f, 0.71f, 5, true);   // post drops above 6 kHz
     f.editor.refreshControls();
     f.editor.getDisplay().setSelection ({ 8, 10 }, 8);
 
