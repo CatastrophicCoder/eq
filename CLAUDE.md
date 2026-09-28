@@ -68,6 +68,9 @@ Decided; details and dates in `docs/PROGRESS.md`.
   run in a biquad structure. Coefficients are computed in our own code, citing the paper.
   Response tests check both the digital design and closeness to the analog prototype (see DSP testing rules).
 - Band count: 16.
+- Band states: free (not in use), in use and enabled, in use and disabled. A band processes audio only when in
+  use and enabled. "In use" is the hidden state property band<n>_used (not a host parameter), mirrored in an
+  atomic for the audio and Auto Gain threads; only Delete frees a band, On/Disable only toggles enabled.
 - Filter types: Bell, Low Shelf, High Shelf, Low Cut, High Cut, Notch, Band Pass, Tilt Shelf, Flat Tilt, All Pass.
   Cut slopes 6-96 dB/oct in 6 dB steps, plus Brickwall (order-32 Butterworth, 192 dB/oct).
   Cuts are always Butterworth: Q has no effect on them. Odd orders add one first-order section.
