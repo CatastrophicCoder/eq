@@ -10,7 +10,7 @@ Milestone definitions and "done when" criteria are in [PLAN.md](PLAN.md#mileston
 | 0 | Toolchain | Done | Command-line build, tests, pluginval and auval pass; owner confirmed CLion build and AU load in Logic (Standalone run not reported separately) |
 | 1 | One bell band | Done | Knobs, smoothing, state save/load and measured response done; tests, pluginval and auval pass. Owner listening check in Logic: no clicks (session save/reopen not reported separately) |
 | 2 | Full band set, tier 1 | Done | All 5 stages built and validated (tests Debug + Release, pluginval, auval). Owner listening check in Logic: no clicks (other checklist items not reported separately) |
-| 3 | Response curve display | In progress | |
+| 3 | Response curve display | In progress | Built and validated (104 tests, pluginval, auval). Waiting on owner check in Logic |
 | 4 | Interactive display | Not started | |
 | 5 | Spectrum analyzer | Not started | |
 | 6 | Per-band stereo | Not started | |
@@ -68,6 +68,23 @@ Newest first. Move each item here from "Open decisions" in `CLAUDE.md` once it i
 ## Session log
 
 Newest first. One entry per session, a few lines each.
+
+### 2026-09-28 — M3
+
+- Done: look-and-feel decision recorded and CLAUDE.md rule updated (overall layout may follow the reference;
+  components, styling and colour values our own). `FrequencyAxis`, `ResponseCurves` (512 log points, recompute
+  only on change), `ResponseDisplay` (grid, labels, dB scale, filled band curves, amber sum, clipping, range
+  button 3/6/12/30 dB saved as the `displayRangeDb` state property), `BandPanel` (16 coloured tabs, one band's
+  controls, re-attached per band), `TopBar`, `BottomBar`. Editor 1280x770 default, 960x580-2400x1440.
+  M2's `BandStrip`/`OutputStrip` removed; menu-label logic moved to `MenuLabels.h`.
+- Tests added / passing: 104/104. Axis mapping and grid; band curves equal BandDesign; displayed sum vs the
+  measured plugin response within 0.1 dB (44.1/48/96 kHz); no recompute without a change; range persistence and
+  fallback; layout at three sizes; tab re-attachment (and no writes to the previous band); menus readable;
+  greying; curve clipping. pluginval strictness 5 (VST3, AU) and auval pass.
+- Checked by eye via snapshots: clipped "+12" scale label found and fixed.
+- Open issues: fonts and bar heights do not scale with the window (small text at 2400x1440); golden-ratio
+  band hues give a few similar greens (bands 3, 5, 8). Both are design choices for the owner.
+- Next step: owner check in Logic, then mark M3 done; M4 (interactive display).
 
 ### 2026-09-28 — M2 stage 5
 
