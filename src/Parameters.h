@@ -19,7 +19,7 @@ namespace Parameters
     inline constexpr const char* autoGain     = "auto_gain";
     inline constexpr const char* outputInvert = "output_invert";
 
-    /** e.g. id (3, "freq") == "band3_freq". Fields: freq, gain, q, type, slope, enabled. */
+    /** e.g. id (3, "freq") == "band3_freq". Fields: freq, gain, q, type, slope, enabled, channel. */
     juce::String id (int band, const char* field);
 
     /** Version hints for juce::ParameterID: band1_freq/gain/q date from M1 (1); everything
@@ -27,6 +27,7 @@ namespace Parameters
     */
     inline constexpr int m1VersionHint = 1;
     inline constexpr int m2VersionHint = 2;
+    inline constexpr int m6VersionHint = 3;   // band<n>_channel
 
     struct BandDefaults
     {
@@ -46,5 +47,5 @@ namespace Parameters
     /** Turns one band's raw parameter values and its in-use flag into BandSettings
         (choice indices rounded and clamped). */
     BandSettings toBandSettings (float type, float frequencyHz, float gainDb, float q, float slope, float enabled,
-                                 bool inUse) noexcept;
+                                 bool inUse, float channel) noexcept;
 }

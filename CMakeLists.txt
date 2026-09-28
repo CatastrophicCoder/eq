@@ -65,7 +65,8 @@ target_sources(ParametricEQ
         src/dsp/EqBand.cpp
         src/dsp/KWeighting.cpp
         src/dsp/AutoGain.cpp
-        src/dsp/AnalyzerFifo.cpp)
+        src/dsp/AnalyzerFifo.cpp
+        src/dsp/StereoTransfer.cpp)
 
 target_include_directories(ParametricEQ
     PUBLIC

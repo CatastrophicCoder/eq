@@ -36,7 +36,7 @@ TEST_CASE ("Every band has all six parameters, plus the three output parameters"
     CHECK (p.getValueTreeState().getParameter (Parameters::outputGain) != nullptr);
     CHECK (p.getValueTreeState().getParameter (Parameters::autoGain) != nullptr);
     CHECK (p.getValueTreeState().getParameter (Parameters::outputInvert) != nullptr);
-    CHECK (p.getParameters().size() == 6 * Parameters::numBands + 3);
+    CHECK (p.getParameters().size() == 7 * Parameters::numBands + 3);   // + band<n>_channel (M6)
 }
 
 TEST_CASE ("Output parameters have the planned ranges, defaults and hints", "[parameters]")

@@ -18,6 +18,9 @@ struct SectionCascade
 
     void add (const BiquadCoefficients& section) noexcept;
 
+    /** Product of the sections' responses at the given frequency. */
+    std::complex<double> response (double frequencyHz, double sampleRate) const noexcept;
+
     /** Summed magnitude in dB of all sections at the given frequency. */
     double magnitudeDb (double frequencyHz, double sampleRate) const noexcept;
 

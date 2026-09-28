@@ -113,7 +113,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout Parameters::createLayout()
 }
 
 BandSettings Parameters::toBandSettings (float type, float frequencyHz, float gainDb, float q, float slope, float enabled,
-                                         bool inUse) noexcept
+                                         bool inUse, float channel) noexcept
 {
     BandSettings s;
     s.type = static_cast<FilterType> (juce::jlimit (0, FilterTypes::count - 1, juce::roundToInt (type)));
@@ -123,5 +123,6 @@ BandSettings Parameters::toBandSettings (float type, float frequencyHz, float ga
     s.slopeIndex = juce::jlimit (0, CutSlope::count - 1, juce::roundToInt (slope));
     s.enabled = enabled >= 0.5f;
     s.inUse = inUse;
+    juce::ignoreUnused (channel);   // Not implemented yet.
     return s;
 }

@@ -113,7 +113,7 @@ void ParametricEQAudioProcessor::pushParametersToBands() noexcept
         const auto& p = bandParameters[i];
         bands[i].setTargets (Parameters::toBandSettings (p.type->load(), p.frequency->load(), p.gain->load(),
                                                          p.q->load(), p.slope->load(), p.enabled->load(),
-                                                         bandInUse[i].load (std::memory_order_relaxed)));
+                                                         bandInUse[i].load (std::memory_order_relaxed), 0.0f));
     }
 }
 
@@ -208,7 +208,7 @@ std::array<BandSettings, 16> ParametricEQAudioProcessor::getBandSettings() const
     {
         const auto& p = bandParameters[i];
         result[i] = Parameters::toBandSettings (p.type->load(), p.frequency->load(), p.gain->load(), p.q->load(),
-                                                p.slope->load(), p.enabled->load(), bandInUse[i].load (std::memory_order_relaxed));
+                                                p.slope->load(), p.enabled->load(), bandInUse[i].load (std::memory_order_relaxed), 0.0f);
     }
 
     return result;

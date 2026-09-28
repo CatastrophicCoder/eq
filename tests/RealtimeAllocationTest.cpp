@@ -111,8 +111,11 @@ TEST_CASE ("Processor processBlock does not allocate with 16 active bands", "[re
     ParametricEQAudioProcessor processor;
 
     for (int band = 1; band <= Parameters::numBands; ++band)
+    {
         TestParameters::setBand (processor, band, static_cast<FilterType> (band % FilterTypes::count),
                                  50.0f * static_cast<float> (band), 3.0f, 1.0f, band % CutSlope::count, true);
+        TestParameters::set (processor, Parameters::id (band, "channel"), static_cast<float> (band % ChannelModes::count));
+    }
 
     TestParameters::set (processor, Parameters::autoGain, 1.0f);
 

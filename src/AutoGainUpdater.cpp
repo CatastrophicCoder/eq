@@ -70,7 +70,7 @@ std::array<BandSettings, 16> AutoGainUpdater::snapshot() const
         const auto& p = bandParameters[i];
         result[i] = Parameters::toBandSettings (p.type->load(), p.frequency->load(), p.gain->load(),
                                                 p.q->load(), p.slope->load(), p.enabled->load(),
-                                                inUse[i].load (std::memory_order_relaxed));
+                                                inUse[i].load (std::memory_order_relaxed), 0.0f);
     }
 
     return result;

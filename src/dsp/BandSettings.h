@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ChannelMode.h"
 #include "FilterType.h"
 
 #include <juce_core/juce_core.h>
@@ -20,6 +21,7 @@ struct BandSettings
     int slopeIndex = 1;   // 12 dB/oct
     bool enabled = true;
     bool inUse = true;
+    ChannelMode channel = ChannelMode::stereo;
 
     bool isActive() const noexcept { return enabled && inUse; }
 
@@ -34,6 +36,7 @@ struct BandSettings
 
     bool hasSameDiscreteSettings (const BandSettings& other) const noexcept
     {
-        return type == other.type && slopeIndex == other.slopeIndex && enabled == other.enabled && inUse == other.inUse;
+        return type == other.type && slopeIndex == other.slopeIndex && enabled == other.enabled && inUse == other.inUse
+            && channel == other.channel;
     }
 };

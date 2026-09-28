@@ -76,6 +76,7 @@ public:
 
     static constexpr int menuTypeBase = 1;      // + FilterType index
     static constexpr int menuSlopeBase = 100;   // + slope index
+    static constexpr int menuChannelBase = 200;   // + ChannelMode index
     static constexpr int menuToggleEnable = 1000;
     static constexpr int menuDelete = 1001;
 

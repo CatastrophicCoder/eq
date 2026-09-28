@@ -30,6 +30,7 @@ public:
     juce::Slider& getGainSlider() noexcept             { return gain; }
     juce::Slider& getQSlider() noexcept                { return q; }
     juce::ComboBox& getSlopeBox() noexcept             { return slope; }
+    juce::ComboBox& getChannelBox() noexcept           { return channel; }
 
 private:
     void attach();
@@ -42,12 +43,12 @@ private:
     int band = 1;
 
     juce::ToggleButton enable;
-    juce::ComboBox type, slope;
+    juce::ComboBox type, slope, channel;
     juce::Slider frequency, gain, q;
     juce::Label frequencyCaption, gainCaption, qCaption;
 
     std::unique_ptr<ButtonAttachment> enableAttachment;
-    std::unique_ptr<ComboBoxAttachment> typeAttachment, slopeAttachment;
+    std::unique_ptr<ComboBoxAttachment> typeAttachment, slopeAttachment, channelAttachment;
     std::unique_ptr<SliderAttachment> frequencyAttachment, gainAttachment, qAttachment;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (BandPanel)

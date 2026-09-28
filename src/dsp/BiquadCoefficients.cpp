@@ -4,6 +4,11 @@
 #include <complex>
 #include <numbers>
 
+std::complex<double> BiquadCoefficients::response (double frequencyHz, double sampleRate) const noexcept
+{
+    return { 1.0, 0.0 };   // Not implemented yet.
+}
+
 double BiquadCoefficients::magnitudeDb (double frequencyHz, double sampleRate) const noexcept
 {
     const auto w = 2.0 * std::numbers::pi * frequencyHz / sampleRate;

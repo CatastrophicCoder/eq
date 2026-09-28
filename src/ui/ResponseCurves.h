@@ -30,12 +30,20 @@ public:
     /** In use (enabled or not): has a curve to draw. */
     bool isBandShown (int band) const noexcept    { return shown[static_cast<size_t> (band)]; }
     double bandDb (int band, int point) const noexcept;
+    /** Which sums are shown: one (all Stereo), L and R, or M and S (decision 2026-09-28). */
+    enum class SumLayout { single, leftRight, midSide };
+    SumLayout getSumLayout() const noexcept { return layout; }
+
+    /** The only sum (single), or L / M. */
     double sumDb (int point) const noexcept       { return sum[static_cast<size_t> (point)]; }
+    /** R / S; equals sumDb in the single layout. */
+    double secondSumDb (int point) const noexcept { return secondSum[static_cast<size_t> (point)]; }
 
 private:
     std::array<double, numPoints> frequencies {};
     std::array<std::array<double, numPoints>, numBands> curves {};
-    std::array<double, numPoints> sum {};
+    std::array<double, numPoints> sum {}, secondSum {};
+    SumLayout layout = SumLayout::single;
     std::array<bool, numBands> active {};
     std::array<bool, numBands> shown {};
 

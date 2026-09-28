@@ -1,5 +1,7 @@
 #pragma once
 
+#include <complex>
+
 //==============================================================================
 /** Coefficients of one second-order section, normalised so that a0 == 1:
 
@@ -11,6 +13,9 @@ struct BiquadCoefficients
 {
     double b0 = 1.0, b1 = 0.0, b2 = 0.0;
     double a1 = 0.0, a2 = 0.0;
+
+    /** H(e^jw) at the given frequency. */
+    std::complex<double> response (double frequencyHz, double sampleRate) const noexcept;
 
     /** Magnitude of H(e^jw) in dB at the given frequency. */
     double magnitudeDb (double frequencyHz, double sampleRate) const noexcept;

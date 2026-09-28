@@ -24,6 +24,7 @@ public:
         juce::Point<float> position;
         bool usesGain;
         bool enabled = true;            // false: in use but disabled (drawn grey, not editable)
+        ChannelMode channel = ChannelMode::stereo;   // for the badge
     };
 
     static std::vector<Node> compute (std::span<const BandSettings> bands, const FrequencyAxis& axis);
