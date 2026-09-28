@@ -3,7 +3,9 @@
 #include "Parameters.h"
 #include "PluginProcessor.h"
 #include "SpectrumColour.h"
+#include "dsp/CutSlope.h"
 
+#include <algorithm>
 #include <cmath>
 
 namespace
@@ -43,15 +45,19 @@ juce::Colour ResponseDisplay::sumColour()
 
 void ResponseDisplay::refresh()
 {
-    std::array<BandSettings, ResponseCurves::numBands> bands;
-    auto& state = processor.getValueTreeState();
+    const auto bands = currentBands();
 
-    for (int band = 1; band <= ResponseCurves::numBands; ++band)
-    {
-        auto raw = [&] (const char* field) { return state.getRawParameterValue (Parameters::id (band, field))->load(); };
-        bands[static_cast<size_t> (band - 1)] = Parameters::toBandSettings (raw ("type"), raw ("freq"), raw ("gain"),
-                                                                            raw ("q"), raw ("slope"), raw ("enabled"));
-    }
+    // Bands switched off elsewhere (panel, automation, host) leave the selection.
+    auto pruned = false;
+    for (auto b : std::vector<int> (selection.getSelected()))
+        if (! bands[static_cast<size_t> (b - 1)].enabled)
+        {
+            selection.remove (b);
+            pruned = true;
+        }
+
+    if (pruned)
+        selectionChanged();
 
     const auto rate = processor.getSampleRate() > 0.0 ? processor.getSampleRate() : 48000.0;
     const auto rangeChanged = rangeButton.getButtonText() != juce::String (juce::roundToInt (processor.getDisplayRangeDb())) + " dB";
@@ -177,6 +183,8 @@ void ResponseDisplay::paint (juce::Graphics& g)
         g.setColour (sumColour());
         g.strokePath (getSumPath(), juce::PathStrokeType (2.2f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
     }
+
+    paintNodes (g, axis);
 }
 
 void ResponseDisplay::resized()
@@ -205,30 +213,450 @@ void ResponseDisplay::updateRangeButton()
 }
 
 //==============================================================================
-// Not implemented yet (M4 interaction).
-void ResponseDisplay::handlePress (juce::Point<float>, juce::ModifierKeys, int) {}
-void ResponseDisplay::handleDrag (juce::Point<float>, juce::ModifierKeys) {}
-void ResponseDisplay::handleRelease() {}
-void ResponseDisplay::handleWheel (juce::Point<float>, float) {}
-void ResponseDisplay::handleMagnify (juce::Point<float>, float) {}
-bool ResponseDisplay::handleKey (const juce::KeyPress&) { return false; }
-juce::PopupMenu ResponseDisplay::buildNodeMenu (int) const { return {}; }
-void ResponseDisplay::applyNodeMenuResult (int, int) {}
-std::vector<NodeLayout::Node> ResponseDisplay::getNodes() const { return {}; }
-void ResponseDisplay::setSelection (std::vector<int>, int) {}
-juce::String ResponseDisplay::getMessage() const { return {}; }
-void ResponseDisplay::mouseDown (const juce::MouseEvent&) {}
-void ResponseDisplay::mouseDrag (const juce::MouseEvent&) {}
-void ResponseDisplay::mouseUp (const juce::MouseEvent&) {}
-void ResponseDisplay::mouseMove (const juce::MouseEvent&) {}
-void ResponseDisplay::mouseExit (const juce::MouseEvent&) {}
-void ResponseDisplay::mouseWheelMove (const juce::MouseEvent&, const juce::MouseWheelDetails&) {}
-void ResponseDisplay::mouseMagnify (const juce::MouseEvent&, float) {}
-bool ResponseDisplay::keyPressed (const juce::KeyPress&) { return false; }
-std::array<BandSettings, ResponseCurves::numBands> ResponseDisplay::currentBands() const { return {}; }
-void ResponseDisplay::selectionChanged() {}
-void ResponseDisplay::addBandAt (juce::Point<float>) {}
-void ResponseDisplay::disableBands (const std::vector<int>&) {}
-void ResponseDisplay::scaleQ (juce::Point<float>, double) {}
-void ResponseDisplay::showMessage (const juce::String&) {}
-void ResponseDisplay::paintNodes (juce::Graphics&, const FrequencyAxis&) {}
+// Interaction (M4).
+
+std::array<BandSettings, ResponseCurves::numBands> ResponseDisplay::currentBands() const
+{
+    std::array<BandSettings, ResponseCurves::numBands> bands;
+    auto& state = processor.getValueTreeState();
+
+    for (int band = 1; band <= ResponseCurves::numBands; ++band)
+    {
+        auto raw = [&] (const char* field) { return state.getRawParameterValue (Parameters::id (band, field))->load(); };
+        bands[static_cast<size_t> (band - 1)] = Parameters::toBandSettings (raw ("type"), raw ("freq"), raw ("gain"),
+                                                                            raw ("q"), raw ("slope"), raw ("enabled"));
+    }
+
+    return bands;
+}
+
+std::vector<NodeLayout::Node> ResponseDisplay::getNodes() const
+{
+    return NodeLayout::compute (currentBands(), getAxis());
+}
+
+void ResponseDisplay::setSelection (std::vector<int> bands, int primary)
+{
+    selection.set (std::move (bands), primary);
+    selectionChanged();
+}
+
+void ResponseDisplay::selectionChanged()
+{
+    repaint();
+    if (onSelectionChanged != nullptr)
+        onSelectionChanged();
+}
+
+void ResponseDisplay::handlePress (juce::Point<float> position, juce::ModifierKeys mods, int numClicks)
+{
+    const auto nodes = getNodes();
+    const auto band = NodeLayout::bandAt (nodes, position);
+
+    if (numClicks >= 2)
+    {
+        if (band != 0)
+            disableBands ({ band });
+        else
+            addBandAt (position);
+        return;
+    }
+
+    if (band == 0)
+    {
+        // Empty space: start a selection rectangle (Shift keeps what is selected).
+        extendSelection = mods.isShiftDown();
+        selectionBeforeArea = extendSelection ? selection.getSelected() : std::vector<int> {};
+        if (! extendSelection)
+        {
+            selection.clear();
+            selectionChanged();
+        }
+
+        selectingArea = true;
+        areaStart = areaEnd = position;
+        return;
+    }
+
+    if (mods.isCommandDown())
+    {
+        selection.toggle (band);
+        selectionChanged();
+        if (! selection.contains (band))
+            return;   // toggled off: nothing to drag
+    }
+    else if (! selection.contains (band))
+    {
+        selection.select (band);
+        selectionChanged();
+    }
+    else
+    {
+        selection.set (selection.getSelected(), band);   // keep the selection, make this band primary
+        selectionChanged();
+    }
+
+    // Drag every selected band, inside one gesture per parameter.
+    const auto bands = currentBands();
+    std::vector<NodeDragController::BandStart> starts;
+
+    for (auto b : selection.getSelected())
+    {
+        const auto& settings = bands[static_cast<size_t> (b - 1)];
+        const auto usesGain = FilterTypes::usesGain (settings.type);
+        starts.push_back ({ b, settings.frequencyHz, settings.gainDb, usesGain });
+
+        writer.beginGesture (b, "freq");
+        if (usesGain)
+            writer.beginGesture (b, "gain");
+    }
+
+    drag.begin (std::move (starts), position);
+}
+
+void ResponseDisplay::handleDrag (juce::Point<float> position, juce::ModifierKeys mods)
+{
+    if (drag.isActive())
+    {
+        for (const auto& v : drag.dragTo (position, mods.isShiftDown(), getAxis()))
+        {
+            writer.set (v.band, "freq", static_cast<float> (v.frequencyHz));
+
+            const auto type = currentBands()[static_cast<size_t> (v.band - 1)].type;
+            if (FilterTypes::usesGain (type))
+                writer.set (v.band, "gain", static_cast<float> (v.gainDb));
+        }
+
+        refresh();
+        return;
+    }
+
+    if (selectingArea)
+    {
+        areaEnd = position;
+        auto chosen = NodeLayout::bandsIn (getNodes(), juce::Rectangle<float> (areaStart, areaEnd));
+
+        if (extendSelection)
+            chosen.insert (chosen.end(), selectionBeforeArea.begin(), selectionBeforeArea.end());
+
+        selection.set (chosen, selection.getPrimary());
+        selectionChanged();
+    }
+}
+
+void ResponseDisplay::handleRelease()
+{
+    if (drag.isActive())
+    {
+        for (const auto& s : drag.getBands())
+        {
+            writer.endGesture (s.band, "freq");
+            if (s.usesGain)
+                writer.endGesture (s.band, "gain");
+        }
+
+        drag.end();
+    }
+
+    if (selectingArea)
+    {
+        selectingArea = false;
+        repaint();
+    }
+}
+
+void ResponseDisplay::scaleQ (juce::Point<float> position, double factor)
+{
+    // The node under the pointer (with its selection, if it is part of one), else the selection.
+    const auto band = NodeLayout::bandAt (getNodes(), position);
+    std::vector<int> targets;
+
+    if (band != 0)
+        targets = selection.contains (band) ? selection.getSelected() : std::vector<int> { band };
+    else
+        targets = selection.getSelected();
+
+    const auto bands = currentBands();
+    for (auto b : targets)
+    {
+        const auto& settings = bands[static_cast<size_t> (b - 1)];
+        if (FilterTypes::usesQ (settings.type))
+            writer.setOnce (b, "q", static_cast<float> (NodeDragController::scaleQ (settings.q, factor)));
+    }
+
+    refresh();
+}
+
+void ResponseDisplay::handleWheel (juce::Point<float> position, float deltaY)
+{
+    scaleQ (position, NodeDragController::wheelFactor (deltaY));
+}
+
+void ResponseDisplay::handleMagnify (juce::Point<float> position, float scaleFactor)
+{
+    scaleQ (position, static_cast<double> (scaleFactor));
+}
+
+bool ResponseDisplay::handleKey (const juce::KeyPress& key)
+{
+    if (key.isKeyCode (juce::KeyPress::deleteKey) || key.isKeyCode (juce::KeyPress::backspaceKey))
+    {
+        if (selection.isEmpty())
+            return false;
+
+        disableBands (selection.getSelected());
+        return true;
+    }
+
+    return false;   // everything else goes to the host (transport, shortcuts)
+}
+
+void ResponseDisplay::addBandAt (juce::Point<float> position)
+{
+    const auto bands = currentBands();
+    int free = 0;
+
+    for (int b = 1; b <= ResponseCurves::numBands && free == 0; ++b)
+        if (! bands[static_cast<size_t> (b - 1)].enabled)
+            free = b;
+
+    if (free == 0)
+    {
+        showMessage ("All 16 bands in use");
+        return;
+    }
+
+    const auto axis = getAxis();
+    const auto f = std::clamp (axis.frequencyForX (position.x), NodeDragController::minFrequency, NodeDragController::maxFrequency);
+    const auto g = std::clamp (axis.dbForY (position.y), NodeDragController::minGain, NodeDragController::maxGain);
+
+    writer.setOnce (free, "type", static_cast<float> (FilterType::bell));
+    writer.setOnce (free, "freq", static_cast<float> (f));
+    writer.setOnce (free, "gain", static_cast<float> (g));
+    writer.setOnce (free, "q", 1.0f);
+    writer.setOnce (free, "enabled", 1.0f);
+
+    selection.select (free);
+    selectionChanged();
+    refresh();
+}
+
+void ResponseDisplay::disableBands (const std::vector<int>& bands)
+{
+    const auto targets = bands;   // copy: the selection may be what we were given
+
+    for (auto b : targets)
+    {
+        writer.setOnce (b, "enabled", 0.0f);
+        selection.remove (b);
+    }
+
+    selectionChanged();
+    refresh();
+}
+
+juce::PopupMenu ResponseDisplay::buildNodeMenu (int band) const
+{
+    const auto settings = currentBands()[static_cast<size_t> (band - 1)];
+    juce::PopupMenu menu;
+
+    for (int t = 0; t < FilterTypes::count; ++t)
+        menu.addItem (menuTypeBase + t, FilterTypes::names[t], true, static_cast<int> (settings.type) == t);
+
+    if (FilterTypes::usesSlope (settings.type))
+    {
+        juce::PopupMenu slopes;
+        for (int sl = 0; sl < CutSlope::count; ++sl)
+            slopes.addItem (menuSlopeBase + sl, CutSlope::labels[sl], true, settings.slopeIndex == sl);
+        menu.addSeparator();
+        menu.addSubMenu ("Slope", slopes);
+    }
+
+    menu.addSeparator();
+    menu.addItem (menuDisable, "Disable band");
+    return menu;
+}
+
+void ResponseDisplay::applyNodeMenuResult (int band, int itemId)
+{
+    if (itemId <= 0)
+        return;   // menu dismissed
+
+    const auto targets = selection.contains (band) ? selection.getSelected() : std::vector<int> { band };
+
+    if (itemId == menuDisable)
+    {
+        disableBands (targets);
+        return;
+    }
+
+    if (itemId >= menuSlopeBase && itemId < menuSlopeBase + CutSlope::count)
+    {
+        for (auto b : targets)
+            writer.setOnce (b, "slope", static_cast<float> (itemId - menuSlopeBase));
+    }
+    else if (itemId >= menuTypeBase && itemId < menuTypeBase + FilterTypes::count)
+    {
+        for (auto b : targets)
+            writer.setOnce (b, "type", static_cast<float> (itemId - menuTypeBase));
+    }
+
+    refresh();
+}
+
+void ResponseDisplay::showMessage (const juce::String& text)
+{
+    message = text;
+    messageTime = juce::Time::getMillisecondCounter();
+    repaint();
+}
+
+juce::String ResponseDisplay::getMessage() const
+{
+    constexpr juce::uint32 messageDurationMs = 2000;
+    return juce::Time::getMillisecondCounter() - messageTime < messageDurationMs ? message : juce::String();
+}
+
+//==============================================================================
+void ResponseDisplay::mouseDown (const juce::MouseEvent& e)
+{
+    grabKeyboardFocus();
+
+    if (e.mods.isPopupMenu())
+    {
+        const auto band = NodeLayout::bandAt (getNodes(), e.position);
+        if (band == 0)
+            return;
+
+        if (! selection.contains (band))
+        {
+            selection.select (band);
+            selectionChanged();
+        }
+
+        juce::Component::SafePointer<ResponseDisplay> safe (this);
+        buildNodeMenu (band).showMenuAsync (juce::PopupMenu::Options().withTargetComponent (this)
+                                                                          .withMousePosition(),
+                                            [safe, band] (int result)
+                                            {
+                                                if (safe != nullptr)
+                                                    safe->applyNodeMenuResult (band, result);
+                                            });
+        return;
+    }
+
+    handlePress (e.position, e.mods, e.getNumberOfClicks());
+}
+
+void ResponseDisplay::mouseDrag (const juce::MouseEvent& e)
+{
+    if (! e.mods.isPopupMenu())
+        handleDrag (e.position, e.mods);
+}
+
+void ResponseDisplay::mouseUp (const juce::MouseEvent&)
+{
+    handleRelease();
+}
+
+void ResponseDisplay::mouseMove (const juce::MouseEvent& e)
+{
+    const auto band = NodeLayout::bandAt (getNodes(), e.position);
+    if (band != hovered)
+    {
+        hovered = band;
+        repaint();
+    }
+}
+
+void ResponseDisplay::mouseExit (const juce::MouseEvent&)
+{
+    if (hovered != 0)
+    {
+        hovered = 0;
+        repaint();
+    }
+}
+
+void ResponseDisplay::mouseWheelMove (const juce::MouseEvent& e, const juce::MouseWheelDetails& wheel)
+{
+    handleWheel (e.position, wheel.deltaY);
+}
+
+void ResponseDisplay::mouseMagnify (const juce::MouseEvent& e, float scaleFactor)
+{
+    handleMagnify (e.position, scaleFactor);
+}
+
+bool ResponseDisplay::keyPressed (const juce::KeyPress& key)
+{
+    return handleKey (key);
+}
+
+//==============================================================================
+void ResponseDisplay::paintNodes (juce::Graphics& g, const FrequencyAxis& axis)
+{
+    const auto bands = currentBands();
+
+    for (const auto& n : NodeLayout::compute (bands, axis))
+    {
+        const auto colour = bandColour (n.band);
+        const auto isSelected = selection.contains (n.band);
+        const auto radius = (n.band == hovered || isSelected) ? 7.5f : 6.0f;
+
+        g.setColour (colour);
+        g.fillEllipse (juce::Rectangle<float> (radius * 2.0f, radius * 2.0f).withCentre (n.position));
+
+        if (isSelected)
+        {
+            g.setColour (juce::Colours::white);
+            g.drawEllipse (juce::Rectangle<float> (radius * 2.0f + 4.0f, radius * 2.0f + 4.0f).withCentre (n.position),
+                           n.band == selection.getPrimary() ? 2.0f : 1.2f);
+        }
+    }
+
+    // Readout for the hovered band, else the primary one.
+    const auto shown = hovered != 0 ? hovered : selection.getPrimary();
+    if (shown != 0 && bands[static_cast<size_t> (shown - 1)].enabled)
+    {
+        const auto& b = bands[static_cast<size_t> (shown - 1)];
+        auto text = (b.frequencyHz >= 1000.0 ? juce::String (b.frequencyHz / 1000.0, 2) + " kHz"
+                                             : juce::String (juce::roundToInt (b.frequencyHz)) + " Hz");
+        if (FilterTypes::usesGain (b.type))
+            text << "   " << (b.gainDb > 0.0 ? "+" : "") << juce::String (b.gainDb, 1) << " dB";
+        if (FilterTypes::usesQ (b.type))
+            text << "   Q " << juce::String (b.q, 2);
+
+        for (const auto& n : NodeLayout::compute (bands, axis))
+            if (n.band == shown)
+            {
+                const auto box = juce::Rectangle<float> (160.0f, 20.0f)
+                                     .withCentre (n.position.translated (0.0f, -24.0f))
+                                     .constrainedWithin (axis.getPlotArea());
+                g.setColour (juce::Colour { 0xd0101014 });
+                g.fillRoundedRectangle (box, 4.0f);
+                g.setColour (bandColour (shown));
+                g.setFont (juce::FontOptions (12.0f));
+                g.drawText (text, box, juce::Justification::centred);
+            }
+    }
+
+    if (selectingArea)
+    {
+        const auto area = juce::Rectangle<float> (areaStart, areaEnd);
+        g.setColour (juce::Colours::white.withAlpha (0.08f));
+        g.fillRect (area);
+        g.setColour (juce::Colours::white.withAlpha (0.4f));
+        g.drawRect (area, 1.0f);
+    }
+
+    if (const auto text = getMessage(); text.isNotEmpty())
+    {
+        const auto box = juce::Rectangle<float> (220.0f, 28.0f).withCentre (axis.getPlotArea().getCentre().withY (axis.getPlotArea().getY() + 40.0f));
+        g.setColour (juce::Colour { 0xe0101014 });
+        g.fillRoundedRectangle (box, 6.0f);
+        g.setColour (juce::Colours::white);
+        g.setFont (juce::FontOptions (13.0f));
+        g.drawText (text, box, juce::Justification::centred);
+    }
+}

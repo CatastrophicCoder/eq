@@ -11,7 +11,15 @@ ParametricEQAudioProcessorEditor::ParametricEQAudioProcessorEditor (ParametricEQ
     addAndMakeVisible (topBar);
     addAndMakeVisible (display);
     addAndMakeVisible (bottomBar);
-    addAndMakeVisible (bandPanel);   // after the display: drawn on top of it
+    addChildComponent (bandPanel);   // after the display: drawn on top of it; shown with a selection
+
+    display.onSelectionChanged = [this]
+    {
+        const auto primary = display.getSelection().getPrimary();
+        if (primary != 0 && primary != bandPanel.getBand())
+            bandPanel.setBand (primary);
+        bandPanel.setVisible (primary != 0);
+    };
 
     setResizable (true, true);
     setResizeLimits (minWidth, minHeight, maxWidth, maxHeight);
