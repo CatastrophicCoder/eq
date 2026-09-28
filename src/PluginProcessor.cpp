@@ -126,7 +126,10 @@ void ParametricEQAudioProcessor::releaseResources()
 
 void ParametricEQAudioProcessor::reset()
 {
-    // Not implemented yet.
+    for (auto& band : bands)
+        band.reset();
+
+    outputGain.setCurrentAndTargetValue (targetOutputGain());
 }
 
 bool ParametricEQAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const

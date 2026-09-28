@@ -101,6 +101,41 @@ juce::AudioProcessorValueTreeState::ParameterLayout Parameters::createLayout()
         layout.add (std::make_unique<juce::AudioParameterChoice> (
             juce::ParameterID { id (band, "channel"), m6VersionHint }, name + "Channel",
             channelNames, static_cast<int> (ChannelMode::stereo)));
+
+        // Dynamics (M7). Continuous ranges without snapping intervals (see output_gain).
+        auto dbText = [] (float v, int) { return formatDb (v); };
+        auto msText = [] (float v, int) { return juce::String (v, v < 10.0f ? 1 : 0); };
+
+        layout.add (std::make_unique<juce::AudioParameterBool> (
+            juce::ParameterID { id (band, "dyn"), m7VersionHint }, name + "Dynamic", false));
+        layout.add (std::make_unique<juce::AudioParameterChoice> (
+            juce::ParameterID { id (band, "dynmode"), m7VersionHint }, name + "Dynamic Mode",
+            juce::StringArray { "Range", "Ratio" }, 0));
+        layout.add (std::make_unique<juce::AudioParameterFloat> (
+            juce::ParameterID { id (band, "thresh"), m7VersionHint }, name + "Threshold",
+            juce::NormalisableRange<float> (-60.0f, 0.0f), -20.0f,
+            FloatAttributes().withLabel ("dB").withStringFromValueFunction (dbText)));
+        layout.add (std::make_unique<juce::AudioParameterFloat> (
+            juce::ParameterID { id (band, "range"), m7VersionHint }, name + "Range",
+            juce::NormalisableRange<float> (-24.0f, 24.0f), -6.0f,
+            FloatAttributes().withLabel ("dB").withStringFromValueFunction (dbText)));
+        layout.add (std::make_unique<juce::AudioParameterFloat> (
+            juce::ParameterID { id (band, "ratio"), m7VersionHint }, name + "Ratio",
+            logRange (1.0f, 20.0f), 2.0f,
+            FloatAttributes().withLabel (":1").withStringFromValueFunction ([] (float v, int) { return juce::String (v, 1); })));
+        layout.add (std::make_unique<juce::AudioParameterFloat> (
+            juce::ParameterID { id (band, "attack"), m7VersionHint }, name + "Attack",
+            logRange (0.1f, 200.0f), 10.0f,
+            FloatAttributes().withLabel ("ms").withStringFromValueFunction (msText)));
+        layout.add (std::make_unique<juce::AudioParameterFloat> (
+            juce::ParameterID { id (band, "release"), m7VersionHint }, name + "Release",
+            logRange (5.0f, 2000.0f), 100.0f,
+            FloatAttributes().withLabel ("ms").withStringFromValueFunction (msText)));
+        layout.add (std::make_unique<juce::AudioParameterChoice> (
+            juce::ParameterID { id (band, "detector"), m7VersionHint }, name + "Detector",
+            juce::StringArray { "Peak", "RMS" }, 0));
+        layout.add (std::make_unique<juce::AudioParameterBool> (
+            juce::ParameterID { id (band, "sidechain"), m7VersionHint }, name + "Side-chain", false));
     }
 
     layout.add (std::make_unique<juce::AudioParameterFloat> (
