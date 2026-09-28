@@ -31,6 +31,14 @@ public:
     PresetManager (ParametricEQAudioProcessor& processor, juce::File userFolder);
 
     static juce::File defaultUserFolder();
+
+    /** The user folder before the rename (M7): ~/Library/Audio/Presets/CatastrophicCoder/ParametricEQ/. */
+    static juce::File legacyUserFolder();
+
+    /** Copies the *.xml files of the legacy folder into the target folder if the target
+        has none yet; the legacy files stay. Returns the number of files copied.
+    */
+    static int copyLegacyPresets (const juce::File& legacy, const juce::File& target);
     const juce::File& getUserFolder() const noexcept { return userFolder; }
 
     /** Tests point this at a temporary folder, so they never touch the real user presets. */

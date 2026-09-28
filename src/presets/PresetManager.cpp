@@ -38,6 +38,16 @@ juce::File PresetManager::defaultUserFolder()
                .getChildFile ("Library/Audio/Presets/CatastrophicCoder/ParametricEQ");
 }
 
+juce::File PresetManager::legacyUserFolder()
+{
+    return {};
+}
+
+int PresetManager::copyLegacyPresets (const juce::File&, const juce::File&)
+{
+    return 0;
+}
+
 std::vector<PresetManager::Entry> PresetManager::getEntries() const
 {
     std::vector<Entry> entries;

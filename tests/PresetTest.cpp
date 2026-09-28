@@ -20,7 +20,7 @@ namespace
     struct TempFolder
     {
         juce::File dir = juce::File::getSpecialLocation (juce::File::tempDirectory)
-                             .getChildFile ("ParametricEQTests-" + juce::Uuid().toString());
+                             .getChildFile ("SpectralFaultTests-" + juce::Uuid().toString());
         TempFolder()  { dir.createDirectory(); }
         ~TempFolder() { dir.deleteRecursively(); }
     };
@@ -365,8 +365,61 @@ TEST_CASE ("Next and previous step through factory and user presets and wrap", "
 
 TEST_CASE ("The default user folder is the macOS plugin preset folder", "[preset][user]")
 {
-    const auto dir = PresetManager::defaultUserFolder();
-    CHECK (dir.getFullPathName().endsWith ("Library/Audio/Presets/CatastrophicCoder/ParametricEQ"));
+    CHECK (PresetManager::defaultUserFolder().getFullPathName().endsWith ("Library/Audio/Presets/Catastrophic Audio/Spectral Fault"));
+    CHECK (PresetManager::legacyUserFolder().getFullPathName().endsWith ("Library/Audio/Presets/CatastrophicCoder/ParametricEQ"));
+}
+
+TEST_CASE ("User presets from the old folder are copied to the new one once", "[preset][user][migration]")
+{
+    TempFolder folder;
+    const auto legacy = folder.dir.getChildFile ("old");
+    const auto target = folder.dir.getChildFile ("new");
+    legacy.createDirectory();
+
+    Preset a; a.name = "Vocal Take";
+    Preset b; b.name = "Drum Bus";
+    REQUIRE (a.toXml()->writeTo (legacy.getChildFile ("Vocal Take.xml")));
+    REQUIRE (b.toXml()->writeTo (legacy.getChildFile ("Drum Bus.xml")));
+    REQUIRE (legacy.getChildFile ("notes.txt").replaceWithText ("not a preset"));
+
+    SECTION ("new folder missing: every .xml is copied, the old files stay")
+    {
+        CHECK (PresetManager::copyLegacyPresets (legacy, target) == 2);
+        CHECK (target.getChildFile ("Vocal Take.xml").existsAsFile());
+        CHECK (target.getChildFile ("Drum Bus.xml").existsAsFile());
+        CHECK_FALSE (target.getChildFile ("notes.txt").exists());
+        CHECK (legacy.getChildFile ("Vocal Take.xml").existsAsFile());
+
+        // A second run finds presets in the new folder and does nothing.
+        legacy.getChildFile ("Late.xml").replaceWithText (a.toXml()->toString());
+        CHECK (PresetManager::copyLegacyPresets (legacy, target) == 0);
+        CHECK_FALSE (target.getChildFile ("Late.xml").exists());
+    }
+
+    SECTION ("new folder already has presets: nothing is copied")
+    {
+        target.createDirectory();
+        Preset c; c.name = "Mine";
+        REQUIRE (c.toXml()->writeTo (target.getChildFile ("Mine.xml")));
+        CHECK (PresetManager::copyLegacyPresets (legacy, target) == 0);
+        CHECK_FALSE (target.getChildFile ("Vocal Take.xml").exists());
+    }
+
+    SECTION ("no old folder: nothing happens, no new folder is created")
+    {
+        CHECK (PresetManager::copyLegacyPresets (folder.dir.getChildFile ("missing"), target) == 0);
+        CHECK_FALSE (target.exists());
+    }
+}
+
+TEST_CASE ("A manager on a folder other than the default never migrates", "[preset][user][migration]")
+{
+    // Tests point managers at temporary folders; copying into them would hide real bugs
+    // and, for the default folder, touch the real user presets.
+    Fixture f;
+    const auto entries = f.presets.getEntries();
+    CHECK (std::none_of (entries.begin(), entries.end(), [] (const auto& e) { return ! e.isFactory; }));
+    CHECK (f.folder.dir.findChildFiles (juce::File::findFiles, false, "*.xml").isEmpty());
 }
 
 TEST_CASE ("The current preset is remembered with the session", "[preset][state]")
