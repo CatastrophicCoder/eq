@@ -12,7 +12,7 @@ Milestone definitions and "done when" criteria are in [PLAN.md](PLAN.md#mileston
 | 2 | Full band set, tier 1 | Done | All 5 stages built and validated (tests Debug + Release, pluginval, auval). Owner listening check in Logic: no clicks (other checklist items not reported separately) |
 | 3 | Response curve display | Done | Built and validated (108 tests, pluginval, auval); owner reviewed the layout and colours |
 | 4 | Interactive display | Done | Built and validated (135 tests, pluginval, auval). Owner re-check in Logic: everything tested, looks good |
-| 5 | Spectrum analyzer | In progress | Built and validated (157 tests, pluginval, auval). Waiting on owner check in Logic |
+| 5 | Spectrum analyzer | Done | Built and validated (157 tests, pluginval, auval); owner tested in Logic |
 | 6 | Per-band stereo | Not started | |
 | 7 | Dynamic EQ | Not started | |
 | 8 | Linear phase mode | Not started | |
@@ -99,7 +99,11 @@ Newest first. One entry per session, a few lines each.
 - Found: the FIFO stress test hung against the stub (now bounded by a deadline); peak hold ran a step long from
   float rounding (1 - 10 x 0.1); resolution and speed menus both read "Medium" (resolution now shows FFT size).
 - Open issues: low frequencies look jagged at small FFT sizes (few bins per point there; higher resolution helps).
-- Next step: owner check in Logic, then mark M5 done.
+- Validation timing: pluginval VST3 3 s, AU 4 s, auval < 1 s. An earlier 10+ minute run most likely came from
+  restarting AudioComponentRegistrar before auval (full AU registry rescan; not proven). Restart it only when a
+  fresh AU build is missing from `auval -a`, as CLAUDE.md says.
+- 2026-09-28: owner tested in Logic. M5 marked done.
+- Next step: M6 (per-band stereo: Stereo / Left / Right / Mid / Side).
 
 ### 2026-09-28 — M4
 
