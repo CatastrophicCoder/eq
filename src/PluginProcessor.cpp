@@ -1,6 +1,7 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 #include "Parameters.h"
+#include "ui/FrequencyAxis.h"
 #include "dsp/CutSlope.h"
 
 //==============================================================================
@@ -144,14 +145,22 @@ float ParametricEQAudioProcessor::getAutoGainOffsetDb() const noexcept
     return autoGainUpdater.getOffsetDb();
 }
 
+namespace
+{
+    const juce::Identifier displayRangeProperty { "displayRangeDb" };
+}
+
 double ParametricEQAudioProcessor::getDisplayRangeDb() const
 {
-    return 12.0;   // Not implemented yet.
+    // Stored with the session; anything missing or not one of the four ranges reads as the default.
+    const auto stored = static_cast<double> (parameters.state.getProperty (displayRangeProperty, FrequencyAxis::defaultRangeDb));
+    return FrequencyAxis::isValidRange (stored) ? stored : FrequencyAxis::defaultRangeDb;
 }
 
 void ParametricEQAudioProcessor::setDisplayRangeDb (double rangeDb)
 {
-    juce::ignoreUnused (rangeDb);
+    if (FrequencyAxis::isValidRange (rangeDb))
+        parameters.state.setProperty (displayRangeProperty, rangeDb, nullptr);
 }
 
 //==============================================================================
