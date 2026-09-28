@@ -1,8 +1,9 @@
-# ParametricEQ — instructions for Claude Code
+# Spectral Fault — instructions for Claude Code
 
 ## Project
 
-Hobby parametric EQ plugin (AU, VST3, Standalone) for macOS, loosely inspired by commercial high-end EQs.
+Spectral Fault by Catastrophic Audio: hobby parametric EQ plugin (AU, VST3, Standalone) for macOS, loosely
+inspired by commercial high-end EQs.
 Learning project, built with JUCE and C++ in CLion. Public repo, licensed AGPLv3.
 
 - Full plan, milestones and design options: `docs/PLAN.md`
@@ -34,23 +35,25 @@ cmake --build build
 ctest --test-dir build --output-on-failure
 
 # validate the plugin (pluginval is not on PATH; run it from the app bundle)
-/Applications/pluginval.app/Contents/MacOS/pluginval --strictness-level 5 --validate build/ParametricEQ_artefacts/Debug/VST3/ParametricEQ.vst3
-/Applications/pluginval.app/Contents/MacOS/pluginval --strictness-level 5 --validate ~/Library/Audio/Plug-Ins/Components/ParametricEQ.component
+/Applications/pluginval.app/Contents/MacOS/pluginval --strictness-level 5 --validate "build/SpectralFault_artefacts/Debug/VST3/Spectral Fault.vst3"
+/Applications/pluginval.app/Contents/MacOS/pluginval --strictness-level 5 --validate "$HOME/Library/Audio/Plug-Ins/Components/Spectral Fault.component"
 
 # AU validation (the build copies the AU to ~/Library/Audio/Plug-Ins/Components)
 auval -v aufx Peq1 Ctcd
 
 # look at the editor without a host: renders PNGs of the editor into <dir>
-EQ_SNAPSHOT_DIR=<dir> build/tests/ParametricEQTests "[.snapshot]"
+EQ_SNAPSHOT_DIR=<dir> build/tests/SpectralFaultTests "[.snapshot]"
 
 # Release CPU check: build only the tests, so the installed Debug plugin is not replaced
 cmake -B build/release -G Ninja -DCMAKE_BUILD_TYPE=Release
-cmake --build build/release --target ParametricEQTests
-build/release/tests/ParametricEQTests "16 Brickwall bands*" -s
+cmake --build build/release --target SpectralFaultTests
+build/release/tests/SpectralFaultTests "16 Brickwall bands*" -s
 ```
 
-- Plugin identity: company `CatastrophicCoder`, manufacturer code `Ctcd`, plugin code `Peq1`,
-  bundle ID `com.catastrophiccoder.parametriceq`. Do not change the codes: hosts use them to recall saved sessions.
+- Plugin identity: product `Spectral Fault`, company `Catastrophic Audio`, CMake target `SpectralFault`,
+  manufacturer code `Ctcd`, plugin code `Peq1`, bundle ID `com.catastrophicaudio.spectralfault` (renamed in M7).
+  Do not change the codes: hosts use them to recall saved sessions. The saved-state tag `ParametricEQ` and preset
+  tag `ParametricEQPreset` also stay, so older sessions and presets keep loading.
 - `COPY_PLUGIN_AFTER_BUILD` is on: every build installs the AU and VST3 into `~/Library/Audio/Plug-Ins/`.
 - If a fresh AU build does not show up in `auval -a`, restart the AU registry: `killall -9 AudioComponentRegistrar`.
 
@@ -96,7 +99,8 @@ Decided; details and dates in `docs/PROGRESS.md`.
   (mode, resolution, speed, range) are state properties; tilt is fixed at 4.5 dB/oct around 1 kHz.
 - Output has one global phase-invert switch.
 - Presets (M6b): `src/presets/`. A preset holds all 16 bands and the output section (not view settings). Eleven
-  factory presets are compiled in; user presets are XML files in ~/Library/Audio/Presets/CatastrophicCoder/ParametricEQ/.
+  factory presets are compiled in; user presets are XML files in ~/Library/Audio/Presets/Catastrophic Audio/Spectral Fault/ (copied once from the
+  old CatastrophicCoder/ParametricEQ folder).
   Presets are shown in the plugin's own browser only (not host programs). Preset code runs on the message thread;
   tests use a temporary folder (`PresetManager::setUserFolder`), never the real one. Preset sources are not cited
   in the repo (owner's decision).

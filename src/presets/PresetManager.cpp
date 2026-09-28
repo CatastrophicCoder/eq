@@ -35,21 +35,46 @@ PresetManager::PresetManager (ParametricEQAudioProcessor& p, juce::File folder)
 juce::File PresetManager::defaultUserFolder()
 {
     return juce::File::getSpecialLocation (juce::File::userHomeDirectory)
-               .getChildFile ("Library/Audio/Presets/CatastrophicCoder/ParametricEQ");
+               .getChildFile ("Library/Audio/Presets/Catastrophic Audio/Spectral Fault");
 }
 
 juce::File PresetManager::legacyUserFolder()
 {
-    return {};
+    return juce::File::getSpecialLocation (juce::File::userHomeDirectory)
+               .getChildFile ("Library/Audio/Presets/CatastrophicCoder/ParametricEQ");
 }
 
-int PresetManager::copyLegacyPresets (const juce::File&, const juce::File&)
+int PresetManager::copyLegacyPresets (const juce::File& legacy, const juce::File& target)
 {
-    return 0;
+    if (! legacy.isDirectory() || ! target.findChildFiles (juce::File::findFiles, false, "*.xml").isEmpty())
+        return 0;
+
+    const auto files = legacy.findChildFiles (juce::File::findFiles, false, "*.xml");
+    if (files.isEmpty() || ! target.createDirectory())
+        return 0;
+
+    int copied = 0;
+    for (const auto& file : files)
+        if (file.copyFileTo (target.getChildFile (file.getFileName())))
+            ++copied;
+
+    return copied;
+}
+
+void PresetManager::copyLegacyPresetsOnce() const
+{
+    // Only the real default folder migrates; tests use temporary folders (setUserFolder).
+    if (legacyChecked)
+        return;
+
+    legacyChecked = true;
+    if (userFolder == defaultUserFolder())
+        copyLegacyPresets (legacyUserFolder(), userFolder);
 }
 
 std::vector<PresetManager::Entry> PresetManager::getEntries() const
 {
+    copyLegacyPresetsOnce();
     std::vector<Entry> entries;
 
     for (const auto& p : FactoryPresets::all())
@@ -142,6 +167,7 @@ bool PresetManager::load (const Entry& entry)
 
 PresetManager::SaveResult PresetManager::saveUserPreset (const juce::String& name, bool overwrite)
 {
+    copyLegacyPresetsOnce();   // before the first save makes the new folder non-empty
     const auto fileName = toFileName (name);
     if (fileName.isEmpty())
         return SaveResult::invalidName;

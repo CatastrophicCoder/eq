@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 
-project(ParametricEQ VERSION 0.1.0 LANGUAGES C CXX)
+project(SpectralFault VERSION 0.1.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -10,13 +10,13 @@ option(PARAMETRICEQ_BUILD_TESTS "Build the Catch2 unit tests" ON)
 
 add_subdirectory(external/JUCE)
 
-juce_add_plugin(ParametricEQ
-    COMPANY_NAME "CatastrophicCoder"
-    BUNDLE_ID com.catastrophiccoder.parametriceq
+juce_add_plugin(SpectralFault
+    COMPANY_NAME "Catastrophic Audio"
+    BUNDLE_ID com.catastrophicaudio.spectralfault
     PLUGIN_MANUFACTURER_CODE Ctcd
     PLUGIN_CODE Peq1
     FORMATS AU VST3 Standalone
-    PRODUCT_NAME "ParametricEQ"
+    PRODUCT_NAME "Spectral Fault"
     IS_SYNTH FALSE
     NEEDS_MIDI_INPUT FALSE
     NEEDS_MIDI_OUTPUT FALSE
@@ -26,7 +26,7 @@ juce_add_plugin(ParametricEQ
     NEEDS_WEB_BROWSER FALSE
     NEEDS_CURL FALSE)
 
-target_sources(ParametricEQ
+target_sources(SpectralFault
     PRIVATE
         src/PluginProcessor.cpp
         src/PluginEditor.cpp
@@ -73,17 +73,17 @@ target_sources(ParametricEQ
         src/dsp/LevelDetector.cpp
         src/dsp/DynamicGainLaw.cpp)
 
-target_include_directories(ParametricEQ
+target_include_directories(SpectralFault
     PUBLIC
         src)
 
-target_compile_definitions(ParametricEQ
+target_compile_definitions(SpectralFault
     PUBLIC
         JUCE_WEB_BROWSER=0
         JUCE_USE_CURL=0
         JUCE_VST3_CAN_REPLACE_VST2=0)
 
-target_link_libraries(ParametricEQ
+target_link_libraries(SpectralFault
     PRIVATE
         juce::juce_audio_utils
         juce::juce_dsp

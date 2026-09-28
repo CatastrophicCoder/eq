@@ -332,7 +332,7 @@ TEST_CASE ("Editors can be opened and closed repeatedly", "[editor]")
 
 TEST_CASE ("Editor snapshot (renders PNGs to $EQ_SNAPSHOT_DIR)", "[.snapshot]")
 {
-    // Hidden: run with  EQ_SNAPSHOT_DIR=<dir> ParametricEQTests "[.snapshot]"  to look at the layout.
+    // Hidden: run with  EQ_SNAPSHOT_DIR=<dir> SpectralFaultTests "[.snapshot]"  to look at the layout.
     const auto dir = juce::SystemStats::getEnvironmentVariable ("EQ_SNAPSHOT_DIR", {});
     if (dir.isEmpty())
         SKIP ("EQ_SNAPSHOT_DIR not set");

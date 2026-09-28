@@ -1,6 +1,6 @@
-# ParametricEQ
+# Spectral Fault
 
-A hobby parametric equalizer plugin for macOS (AU, VST3, Standalone), built with JUCE and C++.
+By Catastrophic Audio. A hobby parametric equalizer plugin for macOS (AU, VST3, Standalone), built with JUCE and C++.
 Learning project; feature scope is loosely inspired by commercial high-end EQs.
 
 - Plan and milestones: [docs/PLAN.md](docs/PLAN.md)
@@ -18,13 +18,13 @@ Learning project; feature scope is loosely inspired by commercial high-end EQs.
 
 ```bash
 git clone --recurse-submodules <repo-url>
-cd ParametricEQ
+cd eq
 cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug
 cmake --build build
 ctest --test-dir build --output-on-failure
 ```
 
-Built plugins are in `build/ParametricEQ_artefacts/Debug/`.
+Built plugins are in `build/SpectralFault_artefacts/Debug/`.
 
 ## Repository layout
 

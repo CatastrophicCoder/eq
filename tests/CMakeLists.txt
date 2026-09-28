@@ -1,4 +1,4 @@
-add_executable(ParametricEQTests
+add_executable(SpectralFaultTests
     ProcessorSmokeTest.cpp
     MatchedPeakingDesignTest.cpp
     StateTest.cpp
@@ -30,18 +30,18 @@ add_executable(ParametricEQTests
 # Link against the plugin's shared-code library. Its JUCE modules are linked
 # PRIVATE there, so take its include paths and defines explicitly instead of
 # relinking the modules (which would compile JUCE a second time).
-target_include_directories(ParametricEQTests
+target_include_directories(SpectralFaultTests
     PRIVATE
-        $<TARGET_PROPERTY:ParametricEQ,INCLUDE_DIRECTORIES>)
+        $<TARGET_PROPERTY:SpectralFault,INCLUDE_DIRECTORIES>)
 
-target_compile_definitions(ParametricEQTests
+target_compile_definitions(SpectralFaultTests
     PRIVATE
-        $<TARGET_PROPERTY:ParametricEQ,COMPILE_DEFINITIONS>)
+        $<TARGET_PROPERTY:SpectralFault,COMPILE_DEFINITIONS>)
 
-target_link_libraries(ParametricEQTests
+target_link_libraries(SpectralFaultTests
     PRIVATE
-        ParametricEQ
+        SpectralFault
         Catch2::Catch2WithMain)
 
 include(${PROJECT_SOURCE_DIR}/external/Catch2/extras/Catch.cmake)
-catch_discover_tests(ParametricEQTests)
+catch_discover_tests(SpectralFaultTests)

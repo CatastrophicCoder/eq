@@ -45,6 +45,9 @@ Newest first. Move each item here from "Open decisions" in `CLAUDE.md` once it i
 | 2026-09-28 | Presets become milestone M6b, built before M7 (moved from the M9 list) | Now before M7; after M8; in M9 | Chosen by owner |
 | 2026-09-28 | A preset stores all 16 bands (in use, enabled, settings, channel) plus output gain, Auto Gain and invert; not view settings | Bands and output; bands only; everything | Chosen by owner |
 | 2026-09-28 | User presets are XML files in ~/Library/Audio/Presets/CatastrophicCoder/ParametricEQ/ | Preset files; host presets only | Chosen by owner |
+| 2026-09-28 | Plugin name "Spectral Fault", brand (company) "Catastrophic Audio" | Name lists proposed by Claude | Chosen by owner |
+| 2026-09-28 | Rename details: bundle ID com.catastrophicaudio.spectralfault; CMake target SpectralFault (tests SpectralFaultTests); plugin codes, saved-state tag and preset tag unchanged; rename committed under M7 | Keep or change bundle ID; keep or rename target; M7 or separate prefix | Chosen by owner |
+| 2026-09-28 | User preset folder moves to ~/Library/Audio/Presets/Catastrophic Audio/Spectral Fault/; the old folder's presets are copied once (only if the new folder has none); old files stay | Keep old path; move without migration; move and migrate | Chosen by owner |
 | 2026-09-28 | Presets are listed in the plugin's own browser only (not exposed as host programs) | Plugin browser only; also as host programs | Chosen by owner |
 | 2026-09-28 | Per-band channel mode Stereo / Left / Right / Mid / Side (band<n>_channel, hint 3, default Stereo); Mid/Side encoded and decoded around each M/S band | - | Planned by Claude: per-band transform so L/R and M/S bands can be mixed in one chain |
 | 2026-09-28 | Auto Gain with channel modes: exact 2x2 transfer-matrix model (power gain ||M||^2/2, K-weighted), assuming uncorrelated equal-level L and R | Exact 2x2 model; half weight; ignore one-channel bands | Chosen by owner |
@@ -103,6 +106,17 @@ Newest first. Move each item here from "Open decisions" in `CLAUDE.md` once it i
 ## Session log
 
 Newest first. One entry per session, a few lines each.
+
+### 2026-09-28 — Rename to Spectral Fault (under M7)
+
+- Done: product "Spectral Fault", company "Catastrophic Audio", bundle ID com.catastrophicaudio.spectralfault, CMake
+  target SpectralFault and test binary SpectralFaultTests; the top bar shows the new name (JucePlugin_Name). Codes
+  Ctcd/Peq1 and the state and preset XML tags unchanged. User presets move to the new folder, with a one-time copy
+  from the old one.
+- Tests added / passing: 211/211 (new and old folder paths; copy once, skip when the new folder has presets, nothing
+  without an old folder; temporary folders never migrate). pluginval strictness 5 passes on both new bundles.
+- Open: the old ParametricEQ.component/.vst3 are still installed with the same codes, so auval and Logic resolve
+  Peq1/Ctcd to the old bundle until they are removed (owner to confirm the removal).
 
 ### 2026-09-28 — M7 stage 2
 

@@ -13,7 +13,8 @@ class ParametricEQAudioProcessor;
     reads and writes files and sets parameters (each inside a host gesture).
 
     User presets are XML files in the user folder, by default
-    ~/Library/Audio/Presets/CatastrophicCoder/ParametricEQ/ (decision 2026-09-28).
+    ~/Library/Audio/Presets/Catastrophic Audio/Spectral Fault/ (renamed in M7; presets in the
+    old folder are copied over the first time the list is read).
     The current preset's name is stored in the session.
 */
 class PresetManager
@@ -71,5 +72,8 @@ public:
 private:
     ParametricEQAudioProcessor& processor;
     juce::File userFolder;
-    std::optional<Preset> loaded;   // what the current preset contained when loaded or saved
+    std::optional<Preset> loaded;
+    mutable bool legacyChecked = false;
+
+    void copyLegacyPresetsOnce() const;   // what the current preset contained when loaded or saved
 };
