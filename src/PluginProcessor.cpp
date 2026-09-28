@@ -8,9 +8,9 @@ ParametricEQAudioProcessor::ParametricEQAudioProcessor()
                           .withInput  ("Input",  juce::AudioChannelSet::stereo(), true)
                           .withOutput ("Output", juce::AudioChannelSet::stereo(), true)),
       parameters (*this, nullptr, "ParametricEQ", Parameters::createLayout()),
-      band1Freq (parameters.getRawParameterValue (Parameters::band1Freq)),
-      band1Gain (parameters.getRawParameterValue (Parameters::band1Gain)),
-      band1Q (parameters.getRawParameterValue (Parameters::band1Q))
+      band1Freq (parameters.getRawParameterValue (Parameters::id (1, "freq"))),
+      band1Gain (parameters.getRawParameterValue (Parameters::id (1, "gain"))),
+      band1Q (parameters.getRawParameterValue (Parameters::id (1, "q")))
 {
     jassert (band1Freq != nullptr && band1Gain != nullptr && band1Q != nullptr);
 }

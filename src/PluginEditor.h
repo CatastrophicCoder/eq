@@ -17,7 +17,7 @@ private:
     /** A rotary slider with a caption, attached to one parameter. */
     struct Knob
     {
-        Knob (juce::AudioProcessorValueTreeState& state, const char* parameterId, const juce::String& caption);
+        Knob (juce::AudioProcessorValueTreeState& state, const juce::String& parameterId, const juce::String& caption);
 
         juce::Slider slider;
         juce::Label label;

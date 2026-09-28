@@ -2,7 +2,7 @@
 // functions for the whole test binary. Used to check the real-time rule
 // "no memory allocation in processBlock and anything it calls".
 
-#include "PluginProcessor.h"
+#include "TestParameters.h"
 #include "dsp/EqBand.h"
 #include "dsp/CutSlope.h"
 
@@ -101,15 +101,19 @@ TEST_CASE ("EqBand::process does not allocate, including ramps and crossfades", 
     CHECK (counter.count() == 0);
 }
 
-TEST_CASE ("Processor processBlock does not allocate", "[realtime]")
+TEST_CASE ("Processor processBlock does not allocate with 16 active bands", "[realtime]")
 {
     juce::ScopedJuceInitialiser_GUI juce;
 
     ParametricEQAudioProcessor processor;
+
+    for (int band = 1; band <= Parameters::numBands; ++band)
+        TestParameters::setBand (processor, band, static_cast<FilterType> (band % FilterTypes::count),
+                                 50.0f * static_cast<float> (band), 3.0f, 1.0f, band % CutSlope::count, true);
+
     processor.setPlayConfigDetails (2, 2, 48000.0, 512);
     processor.prepareToPlay (48000.0, 512);
 
-    auto& gain = *processor.getValueTreeState().getParameter ("band1_gain");
     juce::AudioBuffer<float> buffer (2, 512);
     buffer.clear();
     juce::MidiBuffer midi;
@@ -118,8 +122,14 @@ TEST_CASE ("Processor processBlock does not allocate", "[realtime]")
 
     for (int block = 0; block < 100; ++block)
     {
+        // Raw normalised values, as a host sends automation: gain, type and enable changes.
         if (block % 10 == 0)
-            gain.setValue (static_cast<float> (block % 20) / 20.0f);   // raw value change, as a host would send
+        {
+            const auto band = 1 + (block / 10) % Parameters::numBands;
+            processor.getValueTreeState().getParameter (Parameters::id (band, "gain"))->setValue (static_cast<float> (block % 20) / 20.0f);
+            processor.getValueTreeState().getParameter (Parameters::id (band, "type"))->setValue (static_cast<float> (block % 30) / 30.0f);
+            processor.getValueTreeState().getParameter (Parameters::id (band, "enabled"))->setValue (block % 40 < 20 ? 1.0f : 0.0f);
+        }
 
         processor.processBlock (buffer, midi);
     }

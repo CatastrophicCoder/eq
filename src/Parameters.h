@@ -1,17 +1,39 @@
 #pragma once
 
+#include "dsp/FilterType.h"
+
 #include <juce_audio_processors/juce_audio_processors.h>
 
 //==============================================================================
-/** Parameter IDs and the parameter layout. IDs carry the band index. */
+/** Parameter IDs, defaults and the parameter layout.
+
+    IDs carry the band index: band<n>_freq, _gain, _q, _type, _slope, _enabled, n = 1..16.
+*/
 namespace Parameters
 {
-    inline constexpr const char* band1Freq = "band1_freq";
-    inline constexpr const char* band1Gain = "band1_gain";
-    inline constexpr const char* band1Q    = "band1_q";
+    inline constexpr int numBands = 16;
 
-    /** Version hint for juce::ParameterID; bump only when a parameter's meaning changes. */
-    inline constexpr int versionHint = 1;
+    /** e.g. id (3, "freq") == "band3_freq". Fields: freq, gain, q, type, slope, enabled. */
+    juce::String id (int band, const char* field);
+
+    /** Version hints for juce::ParameterID: band1_freq/gain/q date from M1 (1); everything
+        added in M2 is 2. Never change a parameter's hint once released.
+    */
+    inline constexpr int m1VersionHint = 1;
+    inline constexpr int m2VersionHint = 2;
+
+    struct BandDefaults
+    {
+        FilterType type;
+        float frequencyHz;
+        float gainDb;
+        float q;
+        int slopeIndex;
+        bool enabled;
+    };
+
+    /** Defaults for a new instance (decision 2026-09-28): per-type presets, all disabled. */
+    BandDefaults defaultsFor (int band);
 
     juce::AudioProcessorValueTreeState::ParameterLayout createLayout();
 }

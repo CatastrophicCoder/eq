@@ -4,7 +4,7 @@
 
 //==============================================================================
 ParametricEQAudioProcessorEditor::Knob::Knob (juce::AudioProcessorValueTreeState& state,
-                                              const char* parameterId,
+                                              const juce::String& parameterId,
                                               const juce::String& caption)
     : slider (juce::Slider::RotaryHorizontalVerticalDrag, juce::Slider::TextBoxBelow),
       attachment (state, parameterId, slider)
@@ -18,9 +18,9 @@ ParametricEQAudioProcessorEditor::Knob::Knob (juce::AudioProcessorValueTreeState
 //==============================================================================
 ParametricEQAudioProcessorEditor::ParametricEQAudioProcessorEditor (ParametricEQAudioProcessor& p)
     : AudioProcessorEditor (&p),
-      frequency (p.getValueTreeState(), Parameters::band1Freq, "Frequency"),
-      gain      (p.getValueTreeState(), Parameters::band1Gain, "Gain"),
-      q         (p.getValueTreeState(), Parameters::band1Q,    "Q")
+      frequency (p.getValueTreeState(), Parameters::id (1, "freq"), "Frequency"),
+      gain      (p.getValueTreeState(), Parameters::id (1, "gain"), "Gain"),
+      q         (p.getValueTreeState(), Parameters::id (1, "q"),    "Q")
 {
     for (auto* knob : { &frequency, &gain, &q })
     {

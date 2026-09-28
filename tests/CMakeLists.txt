@@ -8,7 +8,9 @@ add_executable(ParametricEQTests
     CascadeProcessorTest.cpp
     BandDesignTest.cpp
     EqBandTest.cpp
-    RealtimeAllocationTest.cpp)
+    RealtimeAllocationTest.cpp
+    ParametersTest.cpp
+    ProcessorMultiBandTest.cpp)
 
 # Link against the plugin's shared-code library. Its JUCE modules are linked
 # PRIVATE there, so take its include paths and defines explicitly instead of
