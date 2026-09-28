@@ -30,8 +30,11 @@ public:
     static constexpr std::array<int, 3> tapCounts { 8192, 16384, 32768 };
     static constexpr int oversampling = 4;
 
-    /** Below lowestAccurateBins * fs / numTaps the window smooths the curve beyond the stated bounds. */
+    /** Resolution: features narrower than lowestAccurateBins * fs / numTaps (a band's bandwidth
+        f0 / Q, or its frequency) are smoothed by the window beyond the stated bounds. */
     static constexpr double lowestAccurateBins = 32.0;
+
+    static double resolutionHz (int numTaps, double sampleRate) noexcept { return lowestAccurateBins * sampleRate / numTaps; }
 
     static constexpr int latencyFor (int numTaps) noexcept { return numTaps / 2; }
 

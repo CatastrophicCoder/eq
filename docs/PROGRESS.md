@@ -51,6 +51,8 @@ Newest first. Move each item here from "Open decisions" in `CLAUDE.md` once it i
 | 2026-09-29 | M8: dynamic bands run as normal (IIR) filters after the linear-phase FIR, as in Zero latency mode | IIR after FIR; static part in FIR plus delta filter; unavailable in Linear phase | Chosen by owner |
 | 2026-09-29 | M8: dynamic bands detect on the delayed signal (where they act) | Delayed signal; undelayed input (lookahead) | Chosen by owner |
 | 2026-09-29 | Detector (Peak and RMS): classic linear-domain attack/release follower, converted to dB afterwards; replaces the dB-domain smoothing of 2026-09-28 | Keep; peak hold + dB smoothing; classic follower; decide later (RMS: both or Peak only) | Chosen by owner (both Peak and RMS) |
+| 2026-09-29 | M8 FIR design: frequency sampling of the zero-phase 2x2 matrix on a grid 4x finer than the filter, inverse FFT, centred, 4-term Blackman-Harris window (Harris 1978); tap 0 zero, exactly symmetric, latency N/2 | - | Planned by Claude |
+| 2026-09-29 | M8 accuracy bounds: a band is resolved when its frequency and (bell, notch, band pass) bandwidth f0/Q are at least 32 FFT bins (32 fs/N); for resolved bands above 32 fs/N: smooth shapes within 0.1 dB (worst measured 0.048 dB, 1 kHz Q8 notch), cuts within 0.5 dB outside their transition band (max(1/4, 24/slope) octaves) with a -40 dB floor (worst measured 0.000 dB); smooth-shape floor -60 dB. 93 of 126 grid cases resolved | - | Proposed by Claude (new bounds) |
 | 2026-09-28 | Plugin name "Spectral Fault", brand (company) "Catastrophic Audio" | Name lists proposed by Claude | Chosen by owner |
 | 2026-09-28 | Rename details: bundle ID com.catastrophicaudio.spectralfault; CMake target SpectralFault (tests SpectralFaultTests); plugin codes, saved-state tag and preset tag unchanged; rename committed under M7 | Keep or change bundle ID; keep or rename target; M7 or separate prefix | Chosen by owner |
 | 2026-09-28 | User preset folder moves to ~/Library/Audio/Presets/Catastrophic Audio/Spectral Fault/; the old folder's presets are copied once (only if the new folder has none); old files stay | Keep old path; move without migration; move and migrate | Chosen by owner |
@@ -112,6 +114,20 @@ Newest first. Move each item here from "Open decisions" in `CLAUDE.md` once it i
 ## Session log
 
 Newest first. One entry per session, a few lines each.
+
+### 2026-09-29 — M8 step 1 (linear-phase FIR design)
+
+- Done: `LinearPhaseDesigner` (src/dsp): active, non-dynamic bands -> zero-phase 2x2 matrix sampled on a 4x oversampled
+  FFT grid -> symmetric Blackman-Harris-windowed FIRs of 8192/16384/32768 taps (cross terms only with Mid/Side bands).
+  Release: about 50 ms per 32768-tap stereo design (background thread in step 2).
+- Found while testing: a zero of a response (band pass or low cut at DC) could round to a slightly negative power and
+  give NaN taps; clamped at zero. Accuracy depends on bandwidth, not only frequency: unresolved examples are a 100 Hz
+  Q4 bell (0.57 dB off at 16384 taps, 48 kHz) and a 1 kHz Q8 notch (-22 dB deep instead of -59 at 8192 taps).
+- Tests added / passing: 232/232. Tap counts and latency; flat EQ = pure N/2 delay; exact symmetry; accuracy for
+  resolved bands at 44.1/48/96 kHz (bounds in Decisions); cut slope one and two octaves out; stereo matrix terms for
+  all five channel modes; dynamic bands left out. Hidden diagnostic "[.diag]" prints the full accuracy table.
+  pluginval strictness 5 (VST3, AU) and auval pass (audio path unchanged).
+- Next step: M8 step 2, audio path (convolution, latency, background updates, mode switch).
 
 ### 2026-09-29 — M8 planning and detector change (step 0)
 

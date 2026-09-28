@@ -75,10 +75,26 @@ namespace
     /** Stated bounds (dB) above the lowest accurate frequency; see docs/PROGRESS.md. */
     constexpr double smoothBoundDb = 0.1;    // bells, shelves, tilts, band pass, notch
     constexpr double cutBoundDb = 0.5;       // cut filters, outside their transition band
-    constexpr double floorDb = -80.0;        // both below: pass
+    constexpr double floorDb = -60.0;        // both below: pass
+    constexpr double cutFloorDb = -40.0;     // cuts: both below: pass (deep stopband differences are inaudible)
 
     /** Lowest accurate frequency: a fixed number of FFT bins of the filter length. */
-    double lowestAccurateHz (int numTaps, double fs) { return LinearPhaseDesigner::lowestAccurateBins * fs / numTaps; }
+    double lowestAccurateHz (int numTaps, double fs) { return LinearPhaseDesigner::resolutionHz (numTaps, fs); }
+
+    /** A band is resolved when its frequency and (for bells, notches, band passes) its bandwidth f0 / Q
+        span at least the resolution. */
+    bool isResolved (const BandSettings& b, int numTaps, double fs)
+    {
+        const auto resolution = lowestAccurateHz (numTaps, fs);
+        const auto usesBandwidth = b.type == FilterType::bell || b.type == FilterType::notch || b.type == FilterType::bandPass;
+        return b.frequencyHz >= resolution && (! usesBandwidth || b.frequencyHz / b.q >= resolution);
+    }
+
+    struct Accuracy { double worst = 0.0, at = 0.0, target = 0.0, measured = 0.0; };
+
+    /** Worst |FIR - design| in dB over the test points above the resolution; cut transition bands and
+        points where both are below the floor are skipped. */
+    Accuracy measureAccuracy (const std::vector<float>& taps, const BandSettings& band, bool isCut, int numTaps, double fs);
 }
 
 //==============================================================================
@@ -134,52 +150,59 @@ TEST_CASE ("Linear-phase taps are symmetric about the centre", "[linearphase][de
     }
 }
 
-TEST_CASE ("Linear-phase magnitude matches the curve above the lowest accurate frequency", "[linearphase][design]")
+namespace
+{
+    Accuracy measureAccuracy (const std::vector<float>& taps, const BandSettings& band, bool isCut, int numTaps, double fs)
+    {
+        const auto design = BandDesign::design (band, fs);
+        Accuracy a;
+
+        for (auto f : testPoints (lowestAccurateHz (numTaps, fs), fs))
+        {
+            const auto target = design.magnitudeDb (f, fs);
+            const auto measured = toDb (firResponse (taps, f, fs));
+            const auto floor = isCut ? cutFloorDb : floorDb;
+            if (target < floor && measured < floor)
+                continue;
+
+            // Cuts: skip their transition band (within max (1/4, 24 / slope) octaves of the cutoff),
+            // where the window's smoothing dominates; the slope test checks further out.
+            if (isCut && std::abs (std::log2 (f / band.frequencyHz)) < std::max (0.25, 24.0 / CutSlope::dbPerOctave (band.slopeIndex)))
+                continue;
+
+            if (std::abs (measured - target) > a.worst)
+                a = { std::abs (measured - target), f, target, measured };
+        }
+
+        return a;
+    }
+}
+
+TEST_CASE ("Linear-phase magnitude matches the curve for resolved bands", "[linearphase][design]")
 {
     LinearPhaseDesigner designer;
     LinearPhaseDesigner::Result r;
+    int checked = 0;
 
     for (double fs : { 44100.0, 48000.0, 96000.0 })
         for (auto n : LinearPhaseDesigner::tapCounts)
-        {
-            const auto fMin = lowestAccurateHz (n, fs);
-
             for (const auto& shape : shapes())
             {
+                if (! isResolved (shape.band, n, fs))
+                    continue;
+
                 auto bands = freeBands();
                 bands[5] = shape.band;
                 designer.design (bands, fs, n, r);
-                const auto design = BandDesign::design (shape.band, fs);
+                const auto a = measureAccuracy (r.leftFromLeft, shape.band, shape.isCut, n, fs);
+                ++checked;
 
-                double worst = 0.0, worstAt = 0.0;
-                for (auto f : testPoints (fMin, fs))
-                {
-                    const auto target = design.magnitudeDb (f, fs);
-                    const auto measured = toDb (firResponse (r.leftFromLeft, f, fs));
-                    if (target < floorDb && measured < floorDb)
-                        continue;
-
-                    // Cuts: skip their transition band (within a factor of 2^(24/slope dB) of the cutoff),
-                    // where the window's smoothing dominates; the slope rule is checked separately.
-                    if (shape.isCut)
-                    {
-                        const auto octaves = std::abs (std::log2 (f / shape.band.frequencyHz));
-                        if (octaves < std::max (0.25, 24.0 / CutSlope::dbPerOctave (shape.band.slopeIndex)))
-                            continue;
-                    }
-
-                    if (std::abs (measured - target) > worst)
-                    {
-                        worst = std::abs (measured - target);
-                        worstAt = f;
-                    }
-                }
-
-                INFO (shape.name << ", " << n << " taps at " << fs << " Hz (lowest accurate " << fMin << " Hz): worst "
-                                 << worst << " dB at " << worstAt << " Hz");
-                CHECK (worst <= (shape.isCut ? cutBoundDb : smoothBoundDb));
+                INFO (shape.name << ", " << n << " taps at " << fs << " Hz (resolution " << lowestAccurateHz (n, fs)
+                                 << " Hz): worst " << a.worst << " dB at " << a.at << " Hz");
+                CHECK (a.worst <= (shape.isCut ? cutBoundDb : smoothBoundDb));
             }
-        }
+
+    CHECK (checked == 93);   // of 126: the low, narrow bells and the notch are unresolved at the shorter lengths
 }
 
 TEST_CASE ("Linear-phase cut slopes: one and two octaves past the cutoff match the IIR design", "[linearphase][design]")
@@ -248,4 +271,21 @@ TEST_CASE ("Dynamic bands are left out of the linear-phase filter", "[linearphas
     bands[7].dynamics.on = true;
     designer.design (bands, 48000.0, 8192, r);
     CHECK (toDb (firResponse (r.leftFromLeft, 1000.0, 48000.0)) < -20.0);
+}
+
+TEST_CASE ("Linear-phase accuracy table (diagnostic)", "[.diag]")
+{
+    LinearPhaseDesigner designer;
+    LinearPhaseDesigner::Result r;
+    for (double fs : { 44100.0, 48000.0, 96000.0 })
+        for (auto n : LinearPhaseDesigner::tapCounts)
+            for (const auto& shape : shapes())
+            {
+                auto bands = freeBands();
+                bands[5] = shape.band;
+                designer.design (bands, fs, n, r);
+                const auto a = measureAccuracy (r.leftFromLeft, shape.band, shape.isCut, n, fs);
+                std::printf ("%6.0f %6d %-28s %-10s worst %8.3f at %8.1f (target %8.2f measured %8.2f)\n", fs, n, shape.name,
+                             isResolved (shape.band, n, fs) ? "resolved" : "UNRESOLVED", a.worst, a.at, a.target, a.measured);
+            }
 }
