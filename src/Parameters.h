@@ -53,4 +53,7 @@ namespace Parameters
         (choice indices rounded and clamped). */
     BandSettings toBandSettings (float type, float frequencyHz, float gainDb, float q, float slope, float enabled,
                                  bool inUse, float channel) noexcept;
+
+    /** Raw values of the dynamic fields, in dynamicFields order, as BandSettings::Dynamics. */
+    BandSettings::Dynamics toDynamics (const std::array<float, std::size (dynamicFields)>& raw) noexcept;
 }

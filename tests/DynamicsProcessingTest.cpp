@@ -112,7 +112,7 @@ TEST_CASE ("Ratio mode and positive ranges act as their laws say", "[dynamics][d
 {
     juce::ScopedJuceInitialiser_GUI juce;
 
-    SECTION ("ratio 4:1, 20 dB over the threshold: -15 dB")
+    SECTION ("ratio 4:1: the law applied to the detector's reading of the tone")
     {
         ParametricEQAudioProcessor p;
         Dyn d; d.mode = 1; d.ratio = 4.0f; d.range = -24.0f;
@@ -120,7 +120,21 @@ TEST_CASE ("Ratio mode and positive ranges act as their laws say", "[dynamics][d
         prepare (p);
         auto x = sines (static_cast<int> (fs), 1000.0, -10.0, -10.0);
         run (p, x);
-        CHECK_THAT (levelDb (x, 0, 38400, 9600), WithinAbs (-25.0, 0.3));
+
+        // The Peak detector smooths in dB, so a steady sine reads below its peak (about
+        // -10.9 dB here). The band pass is unity at 1 kHz: feed the raw tone to a detector.
+        LevelDetector detector;
+        detector.prepare (fs);
+        detector.setTimes (d.attack, d.release);
+        const auto tone = sines (static_cast<int> (fs), 1000.0, -10.0, -10.0);
+        for (int i = 0; i < tone.getNumSamples(); ++i)
+            detector.process (tone.getSample (0, i));
+        const auto expected = DynamicGainLaw::gainChangeDb (DynamicGainLaw::Mode::ratio, detector.getLevelDb(), -30.0, -24.0, 4.0);
+        INFO ("detector reads " << detector.getLevelDb() << " dB, law gives " << expected << " dB");
+
+        CHECK (expected < -14.0);
+        CHECK_THAT (p.getLiveGainChangeDb (4, 0), WithinAbs (expected, 0.3));
+        CHECK_THAT (levelDb (x, 0, 38400, 9600), WithinAbs (-10.0 + expected, 0.3));
     }
 
     SECTION ("positive range boosts a loud tone")

@@ -169,3 +169,18 @@ BandSettings Parameters::toBandSettings (float type, float frequencyHz, float ga
     s.channel = static_cast<ChannelMode> (juce::jlimit (0, ChannelModes::count - 1, juce::roundToInt (channel)));
     return s;
 }
+
+BandSettings::Dynamics Parameters::toDynamics (const std::array<float, std::size (dynamicFields)>& raw) noexcept
+{
+    BandSettings::Dynamics d;
+    d.on = raw[0] >= 0.5f;
+    d.mode = raw[1] >= 0.5f ? DynamicGainLaw::Mode::ratio : DynamicGainLaw::Mode::range;
+    d.thresholdDb = raw[2];
+    d.rangeDb = raw[3];
+    d.ratio = raw[4];
+    d.attackMs = raw[5];
+    d.releaseMs = raw[6];
+    d.detector = raw[7] >= 0.5f ? LevelDetector::Mode::rms : LevelDetector::Mode::peak;
+    d.sidechain = raw[8] >= 0.5f;
+    return d;
+}

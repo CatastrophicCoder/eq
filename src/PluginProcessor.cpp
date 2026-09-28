@@ -8,7 +8,8 @@
 ParametricEQAudioProcessor::ParametricEQAudioProcessor()
     : AudioProcessor (BusesProperties()
                           .withInput  ("Input",  juce::AudioChannelSet::stereo(), true)
-                          .withOutput ("Output", juce::AudioChannelSet::stereo(), true)),
+                          .withOutput ("Output", juce::AudioChannelSet::stereo(), true)
+                          .withInput  ("Sidechain", juce::AudioChannelSet::stereo(), false)),
       parameters (*this, nullptr, "ParametricEQ", Parameters::createLayout())
 {
     static_assert (std::tuple_size_v<decltype (bands)> == Parameters::numBands);
@@ -25,6 +26,12 @@ ParametricEQAudioProcessor::ParametricEQAudioProcessor()
         p.channel   = parameters.getRawParameterValue (Parameters::id (band, "channel"));
         jassert (p.frequency != nullptr && p.gain != nullptr && p.q != nullptr
                  && p.type != nullptr && p.slope != nullptr && p.enabled != nullptr && p.channel != nullptr);
+
+        for (size_t f = 0; f < p.dynamics.size(); ++f)
+        {
+            p.dynamics[f] = parameters.getRawParameterValue (Parameters::id (band, Parameters::dynamicFields[f]));
+            jassert (p.dynamics[f] != nullptr);
+        }
     }
 
     // Analyzer taps, allocated once: prepareToPlay may run while the editor is reading them.
@@ -69,7 +76,7 @@ void ParametricEQAudioProcessor::prepareToPlay (double sampleRate, int samplesPe
     pushParametersToBands();
 
     for (auto& band : bands)
-        band.prepare (sampleRate, getTotalNumOutputChannels());
+        band.prepare (sampleRate, getMainBusNumOutputChannels());
 
     autoGainUpdater.setSampleRate (sampleRate);
 
@@ -112,12 +119,22 @@ void ParametricEQAudioProcessor::applyOutputGain (juce::AudioBuffer<float>& buff
 void ParametricEQAudioProcessor::pushParametersToBands() noexcept
 {
     for (size_t i = 0; i < bands.size(); ++i)
-    {
-        const auto& p = bandParameters[i];
-        bands[i].setTargets (Parameters::toBandSettings (p.type->load(), p.frequency->load(), p.gain->load(),
-                                                         p.q->load(), p.slope->load(), p.enabled->load(),
-                                                         bandInUse[i].load (std::memory_order_relaxed), p.channel->load()));
-    }
+        bands[i].setTargets (readBandSettings (i));
+}
+
+BandSettings ParametricEQAudioProcessor::readBandSettings (size_t index) const noexcept
+{
+    const auto& p = bandParameters[index];
+    auto s = Parameters::toBandSettings (p.type->load(), p.frequency->load(), p.gain->load(), p.q->load(),
+                                         p.slope->load(), p.enabled->load(),
+                                         bandInUse[index].load (std::memory_order_relaxed), p.channel->load());
+
+    std::array<float, std::size (Parameters::dynamicFields)> raw {};
+    for (size_t f = 0; f < raw.size(); ++f)
+        raw[f] = p.dynamics[f]->load();
+
+    s.dynamics = Parameters::toDynamics (raw);
+    return s;
 }
 
 void ParametricEQAudioProcessor::releaseResources()
@@ -134,8 +151,13 @@ void ParametricEQAudioProcessor::reset()
 
 bool ParametricEQAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
 {
+    // Main: stereo in and out. Side-chain (M7): disabled, mono or stereo.
+    const auto sidechain = layouts.inputBuses.size() > 1 ? layouts.inputBuses[1] : juce::AudioChannelSet::disabled();
+
     return layouts.getMainOutputChannelSet() == juce::AudioChannelSet::stereo()
-        && layouts.getMainInputChannelSet() == layouts.getMainOutputChannelSet();
+        && layouts.getMainInputChannelSet() == layouts.getMainOutputChannelSet()
+        && (sidechain.isDisabled() || sidechain == juce::AudioChannelSet::mono()
+            || sidechain == juce::AudioChannelSet::stereo());
 }
 
 void ParametricEQAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
@@ -144,31 +166,43 @@ void ParametricEQAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     juce::ignoreUnused (midiMessages);
     juce::ScopedNoDenormals noDenormals;
 
+    // The main bus is processed in place; the side-chain (when enabled) only feeds the detectors.
+    auto main = getBusBuffer (buffer, false, 0);
+
     // Clear any outputs that have no matching input, since their contents are not guaranteed.
-    for (auto i = getTotalNumInputChannels(); i < getTotalNumOutputChannels(); ++i)
-        buffer.clear (i, 0, buffer.getNumSamples());
+    for (auto i = getMainBusNumInputChannels(); i < main.getNumChannels(); ++i)
+        main.clear (i, 0, main.getNumSamples());
+
+    juce::AudioBuffer<float> sidechain;
+    const auto* sidechainBus = getBus (true, 1);
+    const auto hasSidechain = sidechainBus != nullptr && sidechainBus->isEnabled()
+                           && sidechainBus->getNumberOfChannels() > 0;
+    if (hasSidechain)
+        sidechain = getBusBuffer (buffer, true, 1);   // refers to the host's data, no allocation
 
     pushParametersToBands();
 
     const auto tap = analyzerActive.load (std::memory_order_relaxed);
-    const auto tapChannels = std::min (2, buffer.getNumChannels());
+    const auto tapChannels = std::min (2, main.getNumChannels());
 
     if (tap)
-        preFifo.push (buffer.getArrayOfReadPointers(), tapChannels, buffer.getNumSamples());
+        preFifo.push (main.getArrayOfReadPointers(), tapChannels, main.getNumSamples());
 
     for (auto& band : bands)
-        band.process (buffer);
+        band.process (main, hasSidechain ? &sidechain : nullptr);
 
-    applyOutputGain (buffer);
+    applyOutputGain (main);
 
     if (tap)
-        postFifo.push (buffer.getArrayOfReadPointers(), tapChannels, buffer.getNumSamples());
+        postFifo.push (main.getArrayOfReadPointers(), tapChannels, main.getNumSamples());
 }
 
 float ParametricEQAudioProcessor::getLiveGainChangeDb (int band, int channel) const noexcept
 {
-    juce::ignoreUnused (band, channel);   // Not implemented yet (M7 stage 2).
-    return 0.0f;
+    if (band < 1 || band > static_cast<int> (bands.size()))
+        return 0.0f;
+
+    return bands[static_cast<size_t> (band - 1)].getLiveGainChangeDb (channel);
 }
 
 float ParametricEQAudioProcessor::getAutoGainOffsetDb() const noexcept
@@ -223,9 +257,7 @@ std::array<BandSettings, 16> ParametricEQAudioProcessor::getBandSettings() const
 
     for (size_t i = 0; i < result.size(); ++i)
     {
-        const auto& p = bandParameters[i];
-        result[i] = Parameters::toBandSettings (p.type->load(), p.frequency->load(), p.gain->load(), p.q->load(),
-                                                p.slope->load(), p.enabled->load(), bandInUse[i].load (std::memory_order_relaxed), p.channel->load());
+        result[i] = readBandSettings (i);
     }
 
     return result;

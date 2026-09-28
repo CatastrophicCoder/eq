@@ -1,6 +1,7 @@
 #pragma once
 
 #include "AutoGainUpdater.h"
+#include "Parameters.h"
 #include "presets/PresetManager.h"
 #include "dsp/AnalyzerFifo.h"
 #include "dsp/EqBand.h"
@@ -116,7 +117,10 @@ private:
         std::atomic<float>* slope = nullptr;
         std::atomic<float>* enabled = nullptr;
         std::atomic<float>* channel = nullptr;
+        std::array<std::atomic<float>*, std::size (Parameters::dynamicFields)> dynamics {};
     };
+
+    BandSettings readBandSettings (size_t index) const noexcept;
 
     /** Output gain x Auto Gain offset x polarity, as one linear gain. */
     double targetOutputGain() const noexcept;

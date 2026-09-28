@@ -2,12 +2,23 @@
 
 void CascadeProcessor::setCoefficients (const SectionCascade& newCascade) noexcept
 {
-    // Sections beyond the old count start from silence rather than stale state.
-    for (auto& channel : state)
-        for (int i = cascade.numSections; i < newCascade.numSections; ++i)
-            channel[static_cast<size_t> (i)] = {};
+    for (int channel = 0; channel < maxChannels; ++channel)
+        setChannelCoefficients (channel, newCascade);
+}
 
-    cascade = newCascade;
+void CascadeProcessor::setChannelCoefficients (int channel, const SectionCascade& newCascade) noexcept
+{
+    auto& cascade = cascades[static_cast<size_t> (channel)];
+    auto& sections = state[static_cast<size_t> (channel)];
+
+    // Sections beyond the old count start from silence rather than stale state.
+    for (int i = cascade.numSections; i < newCascade.numSections; ++i)
+        sections[static_cast<size_t> (i)] = {};
+
+    // Copy only the sections in use: dynamic bands reload coefficients every few samples.
+    for (int i = 0; i < newCascade.numSections; ++i)
+        cascade.sections[static_cast<size_t> (i)] = newCascade.sections[static_cast<size_t> (i)];
+    cascade.numSections = newCascade.numSections;
 }
 
 void CascadeProcessor::reset() noexcept
@@ -18,6 +29,7 @@ void CascadeProcessor::reset() noexcept
 
 double CascadeProcessor::processSample (int channel, double input) noexcept
 {
+    const auto& cascade = cascades[static_cast<size_t> (channel)];
     auto& sections = state[static_cast<size_t> (channel)];
     auto x = input;
 

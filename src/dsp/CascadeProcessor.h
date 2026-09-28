@@ -16,20 +16,24 @@ class CascadeProcessor
 public:
     static constexpr int maxChannels = 2;
 
-    /** Loads new coefficients, keeping the filter state. Sections that were not
-        in use before start from zero state.
+    /** Loads new coefficients for every channel, keeping the filter state. Sections
+        that were not in use before start from zero state.
     */
     void setCoefficients (const SectionCascade& newCascade) noexcept;
+
+    /** Loads coefficients for one channel only (dynamic bands, M7), same state rule. */
+    void setChannelCoefficients (int channel, const SectionCascade& newCascade) noexcept;
 
     void reset() noexcept;
 
     double processSample (int channel, double input) noexcept;
 
-    const SectionCascade& getCascade() const noexcept { return cascade; }
+    /** Channel 0's sections (all channels share them unless set per channel). */
+    const SectionCascade& getCascade() const noexcept { return cascades[0]; }
 
 private:
     struct SectionState { double s1 = 0.0, s2 = 0.0; };
 
-    SectionCascade cascade;
+    std::array<SectionCascade, maxChannels> cascades;
     std::array<std::array<SectionState, SectionCascade::maxSections>, maxChannels> state {};
 };

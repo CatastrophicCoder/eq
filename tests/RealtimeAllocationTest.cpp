@@ -161,6 +161,64 @@ TEST_CASE ("Processor processBlock does not allocate with 16 active bands", "[re
 }
 
 
+TEST_CASE ("Processor processBlock does not allocate with 16 dynamic bands and a side-chain", "[realtime][dynamics]")
+{
+    juce::ScopedJuceInitialiser_GUI juce;
+
+    ParametricEQAudioProcessor processor;
+    const FilterType dynamicTypes[] { FilterType::bell, FilterType::lowShelf, FilterType::highShelf };
+
+    for (int band = 1; band <= Parameters::numBands; ++band)
+    {
+        TestParameters::setBand (processor, band, dynamicTypes[band % 3], 60.0f * static_cast<float> (band), 2.0f, 1.0f, 1, true);
+        TestParameters::set (processor, Parameters::id (band, "channel"), static_cast<float> (band % ChannelModes::count));
+        TestParameters::set (processor, Parameters::id (band, "dyn"), 1.0f);
+        TestParameters::set (processor, Parameters::id (band, "thresh"), -50.0f);
+        TestParameters::set (processor, Parameters::id (band, "dynmode"), static_cast<float> (band % 2));
+        TestParameters::set (processor, Parameters::id (band, "detector"), static_cast<float> ((band / 2) % 2));
+        TestParameters::set (processor, Parameters::id (band, "sidechain"), band % 3 == 0 ? 1.0f : 0.0f);
+    }
+
+    auto layout = processor.getBusesLayout();
+    layout.inputBuses.getReference (1) = juce::AudioChannelSet::stereo();
+    REQUIRE (processor.setBusesLayout (layout));
+    processor.prepareToPlay (48000.0, 512);
+    processor.setAnalyzerActive (true);
+
+    // Main (channels 0-1) and side-chain (2-3): noise, loud enough to move every detector.
+    juce::AudioBuffer<float> buffer (4, 512);
+    juce::Random random (3);
+    juce::MidiBuffer midi;
+
+    struct Automated { juce::RangedAudioParameter* freq; juce::RangedAudioParameter* range; juce::RangedAudioParameter* dyn; };
+    std::vector<Automated> automated;
+    for (int band = 1; band <= Parameters::numBands; ++band)
+        automated.push_back ({ processor.getValueTreeState().getParameter (Parameters::id (band, "freq")),
+                               processor.getValueTreeState().getParameter (Parameters::id (band, "range")),
+                               processor.getValueTreeState().getParameter (Parameters::id (band, "dyn")) });
+
+    ScopedAllocationCounter counter;
+
+    for (int block = 0; block < 100; ++block)
+    {
+        for (int ch = 0; ch < 4; ++ch)
+            for (int i = 0; i < 512; ++i)
+                buffer.setSample (ch, i, 0.5f * (random.nextFloat() - 0.5f));
+
+        if (block % 10 == 0)
+        {
+            const auto& a = automated[static_cast<size_t> ((block / 10) % Parameters::numBands)];
+            a.freq->setValue (static_cast<float> (block % 30) / 30.0f);
+            a.range->setValue (static_cast<float> (block % 20) / 20.0f);
+            a.dyn->setValue (block % 40 < 20 ? 1.0f : 0.0f);
+        }
+
+        processor.processBlock (buffer, midi);
+    }
+
+    CHECK (counter.count() == 0);
+}
+
 TEST_CASE ("AnalyzerFifo::push does not allocate", "[realtime]")
 {
     AnalyzerFifo fifo;

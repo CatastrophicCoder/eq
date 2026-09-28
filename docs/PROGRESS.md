@@ -15,7 +15,7 @@ Milestone definitions and "done when" criteria are in [PLAN.md](PLAN.md#mileston
 | 5 | Spectrum analyzer | Done | Built and validated (157 tests, pluginval, auval); owner tested in Logic |
 | 6 | Per-band stereo | Done | Built and validated (172 tests, pluginval, auval); owner tested in Logic |
 | 6b | Presets | Done | Built and validated (186 tests, pluginval, auval); owner tested in Logic |
-| 7 | Dynamic EQ | In progress | Stage 1 of 3 done (reset, detector, gain laws, parameters). Next: stage 2, audio path and side-chain |
+| 7 | Dynamic EQ | In progress | Stages 1-2 of 3 done (detector, gain laws, parameters, audio path, side-chain). Next: stage 3, UI and presets |
 | 8 | Linear phase mode | Not started | |
 | 9 | Deferred features | Not started | |
 
@@ -103,6 +103,23 @@ Newest first. Move each item here from "Open decisions" in `CLAUDE.md` once it i
 ## Session log
 
 Newest first. One entry per session, a few lines each.
+
+### 2026-09-28 — M7 stage 2
+
+- Done: dynamic parameters reach the bands; optional "Sidechain" input bus (disabled by default; disabled, mono or
+  stereo); `CascadeProcessor` per-channel coefficients; `EqBand` dynamic path: detector filter (bell band pass,
+  shelf lowpass/highpass at Q 0.71) and a `LevelDetector` per detection channel, own input or side-chain (falls back
+  to own input when none is connected), gain redesigned every 16 samples (per channel for Stereo bands, only when
+  the change moves), threshold/range/ratio smoothed over 20 ms; live gain change per band and channel for the UI.
+- Tests added / passing: 209/209. Steady-state cut and boost (Range, Ratio), bit-exact below threshold, attack and
+  release timing, frequency selectivity, shelf detector regions, per-channel and Side detection, side-chain bus
+  layouts, side-chain triggering and fallback, bursts and sweep (finite, step < 0.2), reset(), no allocation with 16
+  dynamic bands plus side-chain. CPU, 16 dynamic stereo bells at 96 kHz: Debug 137 ms per second of audio,
+  Release 18.7 ms. pluginval strictness 5 (VST3, AU) and auval pass; auval lists the side-chain bus.
+- Found: the Peak detector smooths |x| in the dB domain, so a steady sine reads below its peak: at -10 dBFS, 1 kHz,
+  -10.9 dB with 1/50 ms and -12.4 dB with the default 10/100 ms (RMS reads -13.0). Range-mode tests saturate and
+  do not show it; the Ratio test now checks the law against the detector's actual reading. Raised with the owner.
+- Next step: stage 3, panel dynamic controls, live gain and range on the display, preset format v2.
 
 ### 2026-09-28 — M7 stage 1
 
