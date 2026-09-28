@@ -9,7 +9,7 @@ Milestone definitions and "done when" criteria are in [PLAN.md](PLAN.md#mileston
 | --- | --- | --- | --- |
 | 0 | Toolchain | Done | Command-line build, tests, pluginval and auval pass; owner confirmed CLion build and AU load in Logic (Standalone run not reported separately) |
 | 1 | One bell band | Done | Knobs, smoothing, state save/load and measured response done; tests, pluginval and auval pass. Owner listening check in Logic: no clicks (session save/reopen not reported separately) |
-| 2 | Full band set, tier 1 | In progress | Stages 1-2 of 5 done (shape designs; EqBand with cascades and crossfaded switching). Next: stage 3, 16 bands, parameters, state migration |
+| 2 | Full band set, tier 1 | In progress | Stages 1-3 of 5 done (shape designs; EqBand; 16 bands, parameters, state v2). Next: stage 4, output gain, Auto Gain, phase invert |
 | 3 | Response curve display | Not started | |
 | 4 | Interactive display | Not started | |
 | 5 | Spectrum analyzer | Not started | |
@@ -26,6 +26,9 @@ Newest first. Move each item here from "Open decisions" in `CLAUDE.md` once it i
 
 | Date | Decision | Options considered | Reason |
 | --- | --- | --- | --- |
+| 2026-09-28 | Band defaults: per-type presets, all disabled (1 Low Cut 30 Hz, 2 Low Shelf 80 Hz, 3-14 Bells 120 Hz-12 kHz log-spaced, 15 High Shelf 10 kHz, 16 High Cut 18 kHz; 0 dB; bells Q 1, others Q 0.71; cuts 24 dB/oct) | Off and spread; off at 1 kHz; off with per-type presets | Chosen by owner |
+| 2026-09-28 | Band 1 is disabled in a new instance (a new instance is a bit-exact pass-through); M1 sessions migrate to band 1 = enabled bell | Enabled bell at 0 dB; disabled like the rest | Chosen by owner |
+| 2026-09-28 | CPU check is an always-on test: 16 Brickwall bands at 96 kHz stereo must run faster than real time in any build | Hidden Release-only benchmark; always-on; skip | Chosen by owner |
 | 2026-09-28 | Response-test bounds vs analog, extended grid (fc / +-1 oct below 0.8 Nyq / +-1 oct at or above 0.8 Nyq), with worst measured: Bell 0.1 / 0.65 (0.614) / 2.7 (2.640); Band pass 0.1 / 0.7 (0.645) / 1.4 (1.378); Notch depth < -100 dB / 0.55 (0.538) / 1.8 (1.754); Shelves 0.15 (0.123) / 0.1 (0.080) / 0.25 (0.248); Tilt 0.4 (0.385) / 0.25 (0.222) / 0.05 (0.024); Low Cut 0.1 / 0.5 (0.454); High Cut 0.1 / 0.3 (0.277) / 12.25 (12.218); All pass flat within 1e-9 dB; Flat Tilt 0.25 (0.224) from the ideal line. Strict-grid bounds kept as well (Bell 0.35) | Accept and keep strict grid too; accept extended only; drop the new rows | Chosen by owner after tightening attempts |
 | 2026-09-28 | Extended test grid: add f0 = 10 and 16 kHz at 44.1 kHz; separate near-Nyquist bounds for points at or above 0.8 Nyquist | Add rows or keep CLAUDE.md grid; near-Nyquist bounds or leave those points unasserted | Chosen by owner |
 | 2026-09-28 | Cut slope test: points pass if digital and analog are both below -120 dB | Test below 0.8 Nyquist only; -120 dB floor; add a Nyquist zero to the design | Chosen by owner |
@@ -54,6 +57,24 @@ Newest first. Move each item here from "Open decisions" in `CLAUDE.md` once it i
 ## Session log
 
 Newest first. One entry per session, a few lines each.
+
+### 2026-09-28 — M2 stage 3
+
+- Done: 96 band parameters (`band<n>_{freq,gain,q,type,slope,enabled}`, n = 1-16) via `Parameters::id()`,
+  per-type preset defaults (all disabled), version hints 1 for M1's band1 freq/gain/q and 2 for the rest.
+  Processor runs 16 `EqBand`s in series. State version 2 with migration of M1 sessions (band 1 = enabled bell).
+  Idle bypassed bands skip their sample loop.
+- Tests added / passing: 64/64. Parameters (IDs, ranges, choices, defaults, hints), round trip of all 96,
+  v1 migration from an M1-format blob, newer/invalid state ignored, bands in series equal the sum of their designs
+  (within 0.1 dB at 44.1/48/96 kHz), bit-exact new instance, zero allocations with 16 active bands.
+  CPU (Debug): 16 Brickwall bands at 96 kHz stereo, 1 s of audio in 232 ms (4.3x real time).
+  pluginval strictness 5 (VST3, AU) and auval pass.
+- Found: the first allocation test counted 90 allocations that came from the test's own `Parameters::id()`
+  strings, not from `processBlock` (0). Fixed the test to look parameters up first, as a host does.
+- Open issues: the editor still shows only band 1 freq/gain/q, and band 1 now starts disabled, so a listening
+  check needs the host's generic parameter view (Logic: Controls) until the stage-5 grid editor.
+  Planned commits "16-band parameters" and "run 16 bands in the processor" landed as one.
+- Next step: stage 4, output gain, static Auto Gain, output phase invert.
 
 ### 2026-09-28 — M2 stage 2
 
