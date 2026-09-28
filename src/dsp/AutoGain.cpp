@@ -2,6 +2,7 @@
 
 #include "BandDesign.h"
 #include "KWeighting.h"
+#include "StereoTransfer.h"
 
 #include <algorithm>
 #include <array>
@@ -40,12 +41,17 @@ bool AutoGain::countsTowardsAutoGain (FilterType type) noexcept
 
 double AutoGain::computeOffsetDb (std::span<const BandSettings> bands, double sampleRate) noexcept
 {
+    // Bands that count, with their designs, in chain order.
     std::array<SectionCascade, 16> designs;
+    std::array<ChannelMode, 16> modes {};
     size_t numDesigns = 0;
 
     for (const auto& b : bands)
-        if (b.enabled && countsTowardsAutoGain (b.type) && numDesigns < designs.size())
+        if (b.isActive() && countsTowardsAutoGain (b.type) && numDesigns < designs.size())
+        {
+            modes[numDesigns] = b.channel;
             designs[numDesigns++] = BandDesign::design (b, sampleRate);
+        }
 
     if (numDesigns == 0)
         return 0.0;
@@ -59,11 +65,13 @@ double AutoGain::computeOffsetDb (std::span<const BandSettings> bands, double sa
         if (f >= 0.5 * sampleRate)
             continue;
 
-        double magnitudeDb = 0.0;
+        // 2x2 chain per frequency (decision 2026-09-28): power gain ||M||^2 / 2 for uncorrelated,
+        // equal-level L and R. For an all-Stereo chain this is |H|^2, as before M6.
+        auto m = StereoTransfer::identity();
         for (size_t i = 0; i < numDesigns; ++i)
-            magnitudeDb += designs[i].magnitudeDb (f, sampleRate);
+            m = StereoTransfer::multiply (StereoTransfer::forBand (modes[i], designs[i].response (f, sampleRate)), m);
 
-        weightedPower += g.weight[k] * std::pow (10.0, magnitudeDb / 10.0);
+        weightedPower += g.weight[k] * StereoTransfer::powerGain (m);
         totalWeight += g.weight[k];
     }
 

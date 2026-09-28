@@ -60,6 +60,10 @@ juce::AudioProcessorValueTreeState::ParameterLayout Parameters::createLayout()
     for (auto* label : CutSlope::labels)
         slopeLabels.add (label);
 
+    juce::StringArray channelNames;
+    for (auto* name : ChannelModes::names)
+        channelNames.add (name);
+
     for (int band = 1; band <= numBands; ++band)
     {
         const auto d = defaultsFor (band);
@@ -93,6 +97,10 @@ juce::AudioProcessorValueTreeState::ParameterLayout Parameters::createLayout()
 
         layout.add (std::make_unique<juce::AudioParameterBool> (
             juce::ParameterID { id (band, "enabled"), m2VersionHint }, name + "Enabled", d.enabled));
+
+        layout.add (std::make_unique<juce::AudioParameterChoice> (
+            juce::ParameterID { id (band, "channel"), m6VersionHint }, name + "Channel",
+            channelNames, static_cast<int> (ChannelMode::stereo)));
     }
 
     layout.add (std::make_unique<juce::AudioParameterFloat> (
@@ -123,6 +131,6 @@ BandSettings Parameters::toBandSettings (float type, float frequencyHz, float ga
     s.slopeIndex = juce::jlimit (0, CutSlope::count - 1, juce::roundToInt (slope));
     s.enabled = enabled >= 0.5f;
     s.inUse = inUse;
-    juce::ignoreUnused (channel);   // Not implemented yet.
+    s.channel = static_cast<ChannelMode> (juce::jlimit (0, ChannelModes::count - 1, juce::roundToInt (channel)));
     return s;
 }

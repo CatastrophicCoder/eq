@@ -1,6 +1,7 @@
 #include "ResponseCurves.h"
 
 #include "dsp/BandDesign.h"
+#include "dsp/StereoTransfer.h"
 
 #include <algorithm>
 #include <cmath>
@@ -23,6 +24,7 @@ bool ResponseCurves::update (std::span<const BandSettings> bands, double sampleR
         return false;
 
     sum.fill (0.0);
+    std::array<SectionCascade, numBands> designs;
 
     for (size_t b = 0; b < static_cast<size_t> (numBands); ++b)
     {
@@ -40,6 +42,7 @@ bool ResponseCurves::update (std::span<const BandSettings> bands, double sampleR
         auto asIfEnabled = bands[b];
         asIfEnabled.enabled = true;
         const auto design = BandDesign::design (asIfEnabled, sampleRate);
+        designs[b] = design;
 
         for (size_t k = 0; k < static_cast<size_t> (numPoints); ++k)
         {
@@ -48,6 +51,43 @@ bool ResponseCurves::update (std::span<const BandSettings> bands, double sampleR
             curves[b][k] = design.magnitudeDb (f, sampleRate);
             if (active[b])
                 sum[k] += curves[b][k];
+        }
+    }
+
+    // Which sums to show (decision 2026-09-28): one for an all-Stereo chain; L and R when any
+    // Left/Right band is active; M and S when only Mid/Side bands are; mixed: the L and R diagonal.
+    auto anyLeftRight = false, anyMidSide = false;
+    for (size_t b = 0; b < static_cast<size_t> (numBands); ++b)
+        if (active[b])
+        {
+            anyLeftRight = anyLeftRight || ChannelModes::isLeftRight (lastBands[b].channel);
+            anyMidSide = anyMidSide || ChannelModes::isMidSide (lastBands[b].channel);
+        }
+
+    layout = anyLeftRight ? SumLayout::leftRight : anyMidSide ? SumLayout::midSide : SumLayout::single;
+
+    if (layout == SumLayout::single)
+    {
+        secondSum = sum;
+    }
+    else
+    {
+        auto toDb = [] (std::complex<double> v) { return 20.0 * std::log10 (std::max (1.0e-15, std::abs (v))); };
+
+        for (size_t k = 0; k < static_cast<size_t> (numPoints); ++k)
+        {
+            const auto f = std::min (frequencies[k], 0.499 * sampleRate);
+            auto m = StereoTransfer::identity();
+
+            for (size_t b = 0; b < static_cast<size_t> (numBands); ++b)
+                if (active[b])
+                    m = StereoTransfer::multiply (StereoTransfer::forBand (lastBands[b].channel, designs[b].response (f, sampleRate)), m);
+
+            if (layout == SumLayout::midSide)
+                m = StereoTransfer::toMidSide (m);
+
+            sum[k] = toDb (m[0][0]);
+            secondSum[k] = toDb (m[1][1]);
         }
     }
 

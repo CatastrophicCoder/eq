@@ -22,8 +22,9 @@ ParametricEQAudioProcessor::ParametricEQAudioProcessor()
         p.type      = parameters.getRawParameterValue (Parameters::id (band, "type"));
         p.slope     = parameters.getRawParameterValue (Parameters::id (band, "slope"));
         p.enabled   = parameters.getRawParameterValue (Parameters::id (band, "enabled"));
+        p.channel   = parameters.getRawParameterValue (Parameters::id (band, "channel"));
         jassert (p.frequency != nullptr && p.gain != nullptr && p.q != nullptr
-                 && p.type != nullptr && p.slope != nullptr && p.enabled != nullptr);
+                 && p.type != nullptr && p.slope != nullptr && p.enabled != nullptr && p.channel != nullptr);
     }
 
     // Analyzer taps, allocated once: prepareToPlay may run while the editor is reading them.
@@ -113,7 +114,7 @@ void ParametricEQAudioProcessor::pushParametersToBands() noexcept
         const auto& p = bandParameters[i];
         bands[i].setTargets (Parameters::toBandSettings (p.type->load(), p.frequency->load(), p.gain->load(),
                                                          p.q->load(), p.slope->load(), p.enabled->load(),
-                                                         bandInUse[i].load (std::memory_order_relaxed), 0.0f));
+                                                         bandInUse[i].load (std::memory_order_relaxed), p.channel->load()));
     }
 }
 
@@ -208,7 +209,7 @@ std::array<BandSettings, 16> ParametricEQAudioProcessor::getBandSettings() const
     {
         const auto& p = bandParameters[i];
         result[i] = Parameters::toBandSettings (p.type->load(), p.frequency->load(), p.gain->load(), p.q->load(),
-                                                p.slope->load(), p.enabled->load(), bandInUse[i].load (std::memory_order_relaxed), 0.0f);
+                                                p.slope->load(), p.enabled->load(), bandInUse[i].load (std::memory_order_relaxed), p.channel->load());
     }
 
     return result;

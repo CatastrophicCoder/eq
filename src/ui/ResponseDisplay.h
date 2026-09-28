@@ -53,8 +53,11 @@ public:
     const ResponseCurves& getCurves() const noexcept { return curves; }
     juce::TextButton& getRangeButton() noexcept    { return rangeButton; }
 
-    /** The summed curve as drawn, in component coordinates. */
+    /** The summed curve as drawn (the only sum, or L / M), in component coordinates. */
     juce::Path getSumPath() const;
+    /** The second sum (R / S) when channel modes split the display. */
+    juce::Path getSecondSumPath() const;
+    static juce::Colour secondSumColour();
 
     static juce::Colour bandColour (int bandNumber);
     static juce::Colour sumColour();

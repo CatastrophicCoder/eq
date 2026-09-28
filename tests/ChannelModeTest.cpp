@@ -365,12 +365,25 @@ TEST_CASE ("Auto Gain uses the 2x2 model; all-Stereo chains are unchanged", "[ch
     }
     CHECK_THAT (stereoOffset, WithinAbs (-10.0 * std::log10 (num / den), 1e-6));
 
-    // A band on one channel counts for half the power.
-    auto left = freeBands();
-    left[0] = band (FilterType::lowShelf, 20000.0, 12.0, 0.71, ChannelMode::left);   // ~+12 dB almost everywhere
-    auto both = left;
-    both[0].channel = ChannelMode::stereo;
-    CHECK (AutoGain::computeOffsetDb (left, 48000.0) > AutoGain::computeOffsetDb (both, 48000.0) + 3.0);
+    // A band on one channel leaves the other half of the power alone: (|H|^2 + 1) / 2 per frequency.
+    for (auto mode : { ChannelMode::left, ChannelMode::right, ChannelMode::mid, ChannelMode::side })
+    {
+        auto one = freeBands();
+        one[0] = band (FilterType::lowShelf, 20000.0, 12.0, 0.71, mode);
+
+        double oneNum = 0.0, oneDen = 0.0;
+        for (int k = 0; k < AutoGain::numPoints; ++k)
+        {
+            const auto f = 20.0 * std::pow (1000.0, k / (AutoGain::numPoints - 1.0));
+            const auto w = std::pow (10.0, KWeighting::magnitudeDb (f) / 10.0);
+            const auto h2 = std::norm (BandDesign::design (one[0], 48000.0).response (f, 48000.0));
+            oneNum += w * 0.5 * (h2 + 1.0);
+            oneDen += w;
+        }
+
+        INFO ("mode " << ChannelModes::names[static_cast<int> (mode)]);
+        CHECK_THAT (AutoGain::computeOffsetDb (one, 48000.0), WithinAbs (-10.0 * std::log10 (oneNum / oneDen), 1e-6));
+    }
 }
 
 TEST_CASE ("With Auto Gain on, K-weighted loudness of uncorrelated pink noise is unchanged across channel modes", "[channel][autogain]")

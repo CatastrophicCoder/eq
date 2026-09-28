@@ -39,6 +39,7 @@ private:
         std::atomic<float>* type;
         std::atomic<float>* slope;
         std::atomic<float>* enabled;
+        std::atomic<float>* channel;
     };
 
     std::array<BandParameters, 16> bandParameters {};

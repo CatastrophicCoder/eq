@@ -8,7 +8,12 @@ void SectionCascade::add (const BiquadCoefficients& section) noexcept
 
 std::complex<double> SectionCascade::response (double frequencyHz, double sampleRate) const noexcept
 {
-    return { 1.0, 0.0 };   // Not implemented yet.
+    std::complex<double> h { 1.0, 0.0 };
+
+    for (int i = 0; i < numSections; ++i)
+        h *= sections[static_cast<size_t> (i)].response (frequencyHz, sampleRate);
+
+    return h;
 }
 
 double SectionCascade::magnitudeDb (double frequencyHz, double sampleRate) const noexcept

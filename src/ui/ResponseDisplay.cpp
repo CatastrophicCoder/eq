@@ -118,6 +118,16 @@ juce::Path ResponseDisplay::getSumPath() const
     return curvePath (getAxis(), curves, [this] (int k) { return curves.sumDb (k); });
 }
 
+juce::Path ResponseDisplay::getSecondSumPath() const
+{
+    return curvePath (getAxis(), curves, [this] (int k) { return curves.secondSumDb (k); });
+}
+
+juce::Colour ResponseDisplay::secondSumColour()
+{
+    return juce::Colour { 0xff7fcfe2 };   // light cyan: R or S
+}
+
 void ResponseDisplay::paint (juce::Graphics& g)
 {
     g.fillAll (background);
@@ -197,8 +207,37 @@ void ResponseDisplay::paint (juce::Graphics& g)
             g.strokePath (outline, juce::PathStrokeType (1.2f));
         }
 
+        const auto stroke = juce::PathStrokeType (2.2f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded);
+        const auto layout = curves.getSumLayout();
+
+        if (layout != ResponseCurves::SumLayout::single)
+        {
+            g.setColour (secondSumColour());
+            g.strokePath (getSecondSumPath(), stroke);
+        }
+
         g.setColour (sumColour());
-        g.strokePath (getSumPath(), juce::PathStrokeType (2.2f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+        g.strokePath (getSumPath(), stroke);
+
+        // Name the two sums at the right end: L / R, or M / S.
+        if (layout != ResponseCurves::SumLayout::single)
+        {
+            const auto last = ResponseCurves::numPoints - 1;
+            const auto x = axis.xForFrequency (curves.frequency (last)) - 14.0f;
+            const auto isLR = layout == ResponseCurves::SumLayout::leftRight;
+            g.setFont (juce::FontOptions (12.0f, juce::Font::bold));
+
+            const std::pair<double, juce::Colour> labels[] { { curves.sumDb (last), sumColour() },
+                                                             { curves.secondSumDb (last), secondSumColour() } };
+            for (int i = 0; i < 2; ++i)
+            {
+                const auto y = juce::jlimit (plot.getY() + 8.0f, plot.getBottom() - 8.0f, axis.yForDb (labels[i].first));
+                g.setColour (labels[i].second);
+                g.drawText (i == 0 ? (isLR ? "L" : "M") : (isLR ? "R" : "S"),
+                            juce::Rectangle<float> (12.0f, 14.0f).withCentre ({ x, y - (i == 0 ? 9.0f : -9.0f) }),
+                            juce::Justification::centred);
+            }
+        }
     }
 
     paintNodes (g, axis);
@@ -495,6 +534,11 @@ juce::PopupMenu ResponseDisplay::buildNodeMenu (int band) const
         menu.addSubMenu ("Slope", slopes, on);
     }
 
+    juce::PopupMenu channels;
+    for (int c = 0; c < ChannelModes::count; ++c)
+        channels.addItem (menuChannelBase + c, ChannelModes::names[c], on, static_cast<int> (settings.channel) == c);
+    menu.addSubMenu ("Channel", channels, on);
+
     menu.addSeparator();
     menu.addItem (menuToggleEnable, on ? "Disable" : "Enable");
     menu.addItem (menuDelete, "Delete");
@@ -530,6 +574,8 @@ void ResponseDisplay::applyNodeMenuResult (int band, int itemId)
 
         if (itemId >= menuSlopeBase && itemId < menuSlopeBase + CutSlope::count)
             writer.setOnce (b, "slope", static_cast<float> (itemId - menuSlopeBase));
+        else if (itemId >= menuChannelBase && itemId < menuChannelBase + ChannelModes::count)
+            writer.setOnce (b, "channel", static_cast<float> (itemId - menuChannelBase));
         else if (itemId >= menuTypeBase && itemId < menuTypeBase + FilterTypes::count)
             writer.setOnce (b, "type", static_cast<float> (itemId - menuTypeBase));
     }
@@ -795,6 +841,15 @@ void ResponseDisplay::paintNodes (juce::Graphics& g, const FrequencyAxis& axis)
             g.setColour (juce::Colours::white);
             g.drawEllipse (juce::Rectangle<float> (radius * 2.0f + 4.0f, radius * 2.0f + 4.0f).withCentre (n.position),
                            n.band == selection.getPrimary() ? 2.0f : 1.2f);
+        }
+
+        // Channel badge: L / R / M / S (nothing for Stereo).
+        if (const juce::String letter (ChannelModes::letters[static_cast<int> (n.channel)]); letter.isNotEmpty())
+        {
+            g.setColour (colour);
+            g.setFont (juce::FontOptions (11.0f, juce::Font::bold));
+            g.drawText (letter, juce::Rectangle<float> (12.0f, 12.0f).withCentre (n.position.translated (radius + 7.0f, -radius - 5.0f)),
+                        juce::Justification::centred);
         }
     }
 

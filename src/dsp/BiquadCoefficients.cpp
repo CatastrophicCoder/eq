@@ -6,7 +6,10 @@
 
 std::complex<double> BiquadCoefficients::response (double frequencyHz, double sampleRate) const noexcept
 {
-    return { 1.0, 0.0 };   // Not implemented yet.
+    const auto w = 2.0 * std::numbers::pi * frequencyHz / sampleRate;
+    const auto z1 = std::polar (1.0, -w);   // z^-1 on the unit circle
+    const auto z2 = z1 * z1;
+    return (b0 + b1 * z1 + b2 * z2) / (1.0 + a1 * z1 + a2 * z2);
 }
 
 double BiquadCoefficients::magnitudeDb (double frequencyHz, double sampleRate) const noexcept

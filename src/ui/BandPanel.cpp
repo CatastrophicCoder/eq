@@ -30,8 +30,11 @@ BandPanel::BandPanel (juce::AudioProcessorValueTreeState& s)
         type.addItem (FilterTypes::names[i], i + 1);
     for (int i = 0; i < CutSlope::count; ++i)
         slope.addItem (CutSlope::labels[i], i + 1);
+    for (int i = 0; i < ChannelModes::count; ++i)
+        channel.addItem (ChannelModes::names[i], i + 1);
     type.setName ("type");
     slope.setName ("slope");
+    channel.setName ("channel");
 
     setUpKnob (frequency, frequencyCaption, "Freq");
     setUpKnob (gain, gainCaption, "Gain");
@@ -40,8 +43,8 @@ BandPanel::BandPanel (juce::AudioProcessorValueTreeState& s)
     gain.setName ("gain");
     q.setName ("q");
 
-    for (auto* c : std::initializer_list<juce::Component*> { &enable, &type, &frequencyCaption, &frequency, &gainCaption,
-                                                              &gain, &qCaption, &q, &slope })
+    for (auto* c : std::initializer_list<juce::Component*> { &enable, &type, &channel, &frequencyCaption, &frequency,
+                                                              &gainCaption, &gain, &qCaption, &q, &slope })
         addAndMakeVisible (c);
 
     setBand (1);
@@ -64,6 +67,7 @@ void BandPanel::attach()
     enableAttachment.reset();
     typeAttachment.reset();
     slopeAttachment.reset();
+    channelAttachment.reset();
     frequencyAttachment.reset();
     gainAttachment.reset();
     qAttachment.reset();
@@ -71,6 +75,7 @@ void BandPanel::attach()
     enableAttachment    = std::make_unique<ButtonAttachment>   (state, Parameters::id (band, "enabled"), enable);
     typeAttachment      = std::make_unique<ComboBoxAttachment> (state, Parameters::id (band, "type"), type);
     slopeAttachment     = std::make_unique<ComboBoxAttachment> (state, Parameters::id (band, "slope"), slope);
+    channelAttachment   = std::make_unique<ComboBoxAttachment> (state, Parameters::id (band, "channel"), channel);
     frequencyAttachment = std::make_unique<SliderAttachment>   (state, Parameters::id (band, "freq"), frequency);
     gainAttachment      = std::make_unique<SliderAttachment>   (state, Parameters::id (band, "gain"), gain);
     qAttachment         = std::make_unique<SliderAttachment>   (state, Parameters::id (band, "q"), q);
@@ -88,6 +93,7 @@ void BandPanel::refreshControlStates()
     const auto on = state.getRawParameterValue (Parameters::id (band, "enabled"))->load() >= 0.5f;
 
     type.setEnabled (on);
+    channel.setEnabled (on);
     frequency.setEnabled (on);
     frequencyCaption.setEnabled (on);
     gain.setEnabled (on && FilterTypes::usesGain (t));
@@ -119,6 +125,8 @@ void BandPanel::resized()
     enable.setBounds (left.removeFromTop (22));
     left.removeFromTop (6);
     type.setBounds (left.removeFromTop (22));
+    left.removeFromTop (6);
+    channel.setBounds (left.removeFromTop (22));
 
     right.removeFromTop (28);
     slope.setBounds (right.removeFromTop (22));

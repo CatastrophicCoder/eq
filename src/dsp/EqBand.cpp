@@ -53,10 +53,62 @@ void EqBand::reset() noexcept
         slot.processor.reset();
 }
 
+namespace
+{
+    /** One stereo frame through a band's filter, routed by its channel mode (decision 2026-09-28).
+        Mid/Side encode M = (L+R)/2, S = (L-R)/2 and decode L = M+S, R = M-S around the filter;
+        M and S use the filter state of channel 0. */
+    inline void route (CascadeProcessor& filter, ChannelMode mode, bool twoChannels, double& l, double& r) noexcept
+    {
+        if (! twoChannels)
+        {
+            l = filter.processSample (0, l);
+            return;
+        }
+
+        switch (mode)
+        {
+            case ChannelMode::stereo:
+                l = filter.processSample (0, l);
+                r = filter.processSample (1, r);
+                break;
+
+            case ChannelMode::left:
+                l = filter.processSample (0, l);
+                break;
+
+            case ChannelMode::right:
+                r = filter.processSample (1, r);
+                break;
+
+            case ChannelMode::mid:
+            {
+                const auto m = filter.processSample (0, 0.5 * (l + r));
+                const auto sd = 0.5 * (l - r);
+                l = m + sd;
+                r = m - sd;
+                break;
+            }
+
+            case ChannelMode::side:
+            {
+                const auto m = 0.5 * (l + r);
+                const auto sd = filter.processSample (0, 0.5 * (l - r));
+                l = m + sd;
+                r = m - sd;
+                break;
+            }
+        }
+    }
+}
+
 void EqBand::process (juce::AudioBuffer<float>& buffer) noexcept
 {
     const auto channels = std::min (buffer.getNumChannels(), numChannels);
+    const auto twoChannels = channels >= 2;
     const auto numSamples = buffer.getNumSamples();
+    auto* left = buffer.getWritePointer (0);
+    auto* right = twoChannels ? buffer.getWritePointer (1) : nullptr;
 
     for (int start = 0; start < numSamples; start += subBlockSize)
     {
@@ -73,39 +125,45 @@ void EqBand::process (juce::AudioBuffer<float>& buffer) noexcept
             updateCoefficients();
         }
 
-        auto& current = slots[static_cast<size_t> (active)].processor;
+        auto& current = slots[static_cast<size_t> (active)];
 
         if (! isCrossfading())
         {
             // A bypassed band (no sections) leaves the audio untouched: skip the loop.
-            if (current.getCascade().numSections == 0)
+            if (current.processor.getCascade().numSections == 0)
                 continue;
 
-            for (int ch = 0; ch < channels; ++ch)
+            for (int i = start; i < start + length; ++i)
             {
-                auto* x = buffer.getWritePointer (ch, start);
-
-                for (int i = 0; i < length; ++i)
-                    x[i] = static_cast<float> (current.processSample (ch, static_cast<double> (x[i])));
+                auto l = static_cast<double> (left[i]);
+                auto r = twoChannels ? static_cast<double> (right[i]) : 0.0;
+                route (current.processor, current.discrete.channel, twoChannels, l, r);
+                left[i] = static_cast<float> (l);
+                if (twoChannels)
+                    right[i] = static_cast<float> (r);
             }
 
             continue;
         }
 
-        // Linear crossfade from the current to the incoming filter.
-        auto& incoming = slots[static_cast<size_t> (1 - active)].processor;
+        // Linear crossfade from the current to the incoming filter, each with its own routing.
+        auto& incoming = slots[static_cast<size_t> (1 - active)];
         const auto done = fadeLength - fadeRemaining;
 
-        for (int ch = 0; ch < channels; ++ch)
+        for (int i = 0; i < length; ++i)
         {
-            auto* x = buffer.getWritePointer (ch, start);
+            const auto n = start + i;
+            const auto inL = static_cast<double> (left[n]);
+            const auto inR = twoChannels ? static_cast<double> (right[n]) : 0.0;
 
-            for (int i = 0; i < length; ++i)
-            {
-                const auto in = static_cast<double> (x[i]);
-                const auto g = std::min (1.0, static_cast<double> (done + i + 1) / fadeLength);
-                x[i] = static_cast<float> ((1.0 - g) * current.processSample (ch, in) + g * incoming.processSample (ch, in));
-            }
+            auto aL = inL, aR = inR, bL = inL, bR = inR;
+            route (current.processor, current.discrete.channel, twoChannels, aL, aR);
+            route (incoming.processor, incoming.discrete.channel, twoChannels, bL, bR);
+
+            const auto g = std::min (1.0, static_cast<double> (done + i + 1) / fadeLength);
+            left[n] = static_cast<float> ((1.0 - g) * aL + g * bL);
+            if (twoChannels)
+                right[n] = static_cast<float> ((1.0 - g) * aR + g * bR);
         }
 
         fadeRemaining -= length;

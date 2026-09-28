@@ -16,9 +16,10 @@ AutoGainUpdater::AutoGainUpdater (juce::AudioProcessorValueTreeState& state, con
               state.getRawParameterValue (Parameters::id (band, "q")),
               state.getRawParameterValue (Parameters::id (band, "type")),
               state.getRawParameterValue (Parameters::id (band, "slope")),
-              state.getRawParameterValue (Parameters::id (band, "enabled")) };
+              state.getRawParameterValue (Parameters::id (band, "enabled")),
+              state.getRawParameterValue (Parameters::id (band, "channel")) };
         jassert (p.frequency != nullptr && p.gain != nullptr && p.q != nullptr
-                 && p.type != nullptr && p.slope != nullptr && p.enabled != nullptr);
+                 && p.type != nullptr && p.slope != nullptr && p.enabled != nullptr && p.channel != nullptr);
     }
 
     startThread (juce::Thread::Priority::low);
@@ -70,7 +71,7 @@ std::array<BandSettings, 16> AutoGainUpdater::snapshot() const
         const auto& p = bandParameters[i];
         result[i] = Parameters::toBandSettings (p.type->load(), p.frequency->load(), p.gain->load(),
                                                 p.q->load(), p.slope->load(), p.enabled->load(),
-                                                inUse[i].load (std::memory_order_relaxed), 0.0f);
+                                                inUse[i].load (std::memory_order_relaxed), p.channel->load());
     }
 
     return result;

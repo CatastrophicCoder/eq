@@ -20,7 +20,8 @@ std::vector<NodeLayout::Node> NodeLayout::compute (std::span<const BandSettings>
         nodes.push_back ({ static_cast<int> (i) + 1,
                            { axis.xForFrequency (f), juce::jlimit (plot.getY(), plot.getBottom(), y) },
                            usesGain,
-                           b.enabled });
+                           b.enabled,
+                           b.channel });
     }
 
     return nodes;

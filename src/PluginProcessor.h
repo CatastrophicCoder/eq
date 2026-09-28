@@ -100,6 +100,7 @@ private:
         std::atomic<float>* type = nullptr;
         std::atomic<float>* slope = nullptr;
         std::atomic<float>* enabled = nullptr;
+        std::atomic<float>* channel = nullptr;
     };
 
     /** Output gain x Auto Gain offset x polarity, as one linear gain. */
