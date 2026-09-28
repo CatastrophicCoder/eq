@@ -20,6 +20,9 @@ public:
     void prepareToPlay (double sampleRate, int samplesPerBlock) override;
     void releaseResources() override;
 
+    /** Clears filter state, crossfades and (M7) detector envelopes, e.g. after a transport jump. */
+    void reset() override;
+
     bool isBusesLayoutSupported (const BusesLayout& layouts) const override;
 
     void processBlock (juce::AudioBuffer<float>&, juce::MidiBuffer&) override;

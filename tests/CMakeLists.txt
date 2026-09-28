@@ -23,7 +23,8 @@ add_executable(ParametricEQTests
     LevelMeterTest.cpp
     AnalyzerProcessorTest.cpp
     ChannelModeTest.cpp
-    PresetTest.cpp)
+    PresetTest.cpp
+    DynamicsTest.cpp)
 
 # Link against the plugin's shared-code library. Its JUCE modules are linked
 # PRIVATE there, so take its include paths and defines explicitly instead of

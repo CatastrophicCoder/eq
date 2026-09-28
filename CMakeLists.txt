@@ -69,7 +69,9 @@ target_sources(ParametricEQ
         src/dsp/KWeighting.cpp
         src/dsp/AutoGain.cpp
         src/dsp/AnalyzerFifo.cpp
-        src/dsp/StereoTransfer.cpp)
+        src/dsp/StereoTransfer.cpp
+        src/dsp/LevelDetector.cpp
+        src/dsp/DynamicGainLaw.cpp)
 
 target_include_directories(ParametricEQ
     PUBLIC

@@ -124,6 +124,11 @@ void ParametricEQAudioProcessor::releaseResources()
 {
 }
 
+void ParametricEQAudioProcessor::reset()
+{
+    // Not implemented yet.
+}
+
 bool ParametricEQAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
 {
     return layouts.getMainOutputChannelSet() == juce::AudioChannelSet::stereo()
