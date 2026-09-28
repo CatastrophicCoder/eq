@@ -44,6 +44,9 @@ ParametricEQAudioProcessor::ParametricEQAudioProcessor()
     jassert (outputGainDb != nullptr && autoGainOn != nullptr && invertOn != nullptr);
 
     presetManager = std::make_unique<PresetManager> (*this, PresetManager::defaultUserFolder());
+
+    // Started last: its request reads the band parameters set up above.
+    linearPhaseUpdater.start();
 }
 
 //==============================================================================
@@ -77,6 +80,24 @@ void ParametricEQAudioProcessor::prepareToPlay (double sampleRate, int samplesPe
 
     for (auto& band : bands)
         band.prepare (sampleRate, getMainBusNumOutputChannels());
+    bandRan.fill (true);
+
+    // Phase mode: start directly in the requested mode. A fresh stream has a silent past, so the
+    // convolution's empty history is correct and no fade-in wait is needed.
+    currentSampleRate = sampleRate;
+    activeLinear = requestedLinear.load();
+    activeTaps = requestedTaps();
+    if (activeLinear)
+    {
+        LinearPhaseDesigner designer;
+        LinearPhaseDesigner::Result result;
+        designer.design (getBandSettings(), sampleRate, activeTaps, result);
+        linearPhaseEngine.submit (result);   // if the updater's filter is pending instead, that one loads
+    }
+    linearPhaseEngine.prepare();
+    samplesFed = activeTaps;
+    modeFade.reset (sampleRate, EqBand::crossfadeSeconds);
+    modeFade.setCurrentAndTargetValue (1.0f);
 
     autoGainUpdater.setSampleRate (sampleRate);
 
@@ -119,7 +140,10 @@ void ParametricEQAudioProcessor::applyOutputGain (juce::AudioBuffer<float>& buff
 void ParametricEQAudioProcessor::pushParametersToBands() noexcept
 {
     for (size_t i = 0; i < bands.size(); ++i)
-        bands[i].setTargets (readBandSettings (i));
+    {
+        pushedBands[i] = readBandSettings (i);
+        bands[i].setTargets (pushedBands[i]);
+    }
 }
 
 BandSettings ParametricEQAudioProcessor::readBandSettings (size_t index) const noexcept
@@ -145,6 +169,10 @@ void ParametricEQAudioProcessor::reset()
 {
     for (auto& band : bands)
         band.reset();
+
+    // Like a fresh stream: an empty convolution history stands for a silent past.
+    linearPhaseEngine.reset();
+    samplesFed = activeTaps;
 
     outputGain.setCurrentAndTargetValue (targetOutputGain());
 }
@@ -188,13 +216,75 @@ void ParametricEQAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     if (tap)
         preFifo.push (main.getArrayOfReadPointers(), tapChannels, main.getNumSamples());
 
-    for (auto& band : bands)
-        band.process (main, hasSidechain ? &sidechain : nullptr);
+    processLinearPhaseMode (main, hasSidechain ? &sidechain : nullptr);
 
     applyOutputGain (main);
 
     if (tap)
         postFifo.push (main.getArrayOfReadPointers(), tapChannels, main.getNumSamples());
+}
+
+void ParametricEQAudioProcessor::processLinearPhaseMode (juce::AudioBuffer<float>& main, const juce::AudioBuffer<float>* sidechain) noexcept
+{
+    const auto numSamples = main.getNumSamples();
+    const auto wantLinear = requestedLinear.load (std::memory_order_relaxed);
+    const auto wantTaps = requestedTaps();
+    const auto differs = activeLinear != wantLinear || (wantLinear && activeTaps != wantTaps);
+
+    // Ready: the filter in use has the active length and a full input history. Checked before
+    // processing: the engine swaps filters at the end of a block, so the new filter is heard from
+    // the next block on, and a fade-in must not start on a block still made by the old one.
+    const auto ready = ! activeLinear || (linearPhaseEngine.getCurrentTaps() == activeTaps && samplesFed >= activeTaps);
+
+    // Linear phase: the static bands are the FIR; dynamic bands run after it (decision 2026-09-29).
+    if (activeLinear)
+    {
+        linearPhaseEngine.process (main);
+        samplesFed += numSamples;
+    }
+
+    for (size_t i = 0; i < bands.size(); ++i)
+    {
+        const auto runIir = ! activeLinear || pushedBands[i].isDynamic();
+        if (runIir)
+        {
+            if (! bandRan[i])
+                bands[i].reset();   // skipped until now: start from fresh state, not stale history
+            bands[i].process (main, sidechain);
+        }
+        bandRan[i] = runIir;
+    }
+
+    // Fade out to switch, and stay silent until a newly started filter has its full history.
+    modeFade.setTargetValue (differs || ! ready ? 0.0f : 1.0f);
+
+    if (modeFade.isSmoothing())
+    {
+        for (int i = 0; i < numSamples; ++i)
+        {
+            const auto g = modeFade.getNextValue();
+            for (int ch = 0; ch < main.getNumChannels(); ++ch)
+                main.getWritePointer (ch)[i] *= g;
+        }
+    }
+    else if (modeFade.getCurrentValue() <= 0.0f)
+    {
+        main.clear();
+    }
+
+    if (differs && ! modeFade.isSmoothing() && modeFade.getCurrentValue() <= 0.0f)
+    {
+        activeLinear = wantLinear;
+        activeTaps = wantTaps;
+        linearPhaseEngine.reset();
+        samplesFed = 0;
+        for (auto& band : bands)
+            band.reset();
+        bandRan.fill (true);
+    }
+
+    phaseSettled.store (! differs && ready && ! modeFade.isSmoothing() && modeFade.getCurrentValue() >= 1.0f,
+                        std::memory_order_relaxed);
 }
 
 float ParametricEQAudioProcessor::getLiveGainChangeDb (int band, int channel) const noexcept
@@ -379,6 +469,7 @@ void ParametricEQAudioProcessor::setStateInformation (const void* data, int size
         setBandInUse (band, inUse);
     }
 
+    readPhaseModeFromState();   // version 4 (M8); older states read as Zero latency
     presetManager->restoreFromSession();
 }
 
@@ -388,9 +479,68 @@ juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
     return new ParametricEQAudioProcessor();
 }
 
-bool ParametricEQAudioProcessor::isLinearPhase() const { return false; }
-void ParametricEQAudioProcessor::setLinearPhase (bool) {}
-int ParametricEQAudioProcessor::getLinearPhaseLength() const { return 0; }
-void ParametricEQAudioProcessor::setLinearPhaseLength (int) {}
-bool ParametricEQAudioProcessor::isPhaseModeSettled() const noexcept { return false; }
-int ParametricEQAudioProcessor::getLinearPhaseSwapCount() const noexcept { return 0; }
+
+//==============================================================================
+namespace
+{
+    const juce::Identifier linearPhaseProperty { "linearPhase" };
+    const juce::Identifier linearPhaseLengthProperty { "linearPhaseLength" };
+}
+
+int ParametricEQAudioProcessor::requestedTaps() const noexcept
+{
+    const auto index = juce::jlimit (0, static_cast<int> (LinearPhaseDesigner::tapCounts.size()) - 1,
+                                     requestedLength.load (std::memory_order_relaxed));
+    return LinearPhaseDesigner::tapCounts[static_cast<size_t> (index)];
+}
+
+bool ParametricEQAudioProcessor::isLinearPhase() const
+{
+    return requestedLinear.load();
+}
+
+void ParametricEQAudioProcessor::setLinearPhase (bool shouldBeLinear)
+{
+    parameters.state.setProperty (linearPhaseProperty, shouldBeLinear, nullptr);
+    requestedLinear = shouldBeLinear;
+    updateLatency();
+}
+
+int ParametricEQAudioProcessor::getLinearPhaseLength() const
+{
+    return requestedLength.load();
+}
+
+void ParametricEQAudioProcessor::setLinearPhaseLength (int index)
+{
+    if (index < 0 || index >= static_cast<int> (LinearPhaseDesigner::tapCounts.size()))
+        return;
+
+    parameters.state.setProperty (linearPhaseLengthProperty, index, nullptr);
+    requestedLength = index;
+    updateLatency();
+}
+
+void ParametricEQAudioProcessor::readPhaseModeFromState()
+{
+    // Missing (sessions before M8) or invalid values read as Zero latency and the shortest length.
+    const auto length = static_cast<int> (parameters.state.getProperty (linearPhaseLengthProperty, 0));
+    requestedLinear = static_cast<bool> (parameters.state.getProperty (linearPhaseProperty, false));
+    requestedLength = juce::isPositiveAndBelow (length, static_cast<int> (LinearPhaseDesigner::tapCounts.size())) ? length : 0;
+    updateLatency();
+}
+
+void ParametricEQAudioProcessor::updateLatency()
+{
+    setLatencySamples (requestedLinear.load() ? LinearPhaseEngine::latencyFor (requestedTaps()) : 0);
+}
+
+bool ParametricEQAudioProcessor::isPhaseModeSettled() const noexcept
+{
+    return phaseSettled.load (std::memory_order_relaxed);
+}
+
+int ParametricEQAudioProcessor::getLinearPhaseSwapCount() const noexcept
+{
+    return linearPhaseEngine.getSwapCount();
+}

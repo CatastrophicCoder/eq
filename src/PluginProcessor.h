@@ -1,10 +1,12 @@
 #pragma once
 
 #include "AutoGainUpdater.h"
+#include "LinearPhaseUpdater.h"
 #include "Parameters.h"
 #include "presets/PresetManager.h"
 #include "dsp/AnalyzerFifo.h"
 #include "dsp/EqBand.h"
+#include "dsp/LinearPhaseEngine.h"
 #include "ui/AnalyzerSettings.h"
 
 #include <juce_audio_processors/juce_audio_processors.h>
@@ -54,7 +56,7 @@ public:
 
     //==============================================================================
     /** Version written into every saved state; bump when the state format changes. */
-    static constexpr int stateVersion = 3;
+    static constexpr int stateVersion = 4;   // 4: phase mode properties (M8)
 
     juce::AudioProcessorValueTreeState& getValueTreeState() noexcept { return parameters; }
 
@@ -80,7 +82,7 @@ public:
 
     /** Phase mode (M8, decision 2026-09-29): hidden state properties "linearPhase" and
         "linearPhaseLength" (index into LinearPhaseDesigner::tapCounts). Linear phase reports
-        tapCounts[length] / 2 samples of latency. Message thread only.
+        LinearPhaseEngine::latencyFor (taps) samples of latency. Message thread only.
     */
     bool isLinearPhase() const;
     void setLinearPhase (bool shouldBeLinear);
@@ -137,6 +139,11 @@ private:
 
     BandSettings readBandSettings (size_t index) const noexcept;
 
+    int requestedTaps() const noexcept;
+    void updateLatency();
+    void readPhaseModeFromState();
+    void processLinearPhaseMode (juce::AudioBuffer<float>& main, const juce::AudioBuffer<float>* sidechain) noexcept;
+
     /** Output gain x Auto Gain offset x polarity, as one linear gain. */
     double targetOutputGain() const noexcept;
     void applyOutputGain (juce::AudioBuffer<float>& buffer) noexcept;
@@ -156,6 +163,24 @@ private:
     juce::SmoothedValue<double, juce::ValueSmoothingTypes::Linear> outputGain;
 
     AutoGainUpdater autoGainUpdater { parameters, bandInUse };
+
+    // Phase mode (M8). Requested on the message thread; the audio thread switches over with a
+    // fade out, a filter load and a fade in. Settings are pushed per block into pushedBands.
+    std::atomic<bool> requestedLinear { false };
+    std::atomic<int> requestedLength { 0 };
+    std::atomic<double> currentSampleRate { 48000.0 };
+    std::array<BandSettings, 16> pushedBands {};
+    std::array<bool, 16> bandRan {};
+    bool activeLinear = false;
+    int activeTaps = LinearPhaseDesigner::tapCounts[0];
+    juce::int64 samplesFed = 0;
+    juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> modeFade;
+    std::atomic<bool> phaseSettled { true };
+    LinearPhaseEngine linearPhaseEngine;
+    LinearPhaseUpdater linearPhaseUpdater { linearPhaseEngine, [this]
+    {
+        return LinearPhaseUpdater::Request { requestedLinear.load(), requestedTaps(), currentSampleRate.load(), getBandSettings() };
+    } };
     std::unique_ptr<PresetManager> presetManager;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ParametricEQAudioProcessor)

@@ -16,7 +16,7 @@ Milestone definitions and "done when" criteria are in [PLAN.md](PLAN.md#mileston
 | 6 | Per-band stereo | Done | Built and validated (172 tests, pluginval, auval); owner tested in Logic |
 | 6b | Presets | Done | Built and validated (186 tests, pluginval, auval); owner tested in Logic |
 | 7 | Dynamic EQ | Done | Built and validated (223 tests, pluginval, auval); owner tested in Logic except the side-chain (covered by unit tests only). Peak detector reading still an open decision |
-| 8 | Linear phase mode | Not started | |
+| 8 | Linear phase mode | In progress | Steps 0-2 of 3 done (detector change, FIR design, audio path). Next: step 3, UI |
 | 9 | Deferred features | Not started | |
 
 Status values: Not started · In progress · Done · Skipped
@@ -53,6 +53,8 @@ Newest first. Move each item here from "Open decisions" in `CLAUDE.md` once it i
 | 2026-09-29 | Detector (Peak and RMS): classic linear-domain attack/release follower, converted to dB afterwards; replaces the dB-domain smoothing of 2026-09-28 | Keep; peak hold + dB smoothing; classic follower; decide later (RMS: both or Peak only) | Chosen by owner (both Peak and RMS) |
 | 2026-09-29 | M8 FIR design: frequency sampling of the zero-phase 2x2 matrix on a grid 4x finer than the filter, inverse FFT, centred, 4-term Blackman-Harris window (Harris 1978); tap 0 zero, exactly symmetric, latency N/2 | - | Planned by Claude |
 | 2026-09-29 | M8 accuracy bounds: a band is resolved when its frequency and (bell, notch, band pass) bandwidth f0/Q are at least 32 FFT bins (32 fs/N); for resolved bands above 32 fs/N: smooth shapes within 0.1 dB (worst measured 0.048 dB, 1 kHz Q8 notch), cuts within 0.5 dB outside their transition band (max(1/4, 24/slope) octaves) with a -40 dB floor (worst measured 0.000 dB); smooth-shape floor -60 dB. 93 of 126 grid cases resolved | - | Proposed by Claude (new bounds) |
+| 2026-09-29 | M8 convolution: own uniformly partitioned overlap-save engine (512-sample partitions) instead of juce::dsp::Convolution, whose new filters start with an empty history (a dropout of up to half the filter length on every change); the input spectra are kept across filter changes and old/new outputs crossfade over 1024 samples. Adds 512 samples: latency = taps/2 + 512 | juce::dsp::Convolution; own engine | Chosen by Claude after a failing test (reported to owner) |
+| 2026-09-29 | M8 mode and length switches: fade out (20 ms), switch, stay silent until the filter of the new length is in use and has a full input history (taps samples), fade in (20 ms). prepareToPlay and reset() count as a fresh stream (no wait) | - | Planned by Claude |
 | 2026-09-28 | Plugin name "Spectral Fault", brand (company) "Catastrophic Audio" | Name lists proposed by Claude | Chosen by owner |
 | 2026-09-28 | Rename details: bundle ID com.catastrophicaudio.spectralfault; CMake target SpectralFault (tests SpectralFaultTests); plugin codes, saved-state tag and preset tag unchanged; rename committed under M7 | Keep or change bundle ID; keep or rename target; M7 or separate prefix | Chosen by owner |
 | 2026-09-28 | User preset folder moves to ~/Library/Audio/Presets/Catastrophic Audio/Spectral Fault/; the old folder's presets are copied once (only if the new folder has none); old files stay | Keep old path; move without migration; move and migrate | Chosen by owner |
@@ -114,6 +116,28 @@ Newest first. Move each item here from "Open decisions" in `CLAUDE.md` once it i
 ## Session log
 
 Newest first. One entry per session, a few lines each.
+
+### 2026-09-29 — M8 step 2 (linear-phase audio path)
+
+- Done: `LinearPhaseEngine` (own partitioned convolution, 2 or 4 paths), `LinearPhaseUpdater` (background thread,
+  20 ms poll, designs on change and hands filters over through a preallocated slot), processor wiring: hidden state
+  properties linearPhase / linearPhaseLength (state version 4), latency taps/2 + 512 reported, static bands run as
+  the FIR and dynamic bands as IIR after it, mode/length switches with fade and history wait.
+- Found while testing: juce::dsp::Convolution restarts each new filter with an empty history, so every parameter
+  change in Linear phase mode silenced up to half the filter length; replaced by our own engine (Decisions). A
+  length change also glitched because the fade-in began on a block still made by the old filter; readiness is now
+  checked before processing. In Mid/Side chains the cross terms depend on phase, so they are compared with the
+  zero-phase model rather than with Zero latency mode.
+- Tests added / passing: 243/243 (three parallel runs). State and latency reporting; measured delay = reported at
+  44.1/48/96/192 kHz for all three lengths; symmetric impulse response; flat EQ = exact delay; null against Zero
+  latency (Stereo/Left/Right) within 0.1 dB; Mid/Side chain matches the zero-phase model within 0.1 dB; parameter
+  change reaches the audio in about 165 ms of wall-clock time without clicks; mode and length switches clean;
+  dynamic bands act after the FIR; toggling dynamics clean; no allocation in processBlock while filters swap (the
+  allocation counter now counts only the audio thread); CPU at 32768 taps with Mid/Side at 96 kHz: Debug 102 ms per
+  second of audio, Release 9.5 ms. pluginval strictness 5 (VST3, AU) and auval pass.
+- Known transient: toggling a band's dynamics in Linear phase mode briefly (until the next filter, about 70-170 ms)
+  applies that band twice or not at all.
+- Next step: M8 step 3, phase mode and length menus in the bottom bar.
 
 ### 2026-09-29 — M8 step 1 (linear-phase FIR design)
 

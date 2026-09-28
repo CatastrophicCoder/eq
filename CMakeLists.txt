@@ -32,6 +32,7 @@ target_sources(SpectralFault
         src/PluginEditor.cpp
         src/Parameters.cpp
         src/AutoGainUpdater.cpp
+        src/LinearPhaseUpdater.cpp
         src/presets/Preset.cpp
         src/presets/FactoryPresets.cpp
         src/presets/PresetManager.cpp
@@ -72,7 +73,8 @@ target_sources(SpectralFault
         src/dsp/StereoTransfer.cpp
         src/dsp/LevelDetector.cpp
         src/dsp/DynamicGainLaw.cpp
-        src/dsp/LinearPhaseDesigner.cpp)
+        src/dsp/LinearPhaseDesigner.cpp
+        src/dsp/LinearPhaseEngine.cpp)
 
 target_include_directories(SpectralFault
     PUBLIC

@@ -108,6 +108,11 @@ Decided; details and dates in `docs/PROGRESS.md`.
   (bell band pass, shelves lowpass/highpass) from its own input or the optional "Sidechain" bus (falls back to
   its own input); Peak or RMS followed by a linear-level attack/release follower, then dB (2026-09-29); per-channel for Stereo bands; coefficients every 16
   samples. Auto Gain uses static gains. Display shows live gain plus the range. Presets store dynamics (format 2).
+- Linear phase (M8): hidden state properties linearPhase / linearPhaseLength (8192 / 16384 / 32768 taps, same at
+  every rate). `LinearPhaseDesigner` (frequency sampling of the zero-phase 2x2 matrix, Blackman-Harris window),
+  `LinearPhaseUpdater` (background thread), `LinearPhaseEngine` (own partitioned convolution; filter changes keep the
+  input history and crossfade). Latency taps/2 + 512. Static bands form the FIR; dynamic bands run as IIR after it,
+  detecting the delayed signal. Mode and length switches fade out, wait for a full history, fade in.
 - Milestone order after 5: per-band stereo (6), dynamic EQ (7), linear phase (8).
 
 ## Hard rules: real-time audio thread

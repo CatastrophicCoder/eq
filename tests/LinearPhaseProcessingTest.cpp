@@ -2,6 +2,8 @@
 
 #include "dsp/BandDesign.h"
 #include "dsp/LinearPhaseDesigner.h"
+#include "dsp/LinearPhaseEngine.h"
+#include "dsp/StereoTransfer.h"
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
@@ -107,7 +109,7 @@ TEST_CASE ("Phase mode and length are saved with the session; older sessions loa
         ParametricEQAudioProcessor source;
         source.setLinearPhase (true);
         source.setLinearPhaseLength (2);
-        CHECK (source.getLatencySamples() == 32768 / 2);
+        CHECK (source.getLatencySamples() == LinearPhaseEngine::latencyFor (32768));   // 16384 + 512
         source.getStateInformation (saved);
     }
 
@@ -115,7 +117,7 @@ TEST_CASE ("Phase mode and length are saved with the session; older sessions loa
     target.setStateInformation (saved.getData(), static_cast<int> (saved.getSize()));
     CHECK (target.isLinearPhase());
     CHECK (target.getLinearPhaseLength() == 2);
-    CHECK (target.getLatencySamples() == 16384);
+    CHECK (target.getLatencySamples() == 16384 + LinearPhaseEngine::blockSize);
 
     // A state from before M8 (version 3) has neither property.
     juce::XmlElement v3 ("ParametricEQ");
@@ -148,7 +150,7 @@ TEST_CASE ("Reported latency equals the measured delay; the impulse response is 
             const auto taps = LinearPhaseDesigner::tapCounts[static_cast<size_t> (length)];
             const auto latency = p.getLatencySamples();
             INFO (fs << " Hz, " << taps << " taps");
-            CHECK (latency == taps / 2);
+            CHECK (latency == taps / 2 + LinearPhaseEngine::blockSize);   // filter centre plus one engine block
 
             const auto h = impulseResponse (p, taps + 1024, 0);
             int peak = 0;
@@ -158,13 +160,14 @@ TEST_CASE ("Reported latency equals the measured delay; the impulse response is 
             CHECK (peak == latency);
 
             double asymmetry = 0.0;
-            for (int j = 1; j < latency; ++j)
+            for (int j = 1; j < taps / 2; ++j)
                 asymmetry = std::max (asymmetry, static_cast<double> (std::abs (h.getSample (0, latency + j) - h.getSample (0, latency - j))));
             CHECK (asymmetry < 1.0e-5);
 
-            // Nothing on the other channel, nothing after the filter ends.
+            // Nothing on the other channel, nothing before the engine block or after the filter ends.
             CHECK (h.getMagnitude (1, 0, h.getNumSamples()) < 1.0e-6f);
-            CHECK (h.getMagnitude (0, taps, 1024) < 1.0e-6f);
+            CHECK (h.getMagnitude (0, 0, LinearPhaseEngine::blockSize) < 1.0e-6f);
+            CHECK (h.getMagnitude (0, taps + LinearPhaseEngine::blockSize, 1024 - LinearPhaseEngine::blockSize) < 1.0e-6f);
         }
 }
 
@@ -192,9 +195,10 @@ TEST_CASE ("A flat EQ in Linear phase mode is an exact delay", "[linearphase][la
 
 TEST_CASE ("Linear-phase magnitude nulls against Zero latency within the design bounds", "[linearphase][null]")
 {
+    // Stereo, Left and Right bands: each output is a product of per-channel responses, so the
+    // linear-phase magnitude equals the minimum-phase (Zero latency) magnitude.
     juce::ScopedJuceInitialiser_GUI juce;
     constexpr double fs = 48000.0;
-    const auto length = 1;   // 16384 taps: resolution 32 fs / N = 94 Hz
 
     auto setUp = [] (ParametricEQAudioProcessor& p)
     {
@@ -203,24 +207,71 @@ TEST_CASE ("Linear-phase magnitude nulls against Zero latency within the design 
         setBand (p, 6, FilterType::bell, 3000.0f, -4.0f, 2.0f, 3, true);
         set (p, "band6_channel", static_cast<float> (ChannelMode::left));
         setBand (p, 9, FilterType::highShelf, 8000.0f, 3.0f, 0.71f, 3, true);
-        set (p, "band9_channel", static_cast<float> (ChannelMode::side));
+        set (p, "band9_channel", static_cast<float> (ChannelMode::right));
         setBand (p, 12, FilterType::lowShelf, 250.0f, -3.0f, 0.71f, 3, true);
-        set (p, "band12_channel", static_cast<float> (ChannelMode::mid));
     };
 
     ParametricEQAudioProcessor linear, minimum;
     setUp (linear);
     setUp (minimum);
     linear.setLinearPhase (true);
-    linear.setLinearPhaseLength (length);
+    linear.setLinearPhaseLength (1);   // 16384 taps: resolution 32 fs / N = 94 Hz
     prepare (linear, fs);
     prepare (minimum, fs);
     REQUIRE (settle (linear));
 
+    const auto a = impulseResponse (linear, 16384 + 4096);
+    const auto b = impulseResponse (minimum, 16384 + 4096);
+
+    for (int output = 0; output < 2; ++output)
+    {
+        double worst = 0.0, worstAt = 0.0;
+        for (int k = 0; k < 60; ++k)
+        {
+            const auto f = 200.0 * std::pow (18000.0 / 200.0, k / 59.0);
+            const auto difference = std::abs (magnitudeDb (a, output, f, fs) - magnitudeDb (b, output, f, fs));
+            if (difference > worst)
+            {
+                worst = difference;
+                worstAt = f;
+            }
+        }
+
+        INFO ("output " << output << ": worst " << worst << " dB at " << worstAt << " Hz");
+        CHECK (worst <= 0.1);
+    }
+}
+
+TEST_CASE ("With Mid and Side bands, linear phase applies each band's magnitude in its M/S frame", "[linearphase][null]")
+{
+    // The 2x2 terms of an M/S chain depend on the bands' phases, so minimum and linear phase differ
+    // there by design; linear phase must match the zero-phase model (StereoTransfer with |H|).
+    juce::ScopedJuceInitialiser_GUI juce;
+    constexpr double fs = 48000.0;
+    ParametricEQAudioProcessor p;
+    setBand (p, 4, FilterType::bell, 1000.0f, 6.0f, 1.0f, 3, true);
+    setBand (p, 9, FilterType::highShelf, 8000.0f, 3.0f, 0.71f, 3, true);
+    set (p, "band9_channel", static_cast<float> (ChannelMode::side));
+    setBand (p, 12, FilterType::lowShelf, 250.0f, -3.0f, 0.71f, 3, true);
+    set (p, "band12_channel", static_cast<float> (ChannelMode::mid));
+    p.setLinearPhase (true);
+    p.setLinearPhaseLength (1);
+    prepare (p, fs);
+    REQUIRE (settle (p));
+
+    const auto bands = p.getBandSettings();
+    auto model = [&] (double f)
+    {
+        auto m = StereoTransfer::identity();
+        for (const auto& b : bands)
+            if (b.isActive())
+                m = StereoTransfer::multiply (StereoTransfer::forBand (b.channel, { std::abs (BandDesign::design (b, fs).response (f, fs)), 0.0 }), m);
+        return m;
+    };
+
     for (int input = 0; input < 2; ++input)
     {
-        const auto a = impulseResponse (linear, 16384 + 4096, input);
-        const auto b = impulseResponse (minimum, 16384 + 4096, input);
+        const auto h = impulseResponse (p, 16384 + 4096, input);
 
         for (int output = 0; output < 2; ++output)
         {
@@ -228,13 +279,13 @@ TEST_CASE ("Linear-phase magnitude nulls against Zero latency within the design 
             for (int k = 0; k < 60; ++k)
             {
                 const auto f = 200.0 * std::pow (18000.0 / 200.0, k / 59.0);
-                const auto la = magnitudeDb (a, output, f, fs);
-                const auto lb = magnitudeDb (b, output, f, fs);
-                if (la < -60.0 && lb < -60.0)
+                const auto expected = 20.0 * std::log10 (std::max (1.0e-12, std::abs (model (f)[static_cast<size_t> (output)][static_cast<size_t> (input)])));
+                const auto measured = magnitudeDb (h, output, f, fs);
+                if (expected < -60.0 && measured < -60.0)
                     continue;   // cross terms near zero
-                if (std::abs (la - lb) > worst)
+                if (std::abs (expected - measured) > worst)
                 {
-                    worst = std::abs (la - lb);
+                    worst = std::abs (expected - measured);
                     worstAt = f;
                 }
             }
@@ -293,7 +344,7 @@ TEST_CASE ("In Linear phase mode, parameter changes reach the audio quickly and 
         juce::Thread::sleep (1);   // real-time-like pacing so the designer thread can run
     }
 
-    INFO ("reached -12 dB after " << reachedMs << " ms of wall-clock time");
+    WARN ("reached -12 dB after " << reachedMs << " ms of wall-clock time");
     CHECK (finite);
     CHECK (largest < 0.2);
     CHECK (reachedMs > 0.0);
@@ -313,6 +364,7 @@ TEST_CASE ("Switching phase mode and length fades cleanly and ends in the right 
     double largest = 0.0;
     float previous = 0.0f;
 
+    int largestAt = 0, stage = 0, largestStage = 0;
     auto play = [&] (int blocks)
     {
         for (int block = 0; block < blocks; ++block)
@@ -326,7 +378,12 @@ TEST_CASE ("Switching phase mode and length fades cleanly and ends in the right 
             {
                 const auto v = b.getSample (0, i);
                 finite = finite && std::isfinite (v);
-                largest = std::max (largest, static_cast<double> (std::abs (v - previous)));
+                if (std::abs (v - previous) > largest)
+                {
+                    largest = std::abs (v - previous);
+                    largestAt = sample - 512 + i;
+                    largestStage = stage;
+                }
                 previous = v;
             }
             juce::Thread::sleep (1);
@@ -334,16 +391,20 @@ TEST_CASE ("Switching phase mode and length fades cleanly and ends in the right 
     };
 
     play (20);
+    stage = 1;
     p.setLinearPhase (true);
     play (300);
     CHECK (p.isPhaseModeSettled());
+    stage = 2;
     p.setLinearPhaseLength (2);
     play (400);
     CHECK (p.isPhaseModeSettled());
+    stage = 3;
     p.setLinearPhase (false);
     play (40);
     CHECK (p.isPhaseModeSettled());
 
+    INFO ("largest step " << largest << " at sample " << largestAt << " in stage " << largestStage);
     CHECK (finite);
     CHECK (largest < 0.2);   // a 440 Hz sine at 0.5 steps at most 0.029 per sample
     CHECK (p.getLatencySamples() == 0);
