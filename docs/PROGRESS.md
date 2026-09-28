@@ -12,7 +12,7 @@ Milestone definitions and "done when" criteria are in [PLAN.md](PLAN.md#mileston
 | 2 | Full band set, tier 1 | Done | All 5 stages built and validated (tests Debug + Release, pluginval, auval). Owner listening check in Logic: no clicks (other checklist items not reported separately) |
 | 3 | Response curve display | Done | Built and validated (108 tests, pluginval, auval); owner reviewed the layout and colours |
 | 4 | Interactive display | Done | Built and validated (135 tests, pluginval, auval). Owner re-check in Logic: everything tested, looks good |
-| 5 | Spectrum analyzer | In progress | |
+| 5 | Spectrum analyzer | In progress | Built and validated (157 tests, pluginval, auval). Waiting on owner check in Logic |
 | 6 | Per-band stereo | Not started | |
 | 7 | Dynamic EQ | Not started | |
 | 8 | Linear phase mode | Not started | |
@@ -83,6 +83,23 @@ Newest first. Move each item here from "Open decisions" in `CLAUDE.md` once it i
 ## Session log
 
 Newest first. One entry per session, a few lines each.
+
+### 2026-09-28 — M5
+
+- Done: `AnalyzerFifo` (src/dsp), `SpectrumAnalyzer`, `LevelMeter`, `AnalyzerSettings` (src/ui); processor taps
+  (pre/post, stereo, only while an editor is open); analyzer drawn under the curves (pre faint, post brighter) with
+  its own dB scale; stereo output meter at the right edge (click resets the clip lights); bottom-bar controls for
+  mode, resolution (shown as FFT size), speed, range and freeze, with tooltips; settings saved with the session.
+- Tests added / passing: 157/157. FIFO order, overflow and a two-thread stress test; 0 dBFS calibration at all
+  four FFT sizes; peak location; equal levels across frequency; release rate; freeze; tilt; meter peak/RMS, hold,
+  fall, clip latch; taps equal input/output exactly; no allocation in push or processBlock with the taps on;
+  settings persistence. pluginval strictness 5 (VST3, AU) and auval pass.
+- Deviation from the plan: no white-noise flatness test. With max-per-point binning noise cannot read flat (wide
+  high-frequency points pick higher maxima); replaced by equal-amplitude sines across the range.
+- Found: the FIFO stress test hung against the stub (now bounded by a deadline); peak hold ran a step long from
+  float rounding (1 - 10 x 0.1); resolution and speed menus both read "Medium" (resolution now shows FFT size).
+- Open issues: low frequencies look jagged at small FFT sizes (few bins per point there; higher resolution helps).
+- Next step: owner check in Logic, then mark M5 done.
 
 ### 2026-09-28 — M4
 
