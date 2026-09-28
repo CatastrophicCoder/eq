@@ -168,4 +168,6 @@ Write the test first, then the implementation.
 
 Record each decision in `docs/PROGRESS.md` once I make it, then move it out of this list.
 
-- None at the moment. New ones get added here as they come up.
+- M7 Peak detector reading: it smooths |x| in the dB domain, so a steady sine reads 0.9-2.4 dB below its peak
+  (see PROGRESS.md, M7 stage 2). Keep as is, or change how Peak is detected.
+- New ones get added here as they come up.
