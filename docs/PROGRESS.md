@@ -115,8 +115,8 @@ Newest first. One entry per session, a few lines each.
   from the old one.
 - Tests added / passing: 211/211 (new and old folder paths; copy once, skip when the new folder has presets, nothing
   without an old folder; temporary folders never migrate). pluginval strictness 5 passes on both new bundles.
-- Open: the old ParametricEQ.component/.vst3 are still installed with the same codes, so auval and Logic resolve
-  Peq1/Ctcd to the old bundle until they are removed (owner to confirm the removal).
+- Removed the old installed ParametricEQ.component/.vst3 (owner's OK) and restarted the AU registry; `auval -a` lists
+  "Catastrophic Audio: Spectral Fault" and auval passes.
 
 ### 2026-09-28 — M7 stage 2
 
