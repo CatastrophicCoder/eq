@@ -1,4 +1,5 @@
 #include "ui/ResponseDisplay.h"
+#include "ui/BandPanel.h"
 #include "ui/SpectrumColour.h"
 
 #include <catch2/catch_test_macros.hpp>
@@ -9,10 +10,12 @@ using Catch::Matchers::WithinAbs;
 TEST_CASE ("Band wavelengths run evenly from violet to red", "[colour]")
 {
     CHECK_THAT (SpectrumColour::wavelengthForBand (1, 16), WithinAbs (390.0, 1e-9));
-    CHECK_THAT (SpectrumColour::wavelengthForBand (16, 16), WithinAbs (700.0, 1e-9));
+    CHECK_THAT (SpectrumColour::wavelengthForBand (16, 16), WithinAbs (645.0, 1e-9));
 
+    // 645 nm, not 700: the model is pure red from 645 nm up, so 700 made bands 14-16 identical
+    // (decision 2026-09-28).
     const auto step = SpectrumColour::wavelengthForBand (2, 16) - SpectrumColour::wavelengthForBand (1, 16);
-    CHECK_THAT (step, WithinAbs (310.0 / 15.0, 1e-9));
+    CHECK_THAT (step, WithinAbs (17.0, 1e-9));
     for (int b = 2; b <= 16; ++b)
         CHECK_THAT (SpectrumColour::wavelengthForBand (b, 16) - SpectrumColour::wavelengthForBand (b - 1, 16),
                     WithinAbs (step, 1e-9));
@@ -57,10 +60,55 @@ TEST_CASE ("Band colours go from dark violet (band 1) to red (band 16)", "[colou
     CHECK (last.getGreen() < 30);
     CHECK (last.getBlue() == 0);
 
+    // Every band has its own colour.
+    for (int a = 1; a <= 16; ++a)
+        for (int b = a + 1; b <= 16; ++b)
+        {
+            const auto x = ResponseDisplay::bandColour (a), y = ResponseDisplay::bandColour (b);
+            const auto distance = std::hypot (x.getRed() - y.getRed(), x.getGreen() - y.getGreen(), x.getBlue() - y.getBlue());
+            INFO ("bands " << a << " and " << b << " differ by " << distance);
+            CHECK (distance > 20.0);
+        }
+
     // Hue moves from violet towards red without turning back (violet ~0.75, red 0).
     for (int b = 2; b <= 16; ++b)
     {
         INFO ("band " << b);
         CHECK (ResponseDisplay::bandColour (b).getHue() <= ResponseDisplay::bandColour (b - 1).getHue() + 1e-3f);
+    }
+}
+
+namespace
+{
+    /** WCAG 2 relative luminance and contrast ratio. */
+    double luminance (juce::Colour c)
+    {
+        auto lin = [] (juce::uint8 v)
+        {
+            const auto s = v / 255.0;
+            return s <= 0.03928 ? s / 12.92 : std::pow ((s + 0.055) / 1.055, 2.4);
+        };
+        return 0.2126 * lin (c.getRed()) + 0.7152 * lin (c.getGreen()) + 0.0722 * lin (c.getBlue());
+    }
+
+    double contrast (juce::Colour a, juce::Colour b)
+    {
+        const auto la = luminance (a), lb = luminance (b);
+        return (std::max (la, lb) + 0.05) / (std::min (la, lb) + 0.05);
+    }
+}
+
+TEST_CASE ("Tab text uses a readable tint of the band colour", "[colour]")
+{
+    const auto background = BandPanel::tabBackground();
+
+    for (int b = 1; b <= 16; ++b)
+    {
+        const auto band = ResponseDisplay::bandColour (b);
+        const auto text = BandPanel::tabTextColour (b);
+        INFO ("band " << b << " contrast " << contrast (text, background));
+
+        CHECK_THAT (text.getHue(), WithinAbs (band.getHue(), 0.02));   // same hue family
+        CHECK (contrast (text, background) >= 4.5);                    // WCAG AA for small text
     }
 }

@@ -18,6 +18,10 @@ namespace
     }
 }
 
+// Not implemented yet.
+juce::Colour BandPanel::tabTextColour (int bandNumber) { return ResponseDisplay::bandColour (bandNumber); }
+juce::Colour BandPanel::tabBackground() { return juce::Colours::black; }
+
 BandPanel::BandPanel (juce::AudioProcessorValueTreeState& s)
     : state (s)
 {

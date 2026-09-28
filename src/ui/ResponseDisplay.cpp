@@ -2,6 +2,7 @@
 
 #include "Parameters.h"
 #include "PluginProcessor.h"
+#include "SpectrumColour.h"
 
 #include <cmath>
 
@@ -30,9 +31,8 @@ ResponseDisplay::~ResponseDisplay() = default;
 
 juce::Colour ResponseDisplay::bandColour (int bandNumber)
 {
-    // Hues stepped by the golden ratio: neighbouring bands never share a colour family.
-    const auto hue = std::fmod (0.97 + 0.618034 * (bandNumber - 1), 1.0);
-    return juce::Colour::fromHSV (static_cast<float> (hue), 0.72f, 0.96f, 1.0f);
+    // Visible spectrum from band 1 (dark violet) to band 16 (red), evenly spaced in wavelength.
+    return SpectrumColour::fromWavelength (SpectrumColour::wavelengthForBand (bandNumber, ResponseCurves::numBands));
 }
 
 juce::Colour ResponseDisplay::sumColour()

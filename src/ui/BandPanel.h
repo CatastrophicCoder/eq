@@ -15,6 +15,10 @@ public:
     explicit BandPanel (juce::AudioProcessorValueTreeState& state);
     ~BandPanel() override;
 
+    /** Tab text: the band's colour, lightened where needed to stay readable on the tab. */
+    static juce::Colour tabTextColour (int bandNumber);
+    static juce::Colour tabBackground();
+
     void setBand (int bandNumber);
     int getBand() const noexcept { return band; }
 

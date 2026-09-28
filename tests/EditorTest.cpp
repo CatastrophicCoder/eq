@@ -184,7 +184,7 @@ TEST_CASE ("Band tabs carry their band's colour", "[editor]")
     EditorFixture f;
     for (int band = 1; band <= Parameters::numBands; ++band)
         CHECK (f.editor.getBandPanel().getTab (band).findColour (juce::TextButton::textColourOffId)
-               == ResponseDisplay::bandColour (band));
+               == BandPanel::tabTextColour (band));
 }
 
 TEST_CASE ("Menus list the parameter choices and stay readable at every size", "[editor]")
