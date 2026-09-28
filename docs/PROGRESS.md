@@ -12,7 +12,7 @@ Milestone definitions and "done when" criteria are in [PLAN.md](PLAN.md#mileston
 | 2 | Full band set, tier 1 | Done | All 5 stages built and validated (tests Debug + Release, pluginval, auval). Owner listening check in Logic: no clicks (other checklist items not reported separately) |
 | 3 | Response curve display | Done | Built and validated (108 tests, pluginval, auval); owner reviewed the layout and colours |
 | 4 | Interactive display | Done | Built and validated (135 tests, pluginval, auval). Owner re-check in Logic: everything tested, looks good |
-| 5 | Spectrum analyzer | Not started | |
+| 5 | Spectrum analyzer | In progress | |
 | 6 | Per-band stereo | Not started | |
 | 7 | Dynamic EQ | Not started | |
 | 8 | Linear phase mode | Not started | |
@@ -30,6 +30,11 @@ Newest first. Move each item here from "Open decisions" in `CLAUDE.md` once it i
 | 2026-09-28 | Colours similar in character to the reference; values chosen by us, not sampled from the reference image | Own palette; close to the reference | Chosen by owner |
 | 2026-09-28 | M3 band controls: reference-style band panel at the bottom of the display, with 16 band tabs until M4's click-to-select | Panel with tabs; display with the M2 grid below | Chosen by owner |
 | 2026-09-28 | Double-click on empty display space adds a Bell (first free band, at the clicked frequency and gain); with all 16 in use nothing is added and a message is shown | Always Bell; type by position | Chosen by owner |
+| 2026-09-28 | Analyzer modes Off / Pre / Post / Pre+Post (default Pre+Post) | Selectable four modes; post only; pre+post always | Chosen by owner |
+| 2026-09-28 | Analyzer slope compensation 4.5 dB/oct, pivot 1 kHz | 4.5; 3; none; selectable | Chosen by owner |
+| 2026-09-28 | Analyzer dB range selectable 60 / 90 / 120 dB (default 90) | 0 to -90 fixed; 0 to -120 fixed; selectable | Chosen by owner |
+| 2026-09-28 | Output meter added in M5: stereo peak and RMS (300 ms), peak hold 1 s then 20 dB/s, -60 to 0 dBFS, clip light | With M5; later | Chosen by owner; meter details proposed by Claude |
+| 2026-09-28 | Analyzer settings (mode, resolution, speed, range) saved with the session as state properties; freeze not saved | - | Follows the display-range decision |
 | 2026-09-28 | Bands have three states: free, in use and enabled, in use and disabled. Delete (key or menu) frees a band; On/Disable/double-click only toggles enabled. Disabled bands are grey, bypassed, not editable until re-enabled. Replaces the M4 behaviour where every "off" removed the band | Found by the owner in the M4 check: disable and delete were the same | Owner's specification |
 | 2026-09-28 | "In use" stored as hidden state properties band<n>_used (not host parameters), with an atomic copy for the audio and Auto Gain threads; state version 3, older sessions: enabled bands count as in use | Hidden parameter; state property | Chosen by owner |
 | 2026-09-28 | Double-click on a node toggles enable/disable (replaces "disables") | Toggle; nothing | Chosen by owner |
