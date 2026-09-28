@@ -1,20 +1,245 @@
 #include "PresetManager.h"
 
+#include "FactoryPresets.h"
+#include "Parameters.h"
 #include "PluginProcessor.h"
 
-// Not implemented yet.
-PresetManager::PresetManager (ParametricEQAudioProcessor& p, juce::File folder) : processor (p), userFolder (std::move (folder)) {}
-juce::File PresetManager::defaultUserFolder() { return {}; }
-std::vector<PresetManager::Entry> PresetManager::getEntries() const { return {}; }
-Preset PresetManager::capture (const juce::String&) const { return {}; }
-void PresetManager::apply (const Preset&) {}
-bool PresetManager::load (const Entry&) { return false; }
-PresetManager::SaveResult PresetManager::saveUserPreset (const juce::String&, bool) { return SaveResult::failed; }
-bool PresetManager::deleteUserPreset (const Entry&) { return false; }
-void PresetManager::loadNext() {}
-void PresetManager::loadPrevious() {}
-juce::String PresetManager::getCurrentName() const { return {}; }
-bool PresetManager::isCurrentFactory() const { return false; }
-bool PresetManager::isModified() const { return false; }
-juce::String PresetManager::toFileName (const juce::String&) { return {}; }
-void PresetManager::restoreFromSession() {}
+#include <algorithm>
+
+namespace
+{
+    /** One complete parameter edit with its host gesture. */
+    void setWithGesture (juce::AudioProcessorValueTreeState& state, const juce::String& id, float value)
+    {
+        if (auto* p = state.getParameter (id))
+        {
+            p->beginChangeGesture();
+            p->setValueNotifyingHost (p->convertTo0to1 (value));
+            p->endChangeGesture();
+        }
+    }
+
+    std::optional<Preset> readFile (const juce::File& file)
+    {
+        if (const auto xml = juce::XmlDocument::parse (file))
+            return Preset::fromXml (*xml);
+        return std::nullopt;
+    }
+}
+
+PresetManager::PresetManager (ParametricEQAudioProcessor& p, juce::File folder)
+    : processor (p), userFolder (std::move (folder))
+{
+}
+
+juce::File PresetManager::defaultUserFolder()
+{
+    return juce::File::getSpecialLocation (juce::File::userHomeDirectory)
+               .getChildFile ("Library/Audio/Presets/CatastrophicCoder/ParametricEQ");
+}
+
+std::vector<PresetManager::Entry> PresetManager::getEntries() const
+{
+    std::vector<Entry> entries;
+
+    for (const auto& p : FactoryPresets::all())
+        entries.push_back ({ p.name, p.category, true, {} });
+
+    std::vector<Entry> user;
+    for (const auto& file : userFolder.findChildFiles (juce::File::findFiles, false, "*.xml"))
+        if (const auto preset = readFile (file))
+            user.push_back ({ preset->name, "User", false, file });
+
+    std::sort (user.begin(), user.end(), [] (const Entry& a, const Entry& b) { return a.name.compareIgnoreCase (b.name) < 0; });
+    entries.insert (entries.end(), user.begin(), user.end());
+    return entries;
+}
+
+Preset PresetManager::capture (const juce::String& name) const
+{
+    Preset p;
+    p.name = name;
+    p.category = "User";
+
+    const auto bands = processor.getBandSettings();
+    for (size_t i = 0; i < bands.size(); ++i)
+    {
+        const auto& s = bands[i];
+        p.bands[i] = { s.inUse, s.enabled, s.type, static_cast<float> (s.frequencyHz), static_cast<float> (s.gainDb),
+                       static_cast<float> (s.q), s.slopeIndex, s.channel };
+    }
+
+    auto& state = processor.getValueTreeState();
+    p.outputGainDb = state.getRawParameterValue (Parameters::outputGain)->load();
+    p.autoGain = state.getRawParameterValue (Parameters::autoGain)->load() >= 0.5f;
+    p.invert = state.getRawParameterValue (Parameters::outputInvert)->load() >= 0.5f;
+    return p;
+}
+
+void PresetManager::apply (const Preset& preset)
+{
+    auto& state = processor.getValueTreeState();
+
+    for (int band = 1; band <= Parameters::numBands; ++band)
+    {
+        const auto& b = preset.bands[static_cast<size_t> (band - 1)];
+
+        if (! b.inUse)
+        {
+            processor.setBandInUse (band, false);
+            continue;
+        }
+
+        // Settings first, so the band starts with the right filter once it is in use.
+        setWithGesture (state, Parameters::id (band, "type"), static_cast<float> (b.type));
+        setWithGesture (state, Parameters::id (band, "freq"), b.frequencyHz);
+        setWithGesture (state, Parameters::id (band, "gain"), b.gainDb);
+        setWithGesture (state, Parameters::id (band, "q"), b.q);
+        setWithGesture (state, Parameters::id (band, "slope"), static_cast<float> (b.slopeIndex));
+        setWithGesture (state, Parameters::id (band, "channel"), static_cast<float> (b.channel));
+        setWithGesture (state, Parameters::id (band, "enabled"), b.enabled ? 1.0f : 0.0f);
+        processor.setBandInUse (band, true);
+    }
+
+    setWithGesture (state, Parameters::outputGain, preset.outputGainDb);
+    setWithGesture (state, Parameters::autoGain, preset.autoGain ? 1.0f : 0.0f);
+    setWithGesture (state, Parameters::outputInvert, preset.invert ? 1.0f : 0.0f);
+}
+
+bool PresetManager::load (const Entry& entry)
+{
+    std::optional<Preset> preset;
+
+    if (entry.isFactory)
+    {
+        for (const auto& p : FactoryPresets::all())
+            if (p.name == entry.name)
+                preset = p;
+    }
+    else
+    {
+        preset = readFile (entry.file);
+    }
+
+    if (! preset.has_value())
+        return false;
+
+    apply (*preset);
+    loaded = preset;
+    processor.setStoredPreset (preset->name, entry.isFactory);
+    return true;
+}
+
+PresetManager::SaveResult PresetManager::saveUserPreset (const juce::String& name, bool overwrite)
+{
+    const auto fileName = toFileName (name);
+    if (fileName.isEmpty())
+        return SaveResult::invalidName;
+
+    const auto file = userFolder.getChildFile (fileName + ".xml");
+    if (file.exists() && ! overwrite)
+        return SaveResult::alreadyExists;
+
+    if (! userFolder.createDirectory())
+        return SaveResult::failed;
+
+    const auto preset = capture (name.trim());
+    if (! preset.toXml()->writeTo (file))
+        return SaveResult::failed;
+
+    loaded = preset;
+    processor.setStoredPreset (preset.name, false);
+    return SaveResult::saved;
+}
+
+bool PresetManager::deleteUserPreset (const Entry& entry)
+{
+    if (entry.isFactory || ! entry.file.existsAsFile() || ! entry.file.deleteFile())
+        return false;
+
+    if (! isCurrentFactory() && getCurrentName() == entry.name)
+    {
+        loaded.reset();
+        processor.setStoredPreset ({}, false);
+    }
+
+    return true;
+}
+
+void PresetManager::loadNext()
+{
+    const auto entries = getEntries();
+    if (entries.empty())
+        return;
+
+    auto current = -1;
+    for (size_t i = 0; i < entries.size(); ++i)
+        if (entries[i].name == getCurrentName() && entries[i].isFactory == isCurrentFactory())
+            current = static_cast<int> (i);
+
+    load (entries[static_cast<size_t> ((current + 1) % static_cast<int> (entries.size()))]);
+}
+
+void PresetManager::loadPrevious()
+{
+    const auto entries = getEntries();
+    if (entries.empty())
+        return;
+
+    const auto count = static_cast<int> (entries.size());
+    auto current = count;   // "none" steps back to the last one
+    for (size_t i = 0; i < entries.size(); ++i)
+        if (entries[i].name == getCurrentName() && entries[i].isFactory == isCurrentFactory())
+            current = static_cast<int> (i);
+
+    load (entries[static_cast<size_t> ((current - 1 + count) % count)]);
+}
+
+juce::String PresetManager::getCurrentName() const
+{
+    return processor.getStoredPresetName();
+}
+
+bool PresetManager::isCurrentFactory() const
+{
+    return processor.isStoredPresetFactory();
+}
+
+bool PresetManager::isModified() const
+{
+    return loaded.has_value() && ! capture ({}).hasSameSettingsAs (*loaded);
+}
+
+juce::String PresetManager::toFileName (const juce::String& name)
+{
+    juce::String result;
+
+    for (auto c : name)
+        if (c >= 32 && juce::String ("\\/:*?\"<>|").indexOfChar (c) < 0)
+            result += c;
+
+    return result.trim().trimCharactersAtStart (" .").trimCharactersAtEnd (" .");
+}
+
+void PresetManager::restoreFromSession()
+{
+    loaded.reset();
+    const auto name = getCurrentName();
+    if (name.isEmpty())
+        return;
+
+    for (const auto& entry : getEntries())
+        if (entry.name == name && entry.isFactory == isCurrentFactory())
+        {
+            if (entry.isFactory)
+            {
+                for (const auto& p : FactoryPresets::all())
+                    if (p.name == name)
+                        loaded = p;
+            }
+            else
+            {
+                loaded = readFile (entry.file);
+            }
+        }
+}

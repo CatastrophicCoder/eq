@@ -85,6 +85,7 @@ void ParametricEQAudioProcessorEditor::refreshControls()
 
     display.refresh();
     display.refreshAnalyzer (elapsed);
+    topBar.refresh();
     bandPanel.refreshControlStates();
     bottomBar.refresh();
 }

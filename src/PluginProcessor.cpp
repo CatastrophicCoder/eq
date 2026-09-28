@@ -256,10 +256,27 @@ void ParametricEQAudioProcessor::setAnalyzerSettings (const AnalyzerSettings::Va
     parameters.state.setProperty (analyzerRangeProperty, values.range, nullptr);
 }
 
-// Not implemented yet (M6b).
-juce::String ParametricEQAudioProcessor::getStoredPresetName() const { return {}; }
-bool ParametricEQAudioProcessor::isStoredPresetFactory() const { return false; }
-void ParametricEQAudioProcessor::setStoredPreset (const juce::String&, bool) {}
+namespace
+{
+    const juce::Identifier presetNameProperty { "presetName" };
+    const juce::Identifier presetFactoryProperty { "presetFactory" };
+}
+
+juce::String ParametricEQAudioProcessor::getStoredPresetName() const
+{
+    return parameters.state.getProperty (presetNameProperty).toString();
+}
+
+bool ParametricEQAudioProcessor::isStoredPresetFactory() const
+{
+    return static_cast<bool> (parameters.state.getProperty (presetFactoryProperty, false));
+}
+
+void ParametricEQAudioProcessor::setStoredPreset (const juce::String& name, bool isFactory)
+{
+    parameters.state.setProperty (presetNameProperty, name, nullptr);
+    parameters.state.setProperty (presetFactoryProperty, isFactory, nullptr);
+}
 
 //==============================================================================
 bool ParametricEQAudioProcessor::hasEditor() const
@@ -315,6 +332,8 @@ void ParametricEQAudioProcessor::setStateInformation (const void* data, int size
                              : parameters.getRawParameterValue (Parameters::id (band, "enabled"))->load() >= 0.5f;
         setBandInUse (band, inUse);
     }
+
+    presetManager->restoreFromSession();
 }
 
 //==============================================================================
