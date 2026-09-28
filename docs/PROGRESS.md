@@ -11,7 +11,7 @@ Milestone definitions and "done when" criteria are in [PLAN.md](PLAN.md#mileston
 | 1 | One bell band | Done | Knobs, smoothing, state save/load and measured response done; tests, pluginval and auval pass. Owner listening check in Logic: no clicks (session save/reopen not reported separately) |
 | 2 | Full band set, tier 1 | Done | All 5 stages built and validated (tests Debug + Release, pluginval, auval). Owner listening check in Logic: no clicks (other checklist items not reported separately) |
 | 3 | Response curve display | Done | Built and validated (108 tests, pluginval, auval); owner reviewed the layout and colours |
-| 4 | Interactive display | In progress | Built and validated (135 tests, pluginval, auval). Owner check found delete/disable conflated; fixed, waiting on re-check |
+| 4 | Interactive display | Done | Built and validated (135 tests, pluginval, auval). Owner re-check in Logic: everything tested, looks good |
 | 5 | Spectrum analyzer | Not started | |
 | 6 | Per-band stereo | Not started | |
 | 7 | Dynamic EQ | Not started | |
@@ -97,7 +97,8 @@ Newest first. One entry per session, a few lines each.
   states (free / enabled / disabled), hidden band<n>_used properties, state version 3 with migration. Disabled
   bands are grey and not editable; double-click on a node toggles; only Delete (key or menu) frees a band.
   135/135 tests, pluginval and auval pass.
-- Next step: owner re-check in Logic, then mark M4 done; M5 (spectrum analyzer).
+- 2026-09-28: owner re-check in Logic, everything tested (band states, keyboard, dragging, automation). M4 marked done.
+- Next step: M5 (spectrum analyzer).
 
 ### 2026-09-28 — M3
 
