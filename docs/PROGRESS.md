@@ -17,7 +17,7 @@ Milestone definitions and "done when" criteria are in [PLAN.md](PLAN.md#mileston
 | 6b | Presets | Done | Built and validated (186 tests, pluginval, auval); owner tested in Logic |
 | 7 | Dynamic EQ | Done | Built and validated (223 tests, pluginval, auval); owner tested in Logic except the side-chain (covered by unit tests only). Peak detector reading still an open decision |
 | 8 | Linear phase mode | Done | Built and validated (245 tests, pluginval, auval); owner tested in Logic |
-| 9 | Deferred features | In progress | Split into 9a-9g (small to large). 9a A/B done. 9b undo/redo done. 9c peak pick and 9d EQ Sketch done (owner tested in Logic). Next: 9e EQ Match |
+| 9 | Deferred features | In progress | Split into 9a-9g (small to large). 9a A/B done. 9b undo/redo done. 9c peak pick and 9d EQ Sketch done. 9e EQ Match built and validated, awaiting owner's Logic test |
 
 Status values: Not started · In progress · Done · Skipped
 
@@ -80,6 +80,7 @@ Newest first. Move each item here from "Open decisions" in `CLAUDE.md` once it i
 | 2026-09-29 | EQ Match asks on Apply whether to replace all bands or keep them and use the free slots | Replace all; keep, use free slots; ask each time | Chosen by owner |
 | 2026-09-29 | EQ Match controls: Amount (0-100 %) and Smoothing (1/12 to 1 octave) | Amount + smoothing; amount only; none | Chosen by owner |
 | 2026-09-29 | EQ Match controls in a separate floating window opened by a Match button; the target curve is previewed on the display | Panel over display; separate window; bottom bar strip | Chosen by owner |
+| 2026-09-29 | EQ Match bound: match curve and applied bands within 0.25 dB of a known EQ's shape, 100 Hz - 10 kHz, for 6-8 s of pink noise at 1/6-octave smoothing (worst measured 0.057 dB) | - | Proposed by Claude (new bound) |
 | 2026-09-28 | Plugin name "Spectral Fault", brand (company) "Catastrophic Audio" | Name lists proposed by Claude | Chosen by owner |
 | 2026-09-28 | Rename details: bundle ID com.catastrophicaudio.spectralfault; CMake target SpectralFault (tests SpectralFaultTests); plugin codes, saved-state tag and preset tag unchanged; rename committed under M7 | Keep or change bundle ID; keep or rename target; M7 or separate prefix | Chosen by owner |
 | 2026-09-28 | User preset folder moves to ~/Library/Audio/Presets/Catastrophic Audio/Spectral Fault/; the old folder's presets are copied once (only if the new folder has none); old files stay | Keep old path; move without migration; move and migrate | Chosen by owner |
@@ -141,6 +142,24 @@ Newest first. Move each item here from "Open decisions" in `CLAUDE.md` once it i
 ## Session log
 
 Newest first. One entry per session, a few lines each.
+
+### 2026-09-29 — 9e (EQ Match)
+
+- Done: `SpectrumAverager` (src/dsp; 8192-point Hann frames, 50 % overlap, power averaged per bin, read with
+  +-1/24-octave band averaging), `MatchCurve` (smoothing, reference - current, overall level removed, amount,
+  +-24 dB), `MatchSession` (src/ui; learning passes, side-chain one-pass mode, apply via CurveFitter: replace all
+  or keep existing with the free slots, one undo step), `MatchPanel` + `MatchWindow` (floating, always on top),
+  bottom bar Match button, dashed preview on the display, side-chain tap FIFO fed only while learning.
+  `BandParameterWriter::writeFittedBand` now shared by EQ Sketch and EQ Match.
+- Found while testing: single-bin readings were noisy at low frequencies (a 1.2 dB outlier at 100 Hz after 8 s of
+  white noise); levels now average the bins within +-1/24 octave, so steady tones read below their peak level
+  (noise reads its density; matching compares like with like).
+- Tests added / passing: 286/286. Averager: white flat, pink -3 dB/oct by regression, a tone stands out 40 dB;
+  smoothing widths; match curve recovers a known bell + shelf within 0.05 dB, amount scales, level ignored;
+  side-chain tap only while learning; capture/replace, keep-existing and side-chain flows within 0.06 dB, one undo
+  step; window toggles from the bottom bar, preview appears and follows Amount; no allocation with the tap on.
+  pluginval strictness 5 (VST3, AU) and auval pass. Snapshot of the panel (m9e_match_panel.png).
+- Next step: owner's check in Logic, then 9f natural-phase-style mode.
 
 ### 2026-09-29 — 9c/9d owner feedback (third round)
 

@@ -288,6 +288,24 @@ void ResponseDisplay::paint (juce::Graphics& g)
     paintNodes (g, axis);
     paintPeakRings (g);
 
+    // EQ Match preview: dashed, in the second-sum colour.
+    if (! matchPreviewHz.empty())
+    {
+        juce::Path preview;
+        const auto plotArea = axis.getPlotArea();
+        for (size_t i = 0; i < matchPreviewHz.size(); ++i)
+        {
+            const juce::Point<float> pt { axis.xForFrequency (matchPreviewHz[i]),
+                                          juce::jlimit (plotArea.getY(), plotArea.getBottom(), axis.yForDb (matchPreviewDb[i])) };
+            i == 0 ? preview.startNewSubPath (pt) : preview.lineTo (pt);
+        }
+        juce::Path dashed;
+        const float dashes[] { 6.0f, 4.0f };
+        juce::PathStrokeType (1.8f).createDashedStroke (dashed, preview, dashes, 2);
+        g.setColour (secondSumColour().withAlpha (0.9f));
+        g.fillPath (dashed);
+    }
+
     if (sketching && sketchPoints.size() > 1)
     {
         juce::Path stroke;
@@ -821,8 +839,9 @@ void ResponseDisplay::refreshAnalyzer (double elapsedSeconds)
         a->setReleaseDbPerSecond (AnalyzerSettings::releaseDbPerSecond[static_cast<size_t> (settings.speed)]);
     }
 
-    // Drain both taps every time, so they never fill up; feed only what is shown.
-    auto drain = [&] (AnalyzerFifo& fifo, SpectrumAnalyzer* analyzer, bool feedMeter)
+    // Drain both taps every time, so they never fill up; feed only what is shown (and the input
+    // samples to anyone listening, e.g. EQ Match learning).
+    auto drain = [&] (AnalyzerFifo& fifo, SpectrumAnalyzer* analyzer, bool feedMeter, bool isInput)
     {
         for (int n = fifo.pull (tapScratch); n > 0; n = fifo.pull (tapScratch))
         {
@@ -832,17 +851,21 @@ void ResponseDisplay::refreshAnalyzer (double elapsedSeconds)
             if (feedMeter)
                 meter.addSamples (left, right, n, rate);
 
-            if (analyzer != nullptr)
+            const auto listening = isInput && onInputSamples != nullptr;
+            if (analyzer != nullptr || listening)
             {
                 for (int i = 0; i < n; ++i)
                     monoScratch[static_cast<size_t> (i)] = 0.5f * (left[i] + right[i]);
-                analyzer->addSamples (monoScratch.data(), n);
+                if (analyzer != nullptr)
+                    analyzer->addSamples (monoScratch.data(), n);
+                if (listening)
+                    onInputSamples (monoScratch.data(), n);
             }
         }
     };
 
-    drain (processor.getPreFifo(), showPre ? &preAnalyzer : nullptr, false);
-    drain (processor.getPostFifo(), showPost ? &postAnalyzer : nullptr, true);
+    drain (processor.getPreFifo(), showPre ? &preAnalyzer : nullptr, false, true);
+    drain (processor.getPostFifo(), showPost ? &postAnalyzer : nullptr, true, false);
 
     if (showPre)
         preAnalyzer.update (rate, elapsedSeconds);
@@ -1240,23 +1263,45 @@ void ResponseDisplay::finishSketch()
 
     for (size_t i = 0; i < fitted.size() && i < slots.size(); ++i)
     {
-        const auto b = slots[i];
-        const auto& s = fitted[i];
-        writer.setOnce (b, "type", static_cast<float> (s.type));
-        writer.setOnce (b, "freq", static_cast<float> (s.frequencyHz));
-        writer.setOnce (b, "gain", static_cast<float> (s.gainDb));
-        writer.setOnce (b, "q", static_cast<float> (s.q));
-        writer.setOnce (b, "slope", static_cast<float> (s.slopeIndex));
-        writer.setOnce (b, "channel", static_cast<float> (ChannelMode::stereo));
-        writer.setOnce (b, "dyn", 0.0f);
-        writer.setOnce (b, "enabled", 1.0f);
-        processor.setBandInUse (b, true);
+        writer.writeFittedBand (slots[i], fitted[i]);
+        processor.setBandInUse (slots[i], true);
     }
 
     selectionChanged();
     refresh();
 }
 
-void ResponseDisplay::setMatchPreview (std::vector<double>, std::vector<double>) {}
-void ResponseDisplay::clearMatchPreview() {}
-double ResponseDisplay::getMatchPreviewDb (double) const { return 0.0; }
+//==============================================================================
+// EQ Match preview (M9e).
+
+void ResponseDisplay::setMatchPreview (std::vector<double> frequenciesHz, std::vector<double> db)
+{
+    matchPreviewHz = std::move (frequenciesHz);
+    matchPreviewDb = std::move (db);
+    repaint();
+}
+
+void ResponseDisplay::clearMatchPreview()
+{
+    if (matchPreviewHz.empty())
+        return;
+    matchPreviewHz.clear();
+    matchPreviewDb.clear();
+    repaint();
+}
+
+double ResponseDisplay::getMatchPreviewDb (double frequencyHz) const
+{
+    if (matchPreviewHz.empty())
+        return 0.0;
+
+    const auto upper = std::lower_bound (matchPreviewHz.begin(), matchPreviewHz.end(), frequencyHz);
+    if (upper == matchPreviewHz.begin())
+        return matchPreviewDb.front();
+    if (upper == matchPreviewHz.end())
+        return matchPreviewDb.back();
+
+    const auto i = static_cast<size_t> (upper - matchPreviewHz.begin());
+    const auto t = std::log (frequencyHz / matchPreviewHz[i - 1]) / std::log (matchPreviewHz[i] / matchPreviewHz[i - 1]);
+    return matchPreviewDb[i - 1] + t * (matchPreviewDb[i] - matchPreviewDb[i - 1]);
+}

@@ -37,6 +37,7 @@ ParametricEQAudioProcessor::ParametricEQAudioProcessor()
     // Analyzer taps, allocated once: prepareToPlay may run while the editor is reading them.
     preFifo.prepare (2, analyzerFifoCapacity);
     postFifo.prepare (2, analyzerFifoCapacity);
+    sidechainFifo.prepare (2, analyzerFifoCapacity);   // EQ Match reference (M9e)
 
     outputGainDb = parameters.getRawParameterValue (Parameters::outputGain);
     autoGainOn = parameters.getRawParameterValue (Parameters::autoGain);
@@ -210,6 +211,13 @@ void ParametricEQAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
         sidechain = getBusBuffer (buffer, true, 1);   // refers to the host's data, no allocation
 
     pushParametersToBands();
+
+    // EQ Match learning from the side-chain (M9e): a mono side-chain feeds both tap channels.
+    if (hasSidechain && sidechainTapActive.load (std::memory_order_relaxed))
+    {
+        const float* channels[] { sidechain.getReadPointer (0), sidechain.getReadPointer (std::min (1, sidechain.getNumChannels() - 1)) };
+        sidechainFifo.push (channels, 2, sidechain.getNumSamples());
+    }
 
     const auto tap = analyzerActive.load (std::memory_order_relaxed);
     const auto tapChannels = std::min (2, main.getNumChannels());
@@ -562,4 +570,8 @@ int ParametricEQAudioProcessor::getLinearPhaseSwapCount() const noexcept
     return linearPhaseEngine.getSwapCount();
 }
 
-bool ParametricEQAudioProcessor::isSidechainConnected() const { return false; }
+bool ParametricEQAudioProcessor::isSidechainConnected() const
+{
+    const auto* bus = getBus (true, 1);
+    return bus != nullptr && bus->isEnabled() && bus->getNumberOfChannels() > 0;
+}

@@ -7,14 +7,17 @@
 //==============================================================================
 /** Long-term average spectrum for EQ Match (M9e): Hann-windowed FFT frames of
     2^fftOrder samples with 50 % overlap, power averaged per bin over everything
-    added since reset(). levelsDb() reads it at any frequencies (interpolated
-    between bins), calibrated so a full-scale sine reads 0 dB. UI thread only.
+    added since reset(). levelsDb() reads it at any frequencies: the power interpolated
+    between bins, averaged with the bins within +-1/24 octave (a steady tone therefore
+    reads below its peak level; noise reads its density), scaled so a full-scale sine
+    would read 0 dB in a single bin. UI thread only.
 */
 class SpectrumAverager
 {
 public:
     static constexpr int fftOrder = 13;
     static constexpr int fftSize = 1 << fftOrder;
+    static constexpr double bandOctaves = 1.0 / 24.0;   // levelsDb averages the bins within this distance
 
     void prepare (double sampleRate);
     void reset();

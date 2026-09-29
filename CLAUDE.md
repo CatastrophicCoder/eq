@@ -120,6 +120,9 @@ Decided; details and dates in `docs/PROGRESS.md`.
   `ScopedSuspend` and clear it. New UI edits that change several things must be wrapped in one transaction.
 - EQ Sketch (M9d): Option-drag draws; `CurveFitter` (src/dsp) fits bells/shelves/cuts to a target with all
   available slots; bands inside the drawn range are replaced. EQ Match (9e) is meant to reuse the fitter.
+- EQ Match (M9e): `MatchSession` learns long-term spectra (side-chain = reference in one pass, else two capture
+  passes of the input), `MatchCurve` gives the smoothed, level-free difference, `CurveFitter` turns it into bands
+  (replace all or keep existing, asked on Apply). Floating `MatchWindow` from the bottom bar's Match button.
 - MIDI Learn is not planned: MIDI input would change the AU type (aufx -> aumf) and break saved sessions.
 - Milestone order after 5: per-band stereo (6), dynamic EQ (7), linear phase (8).
 

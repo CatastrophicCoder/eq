@@ -657,6 +657,17 @@ TEST_CASE ("Editor snapshot (renders PNGs to $EQ_SNAPSHOT_DIR)", "[.snapshot]")
         const auto t = i / 80.0;
         display.handleDrag ({ axis.xForFrequency (300.0 * std::pow (20.0, t)), axis.yForDb (5.0 * std::sin (6.28318 * t)) }, option);
     }
+    // EQ Match panel contents, rendered on their own.
+    {
+        auto& panel = f.editor.getMatchPanel();
+        panel.setSize (380, 210);
+        const auto panelImage = panel.createComponentSnapshot (panel.getLocalBounds());
+        juce::File panelFile (dir + "/m9e_match_panel.png");
+        panelFile.deleteFile();
+        juce::FileOutputStream panelStream (panelFile);
+        REQUIRE (juce::PNGImageFormat().writeImageToStream (panelImage, panelStream));
+    }
+
     const auto sketchImage = f.editor.createComponentSnapshot (f.editor.getLocalBounds());
     juce::File sketchFile (dir + "/m9d_sketch.png");
     sketchFile.deleteFile();

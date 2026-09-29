@@ -29,6 +29,10 @@ ParametricEQAudioProcessorEditor::ParametricEQAudioProcessorEditor (ParametricEQ
         refreshControls();
     };
     topBar.onCopy = [this] { eqProcessor.getAbComparison().copyActiveToOther(); };
+
+    // EQ Match (M9e).
+    display.onInputSamples = [this] (const float* mono, int n) { matchSession.addInputSamples (mono, n); };
+    bottomBar.getMatchButton().onClick = [this] { setMatchWindowOpen (! isMatchWindowOpen()); };
     topBar.onUndo = [this] { eqProcessor.getUndoHistory().undo(); refreshControls(); };
     topBar.onRedo = [this] { eqProcessor.getUndoHistory().redo(); refreshControls(); };
 
@@ -56,6 +60,7 @@ ParametricEQAudioProcessorEditor::ParametricEQAudioProcessorEditor (ParametricEQ
 ParametricEQAudioProcessorEditor::~ParametricEQAudioProcessorEditor()
 {
     stopTimer();
+    setMatchWindowOpen (false);
     eqProcessor.setAnalyzerActive (false);
     setLookAndFeel (nullptr);
 }
@@ -98,7 +103,30 @@ void ParametricEQAudioProcessorEditor::refreshControls()
         bottomBar.showAnalyzerSettings (stored);
 
     display.refresh();
-    display.refreshAnalyzer (elapsed);
+    display.refreshAnalyzer (elapsed);   // also feeds EQ Match learning from the input tap
+
+    // EQ Match: the side-chain tap, the panel, and the preview while the window is open.
+    auto& sidechainFifo = eqProcessor.getSidechainFifo();
+    for (int n = sidechainFifo.pull (sidechainScratch); n > 0; n = sidechainFifo.pull (sidechainScratch))
+    {
+        for (int i = 0; i < n; ++i)
+            sidechainMono[static_cast<size_t> (i)] = 0.5f * (sidechainScratch.getSample (0, i) + sidechainScratch.getSample (1, i));
+        matchSession.addSidechainSamples (sidechainMono.data(), n);
+    }
+
+    matchPanel.refresh();
+    if (isMatchWindowOpen() && matchSession.canApply())
+    {
+        std::vector<double> frequencies;
+        for (int i = 0; i < 256; ++i)
+            frequencies.push_back (20.0 * std::pow (1000.0, i / 255.0));
+        auto db = matchSession.curveDb (frequencies);
+        display.setMatchPreview (std::move (frequencies), std::move (db));
+    }
+    else
+    {
+        display.clearMatchPreview();
+    }
     topBar.refresh();
     topBar.showActiveSlot (eqProcessor.getAbComparison().getActive() == AbComparison::Slot::b);
     topBar.showUndoState (eqProcessor.getUndoHistory().canUndo(), eqProcessor.getUndoHistory().canRedo());
@@ -108,4 +136,24 @@ void ParametricEQAudioProcessorEditor::refreshControls()
     bottomBar.refresh();
 }
 
-void ParametricEQAudioProcessorEditor::setMatchWindowOpen (bool) {}
+void ParametricEQAudioProcessorEditor::setMatchWindowOpen (bool shouldBeOpen)
+{
+    if (shouldBeOpen == isMatchWindowOpen())
+        return;
+
+    if (shouldBeOpen)
+    {
+        matchWindow = std::make_unique<MatchWindow> (matchPanel, this);
+        juce::Component::SafePointer<ParametricEQAudioProcessorEditor> safe (this);
+        // Closing from the window's own button: delete it after its callback has returned.
+        matchWindow->onClose = [safe] { juce::MessageManager::callAsync ([safe] { if (safe != nullptr) safe->setMatchWindowOpen (false); }); };
+    }
+    else
+    {
+        matchSession.stopLearning();
+        matchWindow.reset();
+        display.clearMatchPreview();
+    }
+
+    bottomBar.getMatchButton().setToggleState (shouldBeOpen, juce::dontSendNotification);
+}

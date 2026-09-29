@@ -186,6 +186,7 @@ TEST_CASE ("Processor processBlock does not allocate with 16 dynamic bands and a
     REQUIRE (processor.setBusesLayout (layout));
     processor.prepareToPlay (48000.0, 512);
     processor.setAnalyzerActive (true);
+    processor.setSidechainTapActive (true);   // EQ Match learning from the side-chain (M9e)
 
     // Main (channels 0-1) and side-chain (2-3): noise, loud enough to move every detector.
     juce::AudioBuffer<float> buffer (4, 512);

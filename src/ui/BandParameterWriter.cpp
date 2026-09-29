@@ -43,3 +43,15 @@ void BandParameterWriter::setOnce (int band, const char* field, float value)
     set (band, field, value);
     endGesture (band, field);
 }
+
+void BandParameterWriter::writeFittedBand (int band, const BandSettings& s)
+{
+    setOnce (band, "type", static_cast<float> (s.type));
+    setOnce (band, "freq", static_cast<float> (s.frequencyHz));
+    setOnce (band, "gain", static_cast<float> (s.gainDb));
+    setOnce (band, "q", static_cast<float> (s.q));
+    setOnce (band, "slope", static_cast<float> (s.slopeIndex));
+    setOnce (band, "channel", static_cast<float> (s.channel));
+    setOnce (band, "dyn", 0.0f);
+    setOnce (band, "enabled", 1.0f);
+}

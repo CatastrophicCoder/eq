@@ -42,13 +42,15 @@ BottomBar::BottomBar (juce::AudioProcessorValueTreeState& s, std::function<float
     freeze.setTooltip ("Hold the current spectrum");
     freeze.setButtonText ("Freeze");
     freeze.setName ("freeze");
+    matchButton.setName ("match");
+    matchButton.setTooltip ("EQ Match: learn a reference and fit bands to it");
 
     for (auto* box : { &analyzerMode, &resolution, &speed, &range })
         box->onChange = [this] { if (onAnalyzerSettingsChanged != nullptr) onAnalyzerSettingsChanged(); };
     freeze.onClick = [this] { if (onAnalyzerSettingsChanged != nullptr) onAnalyzerSettingsChanged(); };
 
     for (auto* c : std::initializer_list<juce::Component*> { &autoGain, &offsetLabel, &invert, &analyzerMode, &resolution,
-                                                              &speed, &range, &freeze, &gainCaption, &gain })
+                                                              &speed, &range, &freeze, &matchButton, &gainCaption, &gain })
         addAndMakeVisible (c);
 
     gainAttachment     = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment> (state, Parameters::outputGain, gain);
@@ -116,4 +118,5 @@ void BottomBar::resized()
     centred (speed, 70);
     centred (range, 66);
     centred (freeze, 70);
+    centred (matchButton, 60);
 }

@@ -86,8 +86,9 @@ namespace
         }
     };
 
-    /** Stated bound (dB) between the applied match and the known EQ, 100 Hz - 10 kHz; see docs/PROGRESS.md. */
-    constexpr double matchBoundDb = 1.0;
+    /** Stated bound (dB) between the match (curve or applied bands) and the known EQ's shape, 100 Hz - 10 kHz,
+        for 6-8 s of pink noise at 1/6-octave smoothing; see docs/PROGRESS.md. Worst measured 0.057 dB. */
+    constexpr double matchBoundDb = 0.25;
 }
 
 //==============================================================================
@@ -113,11 +114,26 @@ TEST_CASE ("The averager reads white noise flat, pink noise at -3 dB per octave 
         const auto f = grid (100.0, 10000.0, 21);
         const auto wl = white.levelsDb (f);
         const auto pl = pinkAverager.levelsDb (f);
-        for (size_t i = 1; i < f.size(); ++i)
+
+        // White: every point within 1 dB of the mean. Pink: the regression slope, and every point
+        // within 1 dB of the regression line.
+        double whiteMean = 0.0, sx = 0.0, sy = 0.0, sxx = 0.0, sxy = 0.0;
+        const auto n = static_cast<double> (f.size());
+        for (size_t i = 0; i < f.size(); ++i)
         {
-            INFO (f[i] << " Hz: white " << wl[i] << ", pink " << pl[i]);
-            CHECK_THAT (wl[i], WithinAbs (wl[0], 1.0));
-            CHECK_THAT (pl[i] - pl[0], WithinAbs (-3.0103 * std::log2 (f[i] / f[0]), 1.0));
+            const auto x = std::log2 (f[i] / 100.0);
+            whiteMean += wl[i] / n;
+            sx += x; sy += pl[i]; sxx += x * x; sxy += x * pl[i];
+        }
+        const auto slope = (n * sxy - sx * sy) / (n * sxx - sx * sx);
+        const auto intercept = (sy - slope * sx) / n;
+        CHECK_THAT (slope, WithinAbs (-3.0103, 0.3));
+
+        for (size_t i = 0; i < f.size(); ++i)
+        {
+            INFO (f[i] << " Hz: white " << wl[i] << " (mean " << whiteMean << "), pink " << pl[i]);
+            CHECK_THAT (wl[i], WithinAbs (whiteMean, 1.0));
+            CHECK_THAT (pl[i], WithinAbs (intercept + slope * std::log2 (f[i] / 100.0), 1.0));
         }
     }
 
@@ -129,7 +145,14 @@ TEST_CASE ("The averager reads white noise flat, pink noise at -3 dB per octave 
         for (int i = 0; i < static_cast<int> (2 * fs); ++i)
             x.push_back (static_cast<float> (0.5 * std::sin (2.0 * juce::MathConstants<double>::pi * 1000.0 * i / fs)));
         a.addSamples (x.data(), static_cast<int> (x.size()));
-        CHECK_THAT (a.levelsDb ({ 1000.0 })[0], WithinAbs (-6.02, 1.5));   // within Hann scalloping
+
+        // Levels are band-averaged power (+-1/24 octave), so a tone reads below its peak level;
+        // it must stand out clearly at its own frequency.
+        const auto levels = a.levelsDb ({ 500.0, 1000.0, 2000.0 });
+        INFO ("500 Hz " << levels[0] << ", 1 kHz " << levels[1] << ", 2 kHz " << levels[2]);
+        CHECK (levels[1] > -20.0);
+        CHECK (levels[1] > levels[0] + 40.0);
+        CHECK (levels[1] > levels[2] + 40.0);
     }
 }
 
