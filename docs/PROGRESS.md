@@ -17,7 +17,7 @@ Milestone definitions and "done when" criteria are in [PLAN.md](PLAN.md#mileston
 | 6b | Presets | Done | Built and validated (186 tests, pluginval, auval); owner tested in Logic |
 | 7 | Dynamic EQ | Done | Built and validated (223 tests, pluginval, auval); owner tested in Logic except the side-chain (covered by unit tests only). Peak detector reading still an open decision |
 | 8 | Linear phase mode | Done | Built and validated (245 tests, pluginval, auval); owner tested in Logic |
-| 9 | Deferred features | In progress | Split into 9a-9g (small to large). 9a A/B done. 9b undo/redo done. 9c peak pick and 9d EQ Sketch done. 9e EQ Match done. 9f skipped. 9g spectral dynamics built and validated (3 stages), awaiting owner's Logic test |
+| 9 | Deferred features | Done | 9a A/B, 9b undo/redo, 9c peak pick, 9d EQ Sketch, 9e EQ Match, 9g spectral dynamics done (owner tested in Logic); 9f skipped; MIDI Learn dropped |
 
 Status values: Not started · In progress · Done · Skipped
 
@@ -164,7 +164,7 @@ Newest first. One entry per session, a few lines each.
 - Tests added / passing: 311/311. Panel switch both ways, greying, layout at three sizes; per-slice curve and the
   0.05 dB recompute step; the display on real audio (loud slice pulled down, quiet slice not). pluginval
   strictness 5 (VST3, AU) and auval pass.
-- Next step: owner's check in Logic (quit and reopen Logic first).
+- Owner tested spectral dynamics in Logic; 9g done, and with it milestone 9 (all planned milestones complete).
 
 ### 2026-09-29 — 9g stage 2 (processor)
 

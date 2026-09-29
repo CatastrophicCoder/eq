@@ -109,8 +109,8 @@ Running the tests, validating the plugin, the architecture and the project's con
 
 ## Status
 
-All planned milestones through linear phase (0–8) are done, and the deferred features are being added one by
-one: A/B, undo/redo, peak pick, EQ Sketch, EQ Match and spectral dynamics are in. The plan and a detailed log are in [docs/PLAN.md](docs/PLAN.md) and [docs/PROGRESS.md](docs/PROGRESS.md).
+All planned milestones (0–9) are done, including the deferred features: A/B, undo/redo, peak pick, EQ Sketch,
+EQ Match and spectral dynamics. The plan and a detailed log are in [docs/PLAN.md](docs/PLAN.md) and [docs/PROGRESS.md](docs/PROGRESS.md).
 The primary test host is Logic Pro (AU); the VST3 is checked with pluginval.
 
 ## How it is built
