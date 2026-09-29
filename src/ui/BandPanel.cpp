@@ -52,6 +52,9 @@ BandPanel::BandPanel (juce::AudioProcessorValueTreeState& s)
     dynamic.setName ("dyn");
     sidechain.setButtonText ("Side-chain");
     sidechain.setName ("sidechain");
+    spectral.setButtonText ("Spectral");
+    spectral.setName ("spectral");
+    spectral.setTooltip ("Act per frequency slice instead of on the whole band (adds latency)");
     dynamicMode.addItemList ({ "Range", "Ratio" }, 1);
     detector.addItemList ({ "Peak", "RMS" }, 1);
     dynamicMode.setName ("dynmode");
@@ -68,7 +71,7 @@ BandPanel::BandPanel (juce::AudioProcessorValueTreeState& s)
     attack.setName ("attack");
     release.setName ("release");
 
-    for (auto* c : std::initializer_list<juce::Component*> { &dynamic, &dynamicMode, &detector, &sidechain,
+    for (auto* c : std::initializer_list<juce::Component*> { &dynamic, &dynamicMode, &detector, &sidechain, &spectral,
                                                               &thresholdCaption, &threshold, &rangeCaption, &range,
                                                               &ratioCaption, &ratio, &attackCaption, &attack,
                                                               &releaseCaption, &release })
@@ -100,6 +103,7 @@ void BandPanel::attach()
     qAttachment.reset();
     dynamicAttachment.reset();
     sidechainAttachment.reset();
+    spectralAttachment.reset();
     dynamicModeAttachment.reset();
     detectorAttachment.reset();
     thresholdAttachment.reset();
@@ -118,6 +122,7 @@ void BandPanel::attach()
 
     dynamicAttachment     = std::make_unique<ButtonAttachment>   (state, Parameters::id (band, "dyn"), dynamic);
     sidechainAttachment   = std::make_unique<ButtonAttachment>   (state, Parameters::id (band, "sidechain"), sidechain);
+    spectralAttachment    = std::make_unique<ButtonAttachment>   (state, Parameters::id (band, "spectral"), spectral);
     dynamicModeAttachment = std::make_unique<ComboBoxAttachment> (state, Parameters::id (band, "dynmode"), dynamicMode);
     detectorAttachment    = std::make_unique<ComboBoxAttachment> (state, Parameters::id (band, "detector"), detector);
     thresholdAttachment   = std::make_unique<SliderAttachment>   (state, Parameters::id (band, "thresh"), threshold);
@@ -159,6 +164,11 @@ void BandPanel::refreshControlStates()
         c->setEnabled (dynOn);
     ratio.setEnabled (dynOn && ratioMode);
     ratioCaption.setEnabled (dynOn && ratioMode);
+
+    // Spectral (M9g): each slice uses its own level, so Peak/RMS does not apply while it is on.
+    const auto spectralOn = state.getRawParameterValue (Parameters::id (band, "spectral"))->load() >= 0.5f;
+    spectral.setEnabled (dynOn);
+    detector.setEnabled (dynOn && ! spectralOn);
 }
 
 void BandPanel::paint (juce::Graphics& g)
@@ -217,10 +227,18 @@ void BandPanel::resized()
     layOutKnobs (filter, { { &frequency, &frequencyCaption }, { &gain, &gainCaption }, { &q, &qCaption } });
 
     auto switches = dyn.removeFromLeft (columnWidth);
-    stack (switches, dynamic);
-    stack (switches, dynamicMode);
-    stack (switches, detector);
-    stack (switches, sidechain);
+    // Five rows in the dynamics column; rows shrink a little in the smallest panel.
+    const auto rowHeight = juce::jlimit (16, 22, (switches.getHeight() - 4 * 3) / 5);
+    auto row = [&] (juce::Component& c)
+    {
+        c.setBounds (switches.removeFromTop (rowHeight));
+        switches.removeFromTop (3);
+    };
+    row (dynamic);
+    row (dynamicMode);
+    row (detector);
+    row (sidechain);
+    row (spectral);
 
     layOutKnobs (dyn, { { &threshold, &thresholdCaption }, { &range, &rangeCaption }, { &ratio, &ratioCaption },
                         { &attack, &attackCaption }, { &release, &releaseCaption } });

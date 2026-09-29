@@ -158,6 +158,23 @@ TEST_CASE ("Documentation screenshots (renders PNGs to $EQ_SCREENSHOT_DIR)", "[.
         s.save (*s.editor, "dynamic-band");
     }
 
+    SECTION ("spectral band: per-slice cuts where the resonance is")
+    {
+        Scene s;
+        s.typicalBands();
+        s.processor.setBandInUse (8, false);   // the static resonance cut is replaced by a spectral band
+        setBand (s.processor, 9, FilterType::bell, 3000.0f, 0.0f, 0.8f, 3, true);
+        set (s.processor, "band9_dyn", 1.0f);
+        set (s.processor, "band9_spectral", 1.0f);
+        set (s.processor, "band9_thresh", -30.0f);
+        set (s.processor, "band9_range", -9.0f);
+        set (s.processor, "band9_attack", 5.0f);
+        s.processor.refreshLatency();
+        s.editor->getDisplay().setSelection ({ 9 }, 9);
+        s.play (3.0, 2800.0, 1.2f);
+        s.save (*s.editor, "spectral-band");
+    }
+
     SECTION ("stereo: Left/Right and Mid/Side bands with split curves")
     {
         Scene s;

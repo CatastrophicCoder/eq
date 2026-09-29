@@ -171,6 +171,7 @@ private:
     std::vector<int> selectionBeforeArea;
     int hovered = 0;
     std::vector<PeakRing> peakRings;
+    ResponseCurves::SliceGains spectralScratch {};
     std::vector<double> matchPreviewHz, matchPreviewDb;
     int pickBand = 0;   // band being created by a peak pick drag
     bool sketching = false;

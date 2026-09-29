@@ -19,12 +19,30 @@ bool ResponseCurves::update (std::span<const BandSettings> bands, double sampleR
 
 bool ResponseCurves::update (std::span<const BandSettings> bands, double sampleRate, std::span<const double> liveGainDb)
 {
+    static const SliceGains none {};
+    return update (bands, sampleRate, liveGainDb, none);
+}
+
+bool ResponseCurves::update (std::span<const BandSettings> bands, double sampleRate, std::span<const double> liveGainDb,
+                             const SliceGains& spectralDb)
+{
+    static_assert (std::tuple_size_v<SliceGains::value_type> == numPoints);
     const auto count = std::min (bands.size(), static_cast<size_t> (numBands));
-    auto liveFor = [&] (size_t b) { return b < count && bands[b].isDynamic() && b < liveGainDb.size() ? liveGainDb[b] : 0.0; };
+    // A spectral band moves per slice (spectralDb); other dynamic bands by one live gain.
+    auto liveFor = [&] (size_t b) { return b < count && bands[b].isDynamic() && ! bands[b].isSpectral() && b < liveGainDb.size() ? liveGainDb[b] : 0.0; };
+    auto spectralMoved = [&] (size_t b)
+    {
+        if (b >= count || ! bands[b].isSpectral())
+            return false;
+        for (size_t k = 0; k < static_cast<size_t> (numPoints); ++k)
+            if (std::abs (spectralDb[b][k] - lastSpectral[b][k]) >= liveGainStepDb)
+                return true;
+        return false;
+    };
 
     auto unchanged = hasComputed && juce::exactlyEqual (sampleRate, lastSampleRate);
     for (size_t b = 0; b < count && unchanged; ++b)
-        unchanged = bands[b].isIdenticalTo (lastBands[b]) && std::abs (liveFor (b) - lastLive[b]) < liveGainStepDb;
+        unchanged = bands[b].isIdenticalTo (lastBands[b]) && std::abs (liveFor (b) - lastLive[b]) < liveGainStepDb && ! spectralMoved (b);
 
     if (unchanged)
         return false;
@@ -39,6 +57,8 @@ bool ResponseCurves::update (std::span<const BandSettings> bands, double sampleR
         dynamic[b] = b < count && bands[b].isDynamic();
         lastBands[b] = b < count ? bands[b] : BandSettings {};
         lastLive[b] = liveFor (b);
+        const auto isSpectralBand = b < count && bands[b].isSpectral();
+        lastSpectral[b] = isSpectralBand ? spectralDb[b] : std::array<double, numPoints> {};
 
         if (! shown[b])
         {
@@ -69,7 +89,7 @@ bool ResponseCurves::update (std::span<const BandSettings> bands, double sampleR
         {
             // Points at or above Nyquist (only at sample rates below 40 kHz) repeat the last valid value.
             const auto f = std::min (frequencies[k], 0.499 * sampleRate);
-            curves[b][k] = design.magnitudeDb (f, sampleRate);
+            curves[b][k] = design.magnitudeDb (f, sampleRate) + (isSpectralBand ? lastSpectral[b][k] : 0.0);
             if (active[b])
                 sum[k] += curves[b][k];
 
@@ -134,9 +154,4 @@ double ResponseCurves::staticBandDb (int band, int point) const noexcept
 double ResponseCurves::rangeBandDb (int band, int point) const noexcept
 {
     return rangeCurves[static_cast<size_t> (band)][static_cast<size_t> (point)];
-}
-
-bool ResponseCurves::update (std::span<const BandSettings> bands, double sampleRate, std::span<const double> liveGainDb, const SliceGains&)
-{
-    return update (bands, sampleRate, liveGainDb);
 }

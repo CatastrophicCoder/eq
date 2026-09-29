@@ -17,7 +17,7 @@ Milestone definitions and "done when" criteria are in [PLAN.md](PLAN.md#mileston
 | 6b | Presets | Done | Built and validated (186 tests, pluginval, auval); owner tested in Logic |
 | 7 | Dynamic EQ | Done | Built and validated (223 tests, pluginval, auval); owner tested in Logic except the side-chain (covered by unit tests only). Peak detector reading still an open decision |
 | 8 | Linear phase mode | Done | Built and validated (245 tests, pluginval, auval); owner tested in Logic |
-| 9 | Deferred features | In progress | Split into 9a-9g (small to large). 9a A/B done. 9b undo/redo done. 9c peak pick and 9d EQ Sketch done. 9e EQ Match done. 9f skipped. 9g spectral dynamics: stages 1-2 of 3 done (engine, processor) |
+| 9 | Deferred features | In progress | Split into 9a-9g (small to large). 9a A/B done. 9b undo/redo done. 9c peak pick and 9d EQ Sketch done. 9e EQ Match done. 9f skipped. 9g spectral dynamics built and validated (3 stages), awaiting owner's Logic test |
 
 Status values: Not started · In progress · Done · Skipped
 
@@ -152,6 +152,19 @@ Newest first. Move each item here from "Open decisions" in `CLAUDE.md` once it i
 ## Session log
 
 Newest first. One entry per session, a few lines each.
+
+### 2026-09-29 — 9g stage 3 (UI and docs)
+
+- Done: band panel "Spectral" switch (fifth row in the dynamics column, rows shrink to fit the smallest panel;
+  enabled only with Dynamic on; Peak/RMS greyed while spectral); `ResponseCurves` draws a spectral band at static
+  gain plus its live per-slice gain (recomputed when any point moves 0.05 dB), fed from the engine via
+  `getSpectralGainDb`; screenshot spectral-band.png; README, DEVELOPMENT.md and the user guide (dynamics hotspot,
+  new "Spectral harshness control" walkthrough) updated. The first screenshot threshold (-48 dB) let the noise
+  trigger the whole region; -30 dB shows the intended resonance-only cut.
+- Tests added / passing: 311/311. Panel switch both ways, greying, layout at three sizes; per-slice curve and the
+  0.05 dB recompute step; the display on real audio (loud slice pulled down, quiet slice not). pluginval
+  strictness 5 (VST3, AU) and auval pass.
+- Next step: owner's check in Logic (quit and reopen Logic first).
 
 ### 2026-09-29 — 9g stage 2 (processor)
 

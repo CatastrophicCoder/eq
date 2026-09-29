@@ -145,6 +145,7 @@ Key pieces:
 | `EqBand` | One band: two filter slots for crossfades, smoothing, channel routing (Stereo/L/R/M/S), and the dynamic path (detector filter, `LevelDetector`, gain law, coefficients every 16 samples) |
 | `BandDesign` | Settings → biquad sections, dispatching to the matched designs |
 | `StereoTransfer` | The chain as a 2×2 complex matrix per frequency; used by Auto Gain, the display and the linear-phase designer |
+| `SpectralDynamicsEngine` | Spectral dynamic bands: short-time FFT (2048/512), per-slice follower and gain law, run after the bands; +2048 samples of latency while any band is spectral |
 | `LinearPhaseDesigner` / `LinearPhaseEngine` | Curve → symmetric FIRs; uniformly partitioned overlap-save convolution (512-sample partitions) that keeps its input spectra when the filter changes |
 | `ResponseDisplay` | The interactive display: curves, analyzer, nodes, peak pick, EQ Sketch, match preview |
 | `CurveFitter` | Levenberg-Marquardt fit of bells, shelves and cuts to a target curve (EQ Sketch, EQ Match) |
@@ -157,7 +158,7 @@ Key pieces:
 src/
   PluginProcessor.*        Audio processor: buses (main + optional side-chain), state, phase modes
   PluginEditor.*           Editor: layout, timer-driven refresh, EQ Match window
-  Parameters.*             Parameter layout (16 × 16 band parameters + output) and conversions
+  Parameters.*             Parameter layout (16 × 17 band parameters + output) and conversions
   AutoGainUpdater.*        Background Auto Gain
   LinearPhaseUpdater.*     Background linear-phase filter design
   dsp/                     Filter designs, EqBand, dynamics, stereo model, linear phase, analysis, curve fitting
@@ -185,8 +186,8 @@ version is ignored rather than misread.
 | 5 | A/B slots, as an `ABComparison` element beside the parameters (M9a) | Both slots equal |
 | 6 | Learned EQ Match spectra, as an `EQMatch` element (M9e) | Nothing learned |
 
-Parameter IDs carry the band number (`band1_freq` … `band16_sidechain`) and a JUCE version hint per milestone;
-IDs and hints never change once released. Preset files have their own `formatVersion` (currently 2).
+Parameter IDs carry the band number (`band1_freq` … `band16_spectral`) and a JUCE version hint per milestone;
+IDs and hints never change once released. Preset files have their own `formatVersion` (currently 3).
 
 ## Testing approach
 

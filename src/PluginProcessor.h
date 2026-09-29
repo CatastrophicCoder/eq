@@ -104,6 +104,9 @@ public:
     /** Number of linear-phase filters handed to the convolution so far (tests); any thread. */
     int getLinearPhaseSwapCount() const noexcept;
 
+    /** A spectral band's current gain change in dB at a frequency (M9g); any thread. */
+    float getSpectralGainDb (int band, double frequencyHz) const noexcept;
+
     /** A band's current dynamic gain change in dB per filter channel (M7); any thread. */
     float getLiveGainChangeDb (int band, int channel) const noexcept;
 

@@ -31,7 +31,7 @@ public:
     bool update (std::span<const BandSettings> bands, double sampleRate, std::span<const double> liveGainDb);
 
     /** Same, with each spectral band's live per-slice gain change at the curve's points (M9g). */
-    using SliceGains = std::array<std::array<double, 512>, 16>;
+    using SliceGains = std::array<std::array<double, 512>, 16>;   // [band][point]
     bool update (std::span<const BandSettings> bands, double sampleRate, std::span<const double> liveGainDb, const SliceGains& spectralDb);
 
     int getNumRecomputes() const noexcept { return recomputes; }
@@ -61,6 +61,7 @@ private:
     std::array<double, numPoints> frequencies {};
     std::array<std::array<double, numPoints>, numBands> curves {}, staticCurves {}, rangeCurves {};
     std::array<double, numBands> lastLive {};
+    SliceGains lastSpectral {};
     std::array<double, numPoints> sum {}, secondSum {};
     SumLayout layout = SumLayout::single;
     std::array<bool, numBands> active {};

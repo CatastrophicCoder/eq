@@ -621,3 +621,9 @@ void ParametricEQAudioProcessor::refreshLatency()
 {
     updateLatency();
 }
+
+float ParametricEQAudioProcessor::getSpectralGainDb (int band, double frequencyHz) const noexcept
+{
+    const auto rate = currentSampleRate.load();
+    return spectralEngine.getSliceGainDb (band - 1, juce::roundToInt (frequencyHz * SpectralDynamicsEngine::fftSize / rate));
+}

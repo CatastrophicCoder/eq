@@ -86,7 +86,16 @@ void ResponseDisplay::refresh()
         live[static_cast<size_t> (b)] = std::abs (r) > std::abs (l) ? r : l;
     }
 
-    if (curves.update (bands, rate, live) || rangeChanged)
+    // Spectral bands (M9g): their per-slice gain at the curve's points.
+    for (int b = 0; b < ResponseCurves::numBands; ++b)
+    {
+        auto& slices = spectralScratch[static_cast<size_t> (b)];
+        const auto spectral = bands[static_cast<size_t> (b)].isSpectral();
+        for (int k = 0; k < ResponseCurves::numPoints; ++k)
+            slices[static_cast<size_t> (k)] = spectral ? processor.getSpectralGainDb (b + 1, curves.frequency (k)) : 0.0;
+    }
+
+    if (curves.update (bands, rate, live, spectralScratch) || rangeChanged)
         repaint();
 }
 

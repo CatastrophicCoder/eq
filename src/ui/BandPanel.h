@@ -70,7 +70,7 @@ private:
     std::unique_ptr<ComboBoxAttachment> typeAttachment, slopeAttachment, channelAttachment;
     std::unique_ptr<SliderAttachment> frequencyAttachment, gainAttachment, qAttachment;
 
-    std::unique_ptr<ButtonAttachment> dynamicAttachment, sidechainAttachment;
+    std::unique_ptr<ButtonAttachment> dynamicAttachment, sidechainAttachment, spectralAttachment;
     std::unique_ptr<ComboBoxAttachment> dynamicModeAttachment, detectorAttachment;
     std::unique_ptr<SliderAttachment> thresholdAttachment, rangeAttachment, ratioAttachment, attackAttachment, releaseAttachment;
 
