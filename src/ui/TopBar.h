@@ -42,6 +42,11 @@ public:
     juce::TextButton& getAButton() noexcept    { return aButton; }
     juce::TextButton& getBButton() noexcept    { return bButton; }
     juce::TextButton& getCopyButton() noexcept { return copyButton; }
+
+    /** Undo/redo (M9b): the editor connects them and sets whether they are enabled. */
+    juce::TextButton& getUndoButton() noexcept { return undoButton; }
+    juce::TextButton& getRedoButton() noexcept { return redoButton; }
+    std::function<void()> onUndo, onRedo;
     void showActiveSlot (bool bIsActive);
     std::function<void (bool b)> onSlotChosen;
     std::function<void()> onCopy;
@@ -56,6 +61,7 @@ private:
     juce::TextButton previousButton { "<" }, nextButton { ">" }, presetButton;
     PhaseModeControls phaseModeControls;
     juce::TextButton aButton { "A" }, bButton { "B" }, copyButton;
+    juce::TextButton undoButton, redoButton;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (TopBar)
 };

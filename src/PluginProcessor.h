@@ -5,6 +5,7 @@
 #include "Parameters.h"
 #include "presets/AbComparison.h"
 #include "presets/PresetManager.h"
+#include "presets/UndoHistory.h"
 #include "dsp/AnalyzerFifo.h"
 #include "dsp/EqBand.h"
 #include "dsp/LinearPhaseEngine.h"
@@ -115,6 +116,9 @@ public:
     /** A/B comparison (M9a). Message thread only. */
     AbComparison& getAbComparison() noexcept { return abComparison; }
 
+    /** Undo/redo of sound edits (M9b). Message thread only. */
+    UndoHistory& getUndoHistory() noexcept { return undoHistory; }
+
     /** The current preset's name and whether it is a factory preset, stored in the session. */
     juce::String getStoredPresetName() const;
     bool isStoredPresetFactory() const;
@@ -187,6 +191,7 @@ private:
     } };
     std::unique_ptr<PresetManager> presetManager;
     AbComparison abComparison { *this };
+    UndoHistory undoHistory { *this };
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ParametricEQAudioProcessor)
 };

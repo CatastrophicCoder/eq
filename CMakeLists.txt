@@ -35,6 +35,7 @@ target_sources(SpectralFault
         src/LinearPhaseUpdater.cpp
         src/presets/Preset.cpp
         src/presets/AbComparison.cpp
+        src/presets/UndoHistory.cpp
         src/presets/FactoryPresets.cpp
         src/presets/PresetManager.cpp
         src/ui/FrequencyAxis.cpp
