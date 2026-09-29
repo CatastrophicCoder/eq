@@ -108,6 +108,13 @@ public:
     static constexpr float peakHoldRadius = 30.0f;   // a press this close to a ring picks it
     void handleHover (juce::Point<float> position);
     const std::vector<PeakRing>& getPeakRings() const noexcept { return peakRings; }
+
+    /** EQ Match (M9e): a dashed preview of the match curve, and the input tap's samples as they arrive. */
+    void setMatchPreview (std::vector<double> frequenciesHz, std::vector<double> db);
+    void clearMatchPreview();
+    bool hasMatchPreview() const noexcept { return ! matchPreviewHz.empty(); }
+    double getMatchPreviewDb (double frequencyHz) const;
+    std::function<void (const float* mono, int numSamples)> onInputSamples;
     int getHoveredBand() const noexcept { return hovered; }
 
     //==============================================================================
@@ -164,6 +171,7 @@ private:
     std::vector<int> selectionBeforeArea;
     int hovered = 0;
     std::vector<PeakRing> peakRings;
+    std::vector<double> matchPreviewHz, matchPreviewDb;
     int pickBand = 0;   // band being created by a peak pick drag
     bool sketching = false;
     std::map<int, float> sketchPoints;   // x (pixel) -> y, one height per column

@@ -107,3 +107,5 @@ void ParametricEQAudioProcessorEditor::refreshControls()
     bandPanel.refreshControlStates();
     bottomBar.refresh();
 }
+
+void ParametricEQAudioProcessorEditor::setMatchWindowOpen (bool) {}

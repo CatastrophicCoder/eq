@@ -53,6 +53,9 @@ target_sources(SpectralFault
         src/ui/TopBar.cpp
         src/ui/PhaseModeControls.cpp
         src/ui/PeakFinder.cpp
+        src/ui/MatchSession.cpp
+        src/ui/MatchPanel.cpp
+        src/ui/MatchWindow.cpp
         src/ui/BottomBar.cpp
         src/ui/CompactLookAndFeel.cpp
         src/dsp/BiquadCoefficients.cpp
@@ -80,7 +83,9 @@ target_sources(SpectralFault
         src/dsp/DynamicGainLaw.cpp
         src/dsp/LinearPhaseDesigner.cpp
         src/dsp/LinearPhaseEngine.cpp
-        src/dsp/CurveFitter.cpp)
+        src/dsp/CurveFitter.cpp
+        src/dsp/SpectrumAverager.cpp
+        src/dsp/MatchCurve.cpp)
 
 target_include_directories(SpectralFault
     PUBLIC

@@ -36,6 +36,7 @@ public:
     juce::ComboBox& getSpeedBox() noexcept           { return speed; }
     juce::ComboBox& getRangeBox() noexcept           { return range; }
     juce::ToggleButton& getFreezeButton() noexcept   { return freeze; }
+    juce::TextButton& getMatchButton() noexcept      { return matchButton; }   // EQ Match window (M9e)
 
     /** Called when an analyzer control changes (the editor stores the settings). */
     std::function<void()> onAnalyzerSettingsChanged;
@@ -49,6 +50,7 @@ private:
     juce::ToggleButton autoGain, invert;
     juce::ComboBox analyzerMode, resolution, speed, range;
     juce::ToggleButton freeze;
+    juce::TextButton matchButton { "Match" };
 
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> gainAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> autoGainAttachment, invertAttachment;

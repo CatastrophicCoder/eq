@@ -4,6 +4,9 @@
 #include "ui/BandPanel.h"
 #include "ui/BottomBar.h"
 #include "ui/CompactLookAndFeel.h"
+#include "ui/MatchPanel.h"
+#include "ui/MatchSession.h"
+#include "ui/MatchWindow.h"
 #include "ui/ResponseDisplay.h"
 #include "ui/TopBar.h"
 
@@ -36,6 +39,12 @@ public:
     BandPanel& getBandPanel() noexcept        { return bandPanel; }
     BottomBar& getBottomBar() noexcept        { return bottomBar; }
 
+    /** EQ Match (M9e): the session and panel live with the editor; the window shows the panel. */
+    MatchSession& getMatchSession() noexcept  { return matchSession; }
+    MatchPanel& getMatchPanel() noexcept      { return matchPanel; }
+    bool isMatchWindowOpen() const noexcept   { return matchWindow != nullptr; }
+    void setMatchWindowOpen (bool shouldBeOpen);
+
 private:
     void timerCallback() override { refreshControls(); }
 
@@ -47,6 +56,11 @@ private:
     BandPanel bandPanel;
     BottomBar bottomBar;
     juce::TooltipWindow tooltips { this, 600 };
+    MatchSession matchSession { eqProcessor };
+    MatchPanel matchPanel { matchSession };
+    std::unique_ptr<MatchWindow> matchWindow;
+    juce::AudioBuffer<float> sidechainScratch { 2, 4096 };
+    std::vector<float> sidechainMono = std::vector<float> (4096);
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ParametricEQAudioProcessorEditor)
 };

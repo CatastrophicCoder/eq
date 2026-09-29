@@ -1256,3 +1256,7 @@ void ResponseDisplay::finishSketch()
     selectionChanged();
     refresh();
 }
+
+void ResponseDisplay::setMatchPreview (std::vector<double>, std::vector<double>) {}
+void ResponseDisplay::clearMatchPreview() {}
+double ResponseDisplay::getMatchPreviewDb (double) const { return 0.0; }

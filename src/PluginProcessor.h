@@ -108,6 +108,11 @@ public:
     bool isAnalyzerActive() const noexcept { return analyzerActive.load (std::memory_order_relaxed); }
     AnalyzerFifo& getPreFifo() noexcept  { return preFifo; }
     AnalyzerFifo& getPostFifo() noexcept { return postFifo; }
+
+    /** EQ Match (M9e): the side-chain tap, fed only while active and a side-chain is connected. */
+    AnalyzerFifo& getSidechainFifo() noexcept { return sidechainFifo; }
+    void setSidechainTapActive (bool shouldBeActive) noexcept { sidechainTapActive.store (shouldBeActive, std::memory_order_relaxed); }
+    bool isSidechainConnected() const;
     static constexpr int analyzerFifoCapacity = 32768;
 
     /** Presets (M6b). Message thread only. */
@@ -158,7 +163,8 @@ private:
 
     juce::AudioProcessorValueTreeState parameters;
     std::array<std::atomic<bool>, 16> bandInUse {};
-    AnalyzerFifo preFifo, postFifo;
+    AnalyzerFifo preFifo, postFifo, sidechainFifo;
+    std::atomic<bool> sidechainTapActive { false };
     std::atomic<bool> analyzerActive { false };
     std::array<BandParameters, 16> bandParameters;
     std::array<EqBand, 16> bands;

@@ -561,3 +561,5 @@ int ParametricEQAudioProcessor::getLinearPhaseSwapCount() const noexcept
 {
     return linearPhaseEngine.getSwapCount();
 }
+
+bool ParametricEQAudioProcessor::isSidechainConnected() const { return false; }
