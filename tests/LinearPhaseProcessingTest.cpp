@@ -509,3 +509,22 @@ TEST_CASE ("Longest linear-phase setting with Mid/Side bands at 96 kHz runs fast
           << 1000.0 / elapsedMs << "x real time)");
     CHECK (elapsedMs < 1000.0);
 }
+
+TEST_CASE ("The linear-phase designer waits for the host's sample rate", "[linearphase][latency]")
+{
+    // Found in a CI rehearsal: the designer thread started with a default rate (48 kHz) and could hand
+    // over a filter for the wrong rate before prepareToPlay, heard until the right one crossfaded in.
+    juce::ScopedJuceInitialiser_GUI juce;
+    constexpr double fs = 96000.0;
+    ParametricEQAudioProcessor p;
+    setBand (p, 3, FilterType::bell, 1500.0f, 6.0f, 1.5f, 3, true);
+    p.setLinearPhase (true);
+    juce::Thread::sleep (300);   // plenty of time for the designer to act before the host prepares
+    const auto swapsBefore = p.getLinearPhaseSwapCount();
+    prepare (p, fs);
+    REQUIRE (settle (p));
+
+    CHECK (swapsBefore == 0);   // nothing was handed over before a rate was known
+    const auto h = impulseResponse (p, 8192 + 1024, 0);
+    CHECK_THAT (magnitudeDb (h, 0, 1500.0, fs), WithinAbs (6.0, 0.1));
+}
