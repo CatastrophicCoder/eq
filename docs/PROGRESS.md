@@ -169,7 +169,8 @@ Newest first. One entry per session, a few lines each.
 - Local release build: SpectralFault-0.1.0.pkg (6.1 MB) and .dmg (2.7 MB); all three bundles arm64, minos 12.0,
   ad-hoc signatures verify; payload paths correct, relocation off; disk image holds the app and read-me.
   Extended attributes are cleared, but macOS's protected com.apple.provenance stays on locally built files and is
-  stored as AppleDouble entries (restored as attributes on install); to check on a CI-built package.
+  stored as AppleDouble entries (restored as attributes on install). The CI-built package has none (checked: 0
+  AppleDouble entries, arm64, minos 12.0, ad-hoc signatures verify, relocation off).
 - Found in a CI rehearsal (Release, tests in parallel): the linear-phase designer thread could design for the
   default 48 kHz before prepareToPlay and hand that filter over at another rate (heard until the right filter
   crossfaded in). It now waits for the host's rate; new test reproduces it (1.0 dB instead of 6 dB before the fix).

@@ -11,3 +11,7 @@ cmake-build-*/
 
 # Local UI reference screenshots of other products (copyrighted; never commit)
 ui_ref.jpg
+
+# Downloaded or locally built release packages
+*.pkg
+*.dmg
