@@ -177,7 +177,8 @@ Newest first. One entry per session, a few lines each.
 - Tests: 312/312 (Debug), and three parallel Release runs 312/312; pluginval strictness 5 (VST3 Debug and
   Release, AU) and auval pass.
 - First CI run on GitHub: green (owner).
-- Next step: owner tags v0.1.0 to publish the release.
+- v0.1.0 tagged (pushed from IntelliJ); CI published the GitHub Release "Spectral Fault 0.1.0" with
+  SpectralFault-0.1.0.pkg and .dmg.
 
 ### 2026-09-29 — 9g stage 3 (UI and docs)
 
