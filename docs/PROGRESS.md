@@ -66,7 +66,7 @@ Newest first. Move each item here from "Open decisions" in `CLAUDE.md` once it i
 | 2026-09-29 | Peak pick (9c): a marker on the nearest spectrum peak appears while hovering empty display space; dragging it creates a band | Hover markers; modifier + drag; pick button | Chosen by owner |
 | 2026-09-29 | Peak pick band: Bell at the peak frequency, Q from the peak's -3 dB width (0.5-18), gain set by the drag from 0 dB | Q from width; fixed Q 6; fixed Q 1 | Chosen by owner |
 | 2026-09-29 | Peak pick follows the shown spectrum: pre when Pre or Pre+Post is shown, post when only Post; none with the analyzer off | Pre; post; whichever is shown | Chosen by owner |
-| 2026-09-29 | Peak pick ring holds its peak and place while the pointer is within 30 px, and a press anywhere in that radius picks it (owner feedback: the ring jumped with the live peak) | Hold while near; slow peak memory; both | Chosen by owner |
+| 2026-09-29 | Peak pick ring holds its peak and place while the pointer stays within the half-octave window it was chosen from (first implemented as 30 px, which failed while approaching); a press within 30 px picks it (owner feedback: the ring jumped with the live peak) | Hold while near; slow peak memory; both | Chosen by owner |
 | 2026-09-29 | EQ Sketch (9d): Option + drag on empty display space draws a curve; release turns it into bands | Sketch button; Option + drag; right-click menu | Chosen by owner |
 | 2026-09-29 | EQ Sketch replaces the bands whose frequency lies inside the drawn range; bands outside stay | Keep, use free slots; replace all; replace in drawn range | Chosen by owner |
 | 2026-09-29 | EQ Sketch fitter may use bells, shelves and cuts | Bells only; bells + shelves; bells, shelves, cuts | Chosen by owner |
@@ -133,6 +133,17 @@ Newest first. Move each item here from "Open decisions" in `CLAUDE.md` once it i
 ## Session log
 
 Newest first. One entry per session, a few lines each.
+
+### 2026-09-29 — 9c/9d owner feedback (second round)
+
+- Owner: Option-drag did nothing; the ring still jumped while hovering. Logic had been started at 12:33, before the
+  ring fix (12:39) and EQ Sketch (12:49) were installed, so it was still running the 9c build; Logic keeps a
+  plugin's code until it quits.
+- Separately, the ring fix itself was flawed: it held only within 30 px, but a ring can appear up to half an octave
+  from the pointer, so approaching it re-picked peaks on every move. Now it holds while the pointer stays over empty
+  space within the half-octave window it was chosen from; a press within 30 px picks it. New test: approaching the
+  ring in steps while the spectrum changes leaves it in place (278/278 tests, pluginval and auval pass).
+- Next step: owner retests both in Logic after restarting it.
 
 ### 2026-09-29 — 9d (EQ Sketch)
 

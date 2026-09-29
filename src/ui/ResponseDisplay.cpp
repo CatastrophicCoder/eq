@@ -1048,8 +1048,11 @@ float ResponseDisplay::analyzerYForDb (double displayDb) const
 
 void ResponseDisplay::handleHover (juce::Point<float> position)
 {
-    // Hold: while the pointer stays near the ring, it keeps its peak and place (owner feedback 2026-09-29).
-    if (peakMarker.has_value() && peakSource() != nullptr && position.getDistanceFrom (peakMarkerPosition) <= peakHoldRadius)
+    // Hold (owner feedback 2026-09-29): while the pointer stays over empty space within the half-octave
+    // window the ring was chosen from, it keeps its peak and place, so it can be approached and caught.
+    if (peakMarker.has_value() && peakSource() != nullptr && getPlotArea().contains (position)
+        && NodeLayout::bandAt (getNodes(), position) == 0
+        && std::abs (std::log2 (getAxis().frequencyForX (position.x) / peakMarker->frequencyHz)) <= PeakFinder::nearOctaves)
         return;
 
     std::optional<PeakFinder::Peak> marker;
