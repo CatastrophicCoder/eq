@@ -113,6 +113,10 @@ Preset PresetManager::capture (const juce::String& name) const
 
 void PresetManager::apply (const Preset& preset)
 {
+    // A preset load is not an undo step and starts a fresh undo history (decisions 2026-09-29).
+    UndoHistory::ScopedSuspend suspendUndo (processor.getUndoHistory());
+    processor.getUndoHistory().clear();
+
     auto& state = processor.getValueTreeState();
 
     for (int band = 1; band <= Parameters::numBands; ++band)

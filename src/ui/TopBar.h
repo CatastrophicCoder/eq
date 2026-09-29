@@ -47,6 +47,7 @@ public:
     juce::TextButton& getUndoButton() noexcept { return undoButton; }
     juce::TextButton& getRedoButton() noexcept { return redoButton; }
     std::function<void()> onUndo, onRedo;
+    void showUndoState (bool canUndo, bool canRedo);
     void showActiveSlot (bool bIsActive);
     std::function<void (bool b)> onSlotChosen;
     std::function<void()> onCopy;

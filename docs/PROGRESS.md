@@ -17,7 +17,7 @@ Milestone definitions and "done when" criteria are in [PLAN.md](PLAN.md#mileston
 | 6b | Presets | Done | Built and validated (186 tests, pluginval, auval); owner tested in Logic |
 | 7 | Dynamic EQ | Done | Built and validated (223 tests, pluginval, auval); owner tested in Logic except the side-chain (covered by unit tests only). Peak detector reading still an open decision |
 | 8 | Linear phase mode | Done | Built and validated (245 tests, pluginval, auval); owner tested in Logic |
-| 9 | Deferred features | In progress | Split into 9a-9g (small to large). 9a A/B done (owner tested in Logic). Next: 9b undo/redo |
+| 9 | Deferred features | In progress | Split into 9a-9g (small to large). 9a A/B done. 9b undo/redo built and validated, awaiting owner's Logic test |
 
 Status values: Not started · In progress · Done · Skipped
 
@@ -124,6 +124,19 @@ Newest first. Move each item here from "Open decisions" in `CLAUDE.md` once it i
 ## Session log
 
 Newest first. One entry per session, a few lines each.
+
+### 2026-09-29 — 9b (undo/redo)
+
+- Done: `UndoHistory` (src/presets): steps from the user's parameter gestures and explicit transactions (band in use,
+  phase mode, display add/delete/enable/menu edits); sound-only snapshots via the new shared `SettingSnapshot`
+  (A/B now uses it too); undo/redo apply them as host edits; wheel/pinch Q steps on the same bands within 1 s merge;
+  100 steps; preset loads, A/B switches and session loads clear it. Top bar undo/redo buttons left of A/B.
+- Tests added / passing: 263/263. Knob/menu edit = one step; multi-node drag = one step; add, delete, disable and
+  menu type change each one step; phase mode and length undoable with latency; Q wheel merge; automation, view
+  settings and empty gestures not recorded; preset/A-B/session load clear; redo cleared by a new edit; 100-step
+  cap; undo sends complete host edits for changed parameters only and records nothing; buttons enable, act and
+  fit at three sizes. pluginval strictness 5 (VST3, AU) and auval pass.
+- Next step: owner's check in Logic, then 9c Spectrum Grab.
 
 ### 2026-09-29 — M9 planning and 9a (A/B comparison)
 

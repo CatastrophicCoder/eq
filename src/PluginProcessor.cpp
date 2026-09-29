@@ -47,6 +47,7 @@ ParametricEQAudioProcessor::ParametricEQAudioProcessor()
 
     // Started last: its request reads the band parameters set up above.
     linearPhaseUpdater.start();
+    undoHistory.attach();
 }
 
 //==============================================================================
@@ -337,6 +338,7 @@ void ParametricEQAudioProcessor::setBandInUse (int band, bool inUse)
     if (band < 1 || band > static_cast<int> (bandInUse.size()))
         return;
 
+    UndoHistory::ScopedTransaction step (undoHistory);   // a sound edit (M9b), unless inside a larger one
     parameters.state.setProperty (inUseProperty (band), inUse, nullptr);
     bandInUse[static_cast<size_t> (band - 1)].store (inUse, std::memory_order_relaxed);
 }
@@ -446,6 +448,10 @@ void ParametricEQAudioProcessor::setStateInformation (const void* data, int size
     if (version < 1 || version > stateVersion)
         return;
 
+    // A session load is not an undo step and starts a fresh history (M9b).
+    UndoHistory::ScopedSuspend suspendUndo (undoHistory);
+    undoHistory.clear();
+
     // The A/B element (version 5) is kept apart: it is not part of the setting itself.
     auto tree = juce::ValueTree::fromXml (*xml);
     const auto abState = tree.getChildWithName (AbComparison::stateTag);
@@ -510,6 +516,7 @@ bool ParametricEQAudioProcessor::isLinearPhase() const
 
 void ParametricEQAudioProcessor::setLinearPhase (bool shouldBeLinear)
 {
+    UndoHistory::ScopedTransaction step (undoHistory);
     parameters.state.setProperty (linearPhaseProperty, shouldBeLinear, nullptr);
     requestedLinear = shouldBeLinear;
     updateLatency();
@@ -525,6 +532,7 @@ void ParametricEQAudioProcessor::setLinearPhaseLength (int index)
     if (index < 0 || index >= static_cast<int> (LinearPhaseDesigner::tapCounts.size()))
         return;
 
+    UndoHistory::ScopedTransaction step (undoHistory);
     parameters.state.setProperty (linearPhaseLengthProperty, index, nullptr);
     requestedLength = index;
     updateLatency();

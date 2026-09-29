@@ -29,6 +29,8 @@ ParametricEQAudioProcessorEditor::ParametricEQAudioProcessorEditor (ParametricEQ
         refreshControls();
     };
     topBar.onCopy = [this] { eqProcessor.getAbComparison().copyActiveToOther(); };
+    topBar.onUndo = [this] { eqProcessor.getUndoHistory().undo(); refreshControls(); };
+    topBar.onRedo = [this] { eqProcessor.getUndoHistory().redo(); refreshControls(); };
 
     addAndMakeVisible (topBar);
     addAndMakeVisible (display);
@@ -99,6 +101,7 @@ void ParametricEQAudioProcessorEditor::refreshControls()
     display.refreshAnalyzer (elapsed);
     topBar.refresh();
     topBar.showActiveSlot (eqProcessor.getAbComparison().getActive() == AbComparison::Slot::b);
+    topBar.showUndoState (eqProcessor.getUndoHistory().canUndo(), eqProcessor.getUndoHistory().canRedo());
     topBar.getPhaseModeControls().show (eqProcessor.isLinearPhase(), eqProcessor.getLinearPhaseLength(),
                                         eqProcessor.getSampleRate() > 0.0 ? eqProcessor.getSampleRate() : 48000.0);
     bandPanel.refreshControlStates();

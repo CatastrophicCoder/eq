@@ -469,6 +469,12 @@ void ResponseDisplay::scaleQ (juce::Point<float> position, double factor)
     else
         targets = selection.getSelected();
 
+    // Wheel and pinch steps on the same bands in quick succession form one undo step (M9b).
+    juce::String mergeKey ("q");
+    for (auto b : targets)
+        mergeKey << "-" << b;
+    UndoHistory::ScopedTransaction step (processor.getUndoHistory(), mergeKey);
+
     const auto bands = currentBands();
     for (auto b : targets)
     {
@@ -523,6 +529,7 @@ void ResponseDisplay::addBandAt (juce::Point<float> position)
     const auto f = std::clamp (axis.frequencyForX (position.x), NodeDragController::minFrequency, NodeDragController::maxFrequency);
     const auto g = std::clamp (axis.dbForY (position.y), NodeDragController::minGain, NodeDragController::maxGain);
 
+    UndoHistory::ScopedTransaction step (processor.getUndoHistory());   // one undo step (M9b)
     writer.setOnce (free, "type", static_cast<float> (FilterType::bell));
     writer.setOnce (free, "freq", static_cast<float> (f));
     writer.setOnce (free, "gain", static_cast<float> (g));
@@ -538,6 +545,7 @@ void ResponseDisplay::addBandAt (juce::Point<float> position)
 void ResponseDisplay::deleteBands (const std::vector<int>& bands)
 {
     const auto targets = bands;   // copy: the selection may be what we were given
+    UndoHistory::ScopedTransaction step (processor.getUndoHistory());
 
     for (auto b : targets)
     {
@@ -552,6 +560,7 @@ void ResponseDisplay::deleteBands (const std::vector<int>& bands)
 
 void ResponseDisplay::setEnabled (const std::vector<int>& bands, bool enabled)
 {
+    UndoHistory::ScopedTransaction step (processor.getUndoHistory());
     for (auto b : bands)
         writer.setOnce (b, "enabled", enabled ? 1.0f : 0.0f);
 
@@ -610,6 +619,7 @@ void ResponseDisplay::applyNodeMenuResult (int band, int itemId)
     }
 
     // Type and slope changes skip disabled bands.
+    UndoHistory::ScopedTransaction step (processor.getUndoHistory());
     for (auto b : targets)
     {
         if (! bands[static_cast<size_t> (b - 1)].enabled)

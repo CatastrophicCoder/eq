@@ -36,6 +36,7 @@ target_sources(SpectralFault
         src/presets/Preset.cpp
         src/presets/AbComparison.cpp
         src/presets/UndoHistory.cpp
+        src/presets/SettingSnapshot.cpp
         src/presets/FactoryPresets.cpp
         src/presets/PresetManager.cpp
         src/ui/FrequencyAxis.cpp

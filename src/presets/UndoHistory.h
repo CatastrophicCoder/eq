@@ -40,7 +40,7 @@ public:
     class ScopedTransaction
     {
     public:
-        explicit ScopedTransaction (UndoHistory& history, const char* mergeKey = nullptr);
+        explicit ScopedTransaction (UndoHistory& history, const juce::String& mergeKey = {});
         ~ScopedTransaction();
     private:
         UndoHistory& history;
@@ -66,7 +66,7 @@ private:
         double endedAt = 0.0;
     };
 
-    void begin (const char* mergeKey);
+    void begin (const juce::String& mergeKey);
     void end();
     void parameterValueChanged (int, float) override {}
     void parameterGestureChanged (int parameterIndex, bool gestureIsStarting) override;

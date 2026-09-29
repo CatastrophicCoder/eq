@@ -56,6 +56,21 @@ TopBar::TopBar (PresetManager& p) : presets (p)
         addAndMakeVisible (b);
     showActiveSlot (false);
 
+    // Undo/redo (M9b): buttons only; Cmd-Z stays with the host.
+    undoButton.setButtonText (juce::String::fromUTF8 ("\xe2\x86\xb6"));   // anticlockwise arrow
+    redoButton.setButtonText (juce::String::fromUTF8 ("\xe2\x86\xb7"));   // clockwise arrow
+    undoButton.setName ("undo");
+    redoButton.setName ("redo");
+    undoButton.setTooltip ("Undo the last edit");
+    redoButton.setTooltip ("Redo");
+    undoButton.onClick = [this] { if (onUndo != nullptr) onUndo(); };
+    redoButton.onClick = [this] { if (onRedo != nullptr) onRedo(); };
+    for (auto* b : { &undoButton, &redoButton })
+    {
+        b->setEnabled (false);
+        addAndMakeVisible (b);
+    }
+
     refresh();
 }
 
@@ -204,6 +219,10 @@ void TopBar::resized()
     bButton.setBounds (abArea.removeFromRight (26));
     abArea.removeFromRight (2);
     aButton.setBounds (abArea.removeFromRight (26));
+    abArea.removeFromRight (8);
+    redoButton.setBounds (abArea.removeFromRight (26));
+    abArea.removeFromRight (2);
+    undoButton.setBounds (abArea.removeFromRight (26));
 
     // Phase mode menus on the right (M8), in the space beside the preset browser.
     const auto rightSpace = area.getRight() - nextButton.getRight() - 12;
@@ -227,4 +246,10 @@ void TopBar::showActiveSlot (bool bIsActive)
     aButton.setToggleState (! bIsActive, juce::dontSendNotification);
     bButton.setToggleState (bIsActive, juce::dontSendNotification);
     copyButton.setButtonText (juce::String::fromUTF8 (bIsActive ? "B\xe2\x86\x92" "A" : "A\xe2\x86\x92" "B"));
+}
+
+void TopBar::showUndoState (bool canUndo, bool canRedo)
+{
+    undoButton.setEnabled (canUndo);
+    redoButton.setEnabled (canRedo);
 }
