@@ -59,6 +59,10 @@ Newest first. Move each item here from "Open decisions" in `CLAUDE.md` once it i
 | 2026-09-29 | M9 split into 9a A/B, 9b undo/redo, 9c Spectrum Grab, 9d EQ Sketch, 9e EQ Match, 9f natural-phase-style mode, 9g spectral dynamics, built in that order | Small to large; workflow first; DSP first | Chosen by owner |
 | 2026-09-29 | A/B slots hold everything: all parameters, bands in use, phase mode and length, view settings, current preset | Same as a preset; preset plus phase mode; everything | Chosen by owner |
 | 2026-09-29 | Both A/B slots and the active one are saved with the session (state version 5); older sessions start with both slots equal | Saved with session; only while open | Chosen by owner |
+| 2026-09-29 | Undo/redo covers sound edits only (bands, output, add/delete/enable, phase mode); not preset loads, A/B switches, view settings or host automation | Sound only; plus presets and A/B; everything | Chosen by owner |
+| 2026-09-29 | A preset load or A/B switch clears the undo history | Clear; one history per slot; keep one history | Chosen by owner |
+| 2026-09-29 | Undo history lives only while the plugin is open (not saved with the session) | Only while open; saved | Chosen by owner |
+| 2026-09-29 | Undo/redo through two buttons in the top bar only; no keyboard shortcuts (Cmd-Z stays with Logic) | Buttons and shortcuts; buttons only; shortcuts only | Chosen by owner |
 | 2026-09-28 | Plugin name "Spectral Fault", brand (company) "Catastrophic Audio" | Name lists proposed by Claude | Chosen by owner |
 | 2026-09-28 | Rename details: bundle ID com.catastrophicaudio.spectralfault; CMake target SpectralFault (tests SpectralFaultTests); plugin codes, saved-state tag and preset tag unchanged; rename committed under M7 | Keep or change bundle ID; keep or rename target; M7 or separate prefix | Chosen by owner |
 | 2026-09-28 | User preset folder moves to ~/Library/Audio/Presets/Catastrophic Audio/Spectral Fault/; the old folder's presets are copied once (only if the new folder has none); old files stay | Keep old path; move without migration; move and migrate | Chosen by owner |
