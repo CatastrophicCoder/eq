@@ -950,3 +950,6 @@ void ResponseDisplay::paintNodes (juce::Graphics& g, const FrequencyAxis& axis)
         g.drawText (text, box, juce::Justification::centred);
     }
 }
+
+void ResponseDisplay::handleHover (juce::Point<float>) {}
+juce::Point<float> ResponseDisplay::getPeakMarkerPosition() const { return {}; }

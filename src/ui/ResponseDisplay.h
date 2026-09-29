@@ -4,6 +4,7 @@
 #include "FrequencyAxis.h"
 #include "NodeDragController.h"
 #include "NodeLayout.h"
+#include "PeakFinder.h"
 #include "ResponseCurves.h"
 #include "LevelMeter.h"
 #include "SelectionModel.h"
@@ -93,6 +94,12 @@ public:
     juce::String getMessage() const;
 
     bool isSelectingArea() const noexcept { return selectingArea; }
+
+    /** Peak pick (M9c): the pointer over empty space shows a marker on the nearest spectrum
+        peak; pressing on it creates a band there and the drag sets its gain. */
+    void handleHover (juce::Point<float> position);
+    std::optional<PeakFinder::Peak> getPeakMarker() const { return peakMarker; }
+    juce::Point<float> getPeakMarkerPosition() const;
     int getHoveredBand() const noexcept { return hovered; }
 
     //==============================================================================
@@ -148,6 +155,7 @@ private:
     juce::Point<float> areaStart, areaEnd;
     std::vector<int> selectionBeforeArea;
     int hovered = 0;
+    std::optional<PeakFinder::Peak> peakMarker;
 
     juce::String message;
     juce::uint32 messageTime = 0;

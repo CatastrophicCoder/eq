@@ -29,7 +29,8 @@ add_executable(SpectralFaultTests
     LinearPhaseDesignTest.cpp
     LinearPhaseProcessingTest.cpp
     AbComparisonTest.cpp
-    UndoHistoryTest.cpp)
+    UndoHistoryTest.cpp
+    PeakPickTest.cpp)
 
 # Link against the plugin's shared-code library. Its JUCE modules are linked
 # PRIVATE there, so take its include paths and defines explicitly instead of
