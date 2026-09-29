@@ -99,6 +99,7 @@ public:
     /** Peak pick (M9c): the pointer over empty space shows a marker on the nearest spectrum
         peak; pressing on it creates a band there and the drag sets its gain. */
     void handleHover (juce::Point<float> position);
+    static constexpr float peakHoldRadius = 30.0f;   // the ring holds still, and can be pressed, this close
     std::optional<PeakFinder::Peak> getPeakMarker() const { return peakMarker; }
     juce::Point<float> getPeakMarkerPosition() const;
     int getHoveredBand() const noexcept { return hovered; }

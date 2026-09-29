@@ -75,11 +75,11 @@ namespace
             feed();
         }
 
-        void feed()
+        void feed (double resonanceHz = 1000.0)
         {
             BandSettings resonator;
             resonator.type = FilterType::bell;
-            resonator.frequencyHz = 1000.0;
+            resonator.frequencyHz = resonanceHz;
             resonator.gainDb = 24.0;
             resonator.q = 8.0;
             CascadeProcessor filter;
@@ -233,4 +233,35 @@ TEST_CASE ("With all bands in use the marker shows the message instead of adding
     f.display.handlePress (f.at (1000.0, 0.0), {}, 1);
     f.display.handleRelease();
     CHECK (f.display.getSelection().getSelected().empty());
+}
+
+TEST_CASE ("The ring holds still while the pointer stays near it, even as the spectrum moves", "[peakpick][editor]")
+{
+    // Owner feedback 2026-09-29: the ring jumped with the live peak and was hard to catch.
+    Fixture f;
+    f.display.handleHover (f.at (1100.0, 0.0));
+    REQUIRE (f.display.getPeakMarker().has_value());
+    const auto held = *f.display.getPeakMarker();
+    const auto position = f.display.getPeakMarkerPosition();
+
+    // The sound changes: the resonance moves to 1.25 kHz. Near the ring, nothing moves.
+    f.feed (1250.0);
+    f.display.handleHover (position + juce::Point<float> (12.0f, 18.0f));
+    REQUIRE (f.display.getPeakMarker().has_value());
+    CHECK (f.display.getPeakMarker()->point == held.point);
+    CHECK (f.display.getPeakMarkerPosition() == position);
+
+    // A press anywhere within the hold radius picks the held peak.
+    f.display.handlePress (position + juce::Point<float> (-20.0f, 15.0f), {}, 1);
+    f.display.handleRelease();
+    REQUIRE (f.processor.isBandInUse (1));
+    CHECK_THAT (f.processor.getBandSettings()[0].frequencyHz, WithinRel (held.frequencyHz, 1e-3));
+
+    // Moving away lets the ring follow the spectrum again.
+    f.processor.getUndoHistory().undo();
+    f.editor.refreshControls();
+    f.display.handleHover (position + juce::Point<float> (0.0f, ResponseDisplay::peakHoldRadius + 40.0f));
+    f.display.handleHover (f.at (1300.0, 0.0));
+    REQUIRE (f.display.getPeakMarker().has_value());
+    CHECK (std::abs (std::log2 (f.display.getPeakMarker()->frequencyHz / 1250.0)) < 1.0 / 12.0);
 }
