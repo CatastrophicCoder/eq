@@ -8,6 +8,8 @@ project follows. For what the plugin does and how to use it, see the [README](..
 - [Building](#building)
 - [Testing](#testing)
 - [Validating the plugin](#validating-the-plugin)
+- [Packaging and releases](#packaging-and-releases)
+- [Continuous integration](#continuous-integration)
 - [Troubleshooting](#troubleshooting)
 - [Architecture](#architecture)
 - [Source layout](#source-layout)
@@ -20,7 +22,7 @@ project follows. For what the plugin does and how to use it, see the [README](..
 
 | Tool | Notes |
 |---|---|
-| macOS with Xcode command-line tools | `xcode-select --install`; the project builds with Apple clang |
+| A Mac with Apple silicon and Xcode command-line tools | `xcode-select --install`; the project builds with Apple clang |
 | CMake 3.22+ and Ninja | `brew install cmake ninja` |
 | [pluginval](https://github.com/Tracktion/pluginval) | Plugin validation; the app bundle is enough (it does not need to be on `PATH`) |
 | An IDE (optional) | CLion works out of the box (toolchain: Xcode clang, generator: Ninja) |
@@ -92,6 +94,41 @@ auval -v aufx Peq1 Ctcd
 ```
 
 Every change is expected to pass all tests, pluginval at strictness 5 for both formats, and auval.
+
+## Packaging and releases
+
+```bash
+./packaging/package.sh
+```
+
+builds a separate Release tree (`build/package-release`, without tests and without installing into
+`~/Library`, so a local Debug install is left alone) and writes to `build/package-release/artefacts/`:
+
+| File | Contents |
+|---|---|
+| `SpectralFault-<version>.pkg` | Installer with Audio Unit, VST3 and Standalone as separate choices (into `/Library/Audio/Plug-Ins/…` and `/Applications`) |
+| `SpectralFault-<version>.dmg` | The Standalone app and a read-me (`packaging/README.md`) |
+
+Builds are arm64 (Apple silicon), macOS 12 or later, and **ad-hoc signed**: no Apple Developer ID, so the first
+use on another Mac needs System Settings → Privacy & Security → Open Anyway (explained on the installer's welcome
+page). The version comes from `project(… VERSION …)` in `CMakeLists.txt`. `SPECTRALFAULT_BUILD_DIR=<dir>` makes
+the script package an existing Release tree instead (used by CI).
+
+The component packages turn bundle relocation off: all three formats share one bundle ID, and a relocatable
+package would install over whichever bundle with that ID it finds. Extended attributes are cleared before
+packaging; macOS's protected `com.apple.provenance` attribute can remain on locally built files and is stored as
+AppleDouble entries, which the Installer restores as attributes.
+
+**Releasing a version:** set the version in `CMakeLists.txt`, commit, then push a matching tag:
+`git tag v0.1.0 && git push origin v0.1.0`. CI checks that the tag matches the version and publishes a GitHub
+Release with the installer and disk image.
+
+## Continuous integration
+
+`.github/workflows/build.yml` runs on every push to `main`, every pull request, manual runs and `v*` tags, on
+GitHub's macOS (Apple silicon) runners: Release build, all tests, `auval`, `pluginval` (strictness 5, VST3),
+packaging, and upload of the `.pkg` and `.dmg` as the run's artifacts (kept 90 days). On a tag it also creates
+the GitHub Release.
 
 ## Troubleshooting
 
@@ -167,6 +204,8 @@ src/
 tests/                     Catch2 tests; DesignTestGrid.h holds the shared response grid and checker
 docs/                      PLAN.md, PROGRESS.md, this guide, images/, guide/ (the user guide web page)
 tools/                     Helper scripts (documentation link check)
+packaging/                 package.sh, installer layout and resources, the disk image's read-me
+.github/workflows/         CI (build.yml)
 external/                  JUCE and Catch2 submodules (not edited)
 ```
 

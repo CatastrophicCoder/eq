@@ -195,7 +195,7 @@ private:
     // fade out, a filter load and a fade in. Settings are pushed per block into pushedBands.
     std::atomic<bool> requestedLinear { false };
     std::atomic<int> requestedLength { 0 };
-    std::atomic<double> currentSampleRate { 48000.0 };
+    std::atomic<double> currentSampleRate { 0.0 };   // 0 until prepareToPlay: nothing is designed before a rate is known
     std::array<BandSettings, 16> pushedBands {};
     std::array<bool, 16> bandRan {};
     bool activeLinear = false;

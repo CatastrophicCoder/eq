@@ -48,6 +48,9 @@ auval -v aufx Peq1 Ctcd
 # look at the editor without a host: renders PNGs of the editor into <dir>
 EQ_SNAPSHOT_DIR=<dir> build/tests/SpectralFaultTests "[.snapshot]"
 
+# Release installer and disk image (arm64, ad-hoc signed; does not touch the installed Debug plugin)
+./packaging/package.sh
+
 # Release CPU check: build only the tests, so the installed Debug plugin is not replaced
 cmake -B build/release -G Ninja -DCMAKE_BUILD_TYPE=Release
 cmake --build build/release --target SpectralFaultTests
@@ -58,7 +61,10 @@ build/release/tests/SpectralFaultTests "16 Brickwall bands*" -s
   manufacturer code `Ctcd`, plugin code `Peq1`, bundle ID `com.catastrophicaudio.spectralfault` (renamed in M7).
   Do not change the codes: hosts use them to recall saved sessions. The saved-state tag `ParametricEQ` and preset
   tag `ParametricEQPreset` also stay, so older sessions and presets keep loading.
-- `COPY_PLUGIN_AFTER_BUILD` is on: every build installs the AU and VST3 into `~/Library/Audio/Plug-Ins/`.
+- `COPY_PLUGIN_AFTER_BUILD` is on (`SPECTRALFAULT_COPY_PLUGIN`): every build installs the AU and VST3 into
+  `~/Library/Audio/Plug-Ins/`. `SPECTRALFAULT_BUILD_TESTS` (on) builds the tests.
+- Builds are arm64, macOS 12+. CI (`.github/workflows/build.yml`) builds, tests, validates and packages every push
+  and PR; a `v*` tag matching the CMake version publishes a GitHub Release.
 - If a fresh AU build does not show up in `auval -a`, restart the AU registry: `killall -9 AudioComponentRegistrar`.
 
 - JUCE 9.0.2 is a git submodule in `external/JUCE`, pinned to the release tag.

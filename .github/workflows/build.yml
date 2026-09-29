@@ -1,0 +1,89 @@
+name: build
+
+# Every push to main and every pull request, a button in the Actions tab, and version tags
+# (v1.2.3), which also publish a GitHub Release with the installer and disk image.
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+# A new push supersedes an in-flight run of the same branch.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  macos:
+    name: macOS (Release, Apple silicon)
+    # macos-latest rather than a pinned image: GitHub retires old images, and a retired label fails
+    # before anything is built. It runs on Apple silicon, matching the arm64 build.
+    runs-on: macos-latest
+    permissions:
+      contents: write   # only used by the release step on tags
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # JUCE and Catch2 are submodules, pinned to release tags; no history is needed.
+          submodules: recursive
+          fetch-depth: 1
+
+      - name: Install Ninja
+        run: brew install ninja
+
+      - name: Configure
+        run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build
+
+      # The numerical suite: filter responses against analog prototypes, dynamics, latency,
+      # state and presets, no allocation on the audio thread.
+      - name: Test
+        run: ctest --test-dir build --output-on-failure --timeout 300 -j3
+
+      # The build has installed the AU into ~/Library/Audio/Plug-Ins, where auval finds it.
+      - name: Validate the Audio Unit
+        run: |
+          killall -9 AudioComponentRegistrar 2>/dev/null || true
+          auval -v aufx Peq1 Ctcd
+
+      - name: Install pluginval
+        run: |
+          curl -fsSL -o pluginval.zip \
+            https://github.com/Tracktion/pluginval/releases/download/v1.0.4/pluginval_macOS.zip
+          unzip -q pluginval.zip
+
+      - name: Validate the VST3
+        run: |
+          ./pluginval.app/Contents/MacOS/pluginval --strictness-level 5 \
+            --validate "build/SpectralFault_artefacts/Release/VST3/Spectral Fault.vst3"
+
+      # Ad-hoc signed installer and disk image, reusing the build above.
+      - name: Package
+        run: SPECTRALFAULT_BUILD_DIR=build ./packaging/package.sh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SpectralFault-macOS
+          path: build/artefacts/*
+          if-no-files-found: error
+
+      # Tags only: the tag must match the version in CMakeLists.txt, then a release is created
+      # with the GitHub CLI that comes with the runner.
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="$(sed -n 's/^project(SpectralFault VERSION \([0-9.]*\).*/\1/p' CMakeLists.txt)"
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match the version $version in CMakeLists.txt" >&2
+            exit 1
+          fi
+          gh release create "$GITHUB_REF_NAME" build/artefacts/* \
+            --title "Spectral Fault $version" \
+            --notes "Spectral Fault $version for Macs with Apple silicon (macOS 12 or later). Ad-hoc signed: the first use needs System Settings > Privacy & Security > Open Anyway; see the installer's welcome page. User guide: https://catastrophiccoder.github.io/eq/" \
+            --verify-tag

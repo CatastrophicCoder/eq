@@ -1,12 +1,18 @@
 cmake_minimum_required(VERSION 3.22)
 
+# Release builds target Apple silicon, macOS 12 and later (decision 2026-09-29). Cache defaults, so a
+# build directory can still override them.
+set(CMAKE_OSX_ARCHITECTURES "arm64" CACHE STRING "Target architectures")
+set(CMAKE_OSX_DEPLOYMENT_TARGET "12.0" CACHE STRING "Minimum macOS version")
+
 project(SpectralFault VERSION 0.1.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-option(PARAMETRICEQ_BUILD_TESTS "Build the Catch2 unit tests" ON)
+option(SPECTRALFAULT_BUILD_TESTS "Build the Catch2 unit tests" ON)
+option(SPECTRALFAULT_COPY_PLUGIN "Install the AU and VST3 into ~/Library/Audio/Plug-Ins after each build" ON)
 
 add_subdirectory(external/JUCE)
 
@@ -22,7 +28,7 @@ juce_add_plugin(SpectralFault
     NEEDS_MIDI_OUTPUT FALSE
     IS_MIDI_EFFECT FALSE
     EDITOR_WANTS_KEYBOARD_FOCUS TRUE
-    COPY_PLUGIN_AFTER_BUILD TRUE
+    COPY_PLUGIN_AFTER_BUILD ${SPECTRALFAULT_COPY_PLUGIN}
     NEEDS_WEB_BROWSER FALSE
     NEEDS_CURL FALSE)
 
@@ -107,7 +113,7 @@ target_link_libraries(SpectralFault
         juce::juce_recommended_lto_flags
         juce::juce_recommended_warning_flags)
 
-if (PARAMETRICEQ_BUILD_TESTS)
+if (SPECTRALFAULT_BUILD_TESTS)
     enable_testing()
     add_subdirectory(external/Catch2)
     add_subdirectory(tests)

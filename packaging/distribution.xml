@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<installer-gui-script minSpecVersion="2">
+    <title>Spectral Fault @VERSION@</title>
+    <welcome file="welcome.html" mime-type="text/html"/>
+    <license file="license.txt" mime-type="text/plain"/>
+    <options customize="always" require-scripts="false" hostArchitectures="arm64"/>
+    <volume-check>
+        <allowed-os-versions>
+            <os-version min="12.0"/>
+        </allowed-os-versions>
+    </volume-check>
+
+    <choices-outline>
+        <line choice="au"/>
+        <line choice="vst3"/>
+        <line choice="standalone"/>
+    </choices-outline>
+
+    <choice id="au" title="Audio Unit" description="For Logic Pro, GarageBand and other AU hosts. Installs to /Library/Audio/Plug-Ins/Components.">
+        <pkg-ref id="com.catastrophicaudio.spectralfault.au"/>
+    </choice>
+    <choice id="vst3" title="VST3" description="For VST3 hosts. Installs to /Library/Audio/Plug-Ins/VST3.">
+        <pkg-ref id="com.catastrophicaudio.spectralfault.vst3"/>
+    </choice>
+    <choice id="standalone" title="Standalone app" description="Spectral Fault on its own, without a host. Installs to /Applications.">
+        <pkg-ref id="com.catastrophicaudio.spectralfault.standalone"/>
+    </choice>
+
+    <pkg-ref id="com.catastrophicaudio.spectralfault.au" version="@VERSION@">au.pkg</pkg-ref>
+    <pkg-ref id="com.catastrophicaudio.spectralfault.vst3" version="@VERSION@">vst3.pkg</pkg-ref>
+    <pkg-ref id="com.catastrophicaudio.spectralfault.standalone" version="@VERSION@">app.pkg</pkg-ref>
+</installer-gui-script>

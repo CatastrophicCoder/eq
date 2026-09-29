@@ -92,6 +92,11 @@ Newest first. Move each item here from "Open decisions" in `CLAUDE.md` once it i
 | 2026-09-29 | Spectral engine: 2048-point frames, hop 512, square-root periodic Hann analysis and synthesis (exact delay of 2048 samples with no gain change); per-slice linear attack/release follower; band region weighting = power response of the M7 detector filter (bell band pass, shelf Butterworth low/high pass); side-chain slices drive the same slices; Stereo per channel, M/S around the slice | - | Planned |
 | 2026-09-29 | Spectral switch as its own parameter band<n>_spectral (bool, hint 5; 275 parameters), not a third Peak/RMS choice (which would shift stored automation of that menu); preset format 3 stores it, format 2 loads it off | - | Planned |
 | 2026-09-29 | The README, DEVELOPMENT.md and user guide do not describe how the project is developed (the README note was removed; DEVELOPMENT.md keeps a neutral Workflow section) | - | Chosen by owner |
+| 2026-09-29 | Release builds are ad-hoc signed (no Apple Developer ID; first use needs Open Anyway) | Ad-hoc; Developer ID + notarized | Chosen by owner |
+| 2026-09-29 | Release builds are Apple silicon only (arm64), macOS 12 or later | Universal; Apple silicon only | Chosen by owner (minimum macOS 12 proposed in planning) |
+| 2026-09-29 | Downloads: a .pkg installer (AU, VST3, Standalone selectable) and a .dmg with the Standalone app | Installer + disk image; installer only; zip of bundles | Chosen by owner |
+| 2026-09-29 | CI keeps the packages as run artifacts; a v* tag also publishes a GitHub Release (via the runner's gh CLI, no third-party action) | Artifacts + tag releases; artifacts only | Chosen by owner |
+| 2026-09-29 | First release version 0.1.0 | 1.0.0; 0.9.0; 0.1.0 | Chosen by owner |
 | 2026-09-28 | Plugin name "Spectral Fault", brand (company) "Catastrophic Audio" | Name lists proposed in planning | Chosen by owner |
 | 2026-09-28 | Rename details: bundle ID com.catastrophicaudio.spectralfault; CMake target SpectralFault (tests SpectralFaultTests); plugin codes, saved-state tag and preset tag unchanged; rename committed under M7 | Keep or change bundle ID; keep or rename target; M7 or separate prefix | Chosen by owner |
 | 2026-09-28 | User preset folder moves to ~/Library/Audio/Presets/Catastrophic Audio/Spectral Fault/; the old folder's presets are copied once (only if the new folder has none); old files stay | Keep old path; move without migration; move and migrate | Chosen by owner |
@@ -153,6 +158,24 @@ Newest first. Move each item here from "Open decisions" in `CLAUDE.md` once it i
 ## Session log
 
 Newest first. One entry per session, a few lines each.
+
+### 2026-09-29 — Release build and CI
+
+- Done: CMake defaults arm64 / macOS 12, options SPECTRALFAULT_BUILD_TESTS and SPECTRALFAULT_COPY_PLUGIN;
+  packaging/package.sh (Release build, ad-hoc signing, component packages with relocation off, installer with
+  welcome page and licence, disk image with read-me); .github/workflows/build.yml (build, tests, auval, pluginval,
+  package, artifacts; GitHub Release on v* tags after checking the tag against the CMake version); README
+  "Download and install" and build badge; DEVELOPMENT.md packaging, releasing and CI sections.
+- Local release build: SpectralFault-0.1.0.pkg (6.1 MB) and .dmg (2.7 MB); all three bundles arm64, minos 12.0,
+  ad-hoc signatures verify; payload paths correct, relocation off; disk image holds the app and read-me.
+  Extended attributes are cleared, but macOS's protected com.apple.provenance stays on locally built files and is
+  stored as AppleDouble entries (restored as attributes on install); to check on a CI-built package.
+- Found in a CI rehearsal (Release, tests in parallel): the linear-phase designer thread could design for the
+  default 48 kHz before prepareToPlay and hand that filter over at another rate (heard until the right filter
+  crossfaded in). It now waits for the host's rate; new test reproduces it (1.0 dB instead of 6 dB before the fix).
+- Tests: 312/312 (Debug), and three parallel Release runs 312/312; pluginval strictness 5 (VST3 Debug and
+  Release, AU) and auval pass.
+- Next step: owner pushes, checks the first CI run, then tags v0.1.0.
 
 ### 2026-09-29 — 9g stage 3 (UI and docs)
 

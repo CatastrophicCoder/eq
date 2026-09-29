@@ -9,7 +9,9 @@
 ![Formats: AU | VST3 | Standalone](https://img.shields.io/badge/formats-AU%20%7C%20VST3%20%7C%20Standalone-orange.svg)
 ![C++20](https://img.shields.io/badge/C%2B%2B-20-00599C.svg)
 ![JUCE 9](https://img.shields.io/badge/JUCE-9.0.2-8DC63F.svg)
+[![build](https://github.com/CatastrophicCoder/eq/actions/workflows/build.yml/badge.svg)](https://github.com/CatastrophicCoder/eq/actions/workflows/build.yml)
 
+[Download](https://github.com/CatastrophicCoder/eq/releases) ·
 [User guide](https://catastrophiccoder.github.io/eq/) ·
 [Features](#features) ·
 [Under the hood](#under-the-hood) ·
@@ -82,11 +84,16 @@ its analog prototype.
 
 Built with [JUCE](https://juce.com) 9.0.2 (AGPLv3 option) and [Catch2](https://github.com/catchorg/Catch2), C++20, CMake.
 
-## Getting started
+## Download and install
 
-There are no pre-built releases yet; build the plugin from source (below). The build installs the AU and VST3
-into `~/Library/Audio/Plug-Ins/`, so they appear in your host after a rescan. The plugin shows up as
-**Catastrophic Audio: Spectral Fault**.
+Download the latest **`SpectralFault-<version>.pkg`** from [Releases](https://github.com/CatastrophicCoder/eq/releases)
+(builds of every change are also kept as artifacts of the [build workflow](https://github.com/CatastrophicCoder/eq/actions)).
+It needs a Mac with Apple silicon and macOS 12 or later, and lets you choose Audio Unit, VST3 and the Standalone
+app. The `.dmg` holds just the Standalone app.
+
+The builds are not signed with an Apple Developer ID, so macOS asks once: if your host skips the plug-in, open
+**System Settings → Privacy & Security** and click **Open Anyway** next to Spectral Fault, then restart the host.
+In Logic Pro the plug-in appears as **Catastrophic Audio: Spectral Fault**.
 
 New to it? The **[user guide](https://catastrophiccoder.github.io/eq/)** has an annotated tour of the interface and
 walkthroughs for common jobs: cleaning up a vocal, taming resonances, dynamic de-essing, side-chain ducking,
@@ -94,7 +101,7 @@ mastering in linear phase, matching a reference and more.
 
 ## Building from source
 
-Requirements: macOS with Xcode command-line tools, CMake 3.22+ and Ninja.
+Requirements: a Mac with Apple silicon, Xcode command-line tools, CMake 3.22+ and Ninja.
 
 ```bash
 git clone --recurse-submodules https://github.com/CatastrophicCoder/eq.git
@@ -103,7 +110,8 @@ cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
 cmake --build build
 ```
 
-The plugins are in `build/SpectralFault_artefacts/Release/` and are also installed automatically.
+The plugins are in `build/SpectralFault_artefacts/Release/` and are also installed into `~/Library/Audio/Plug-Ins/`.
+`./packaging/package.sh` builds the installer and disk image.
 Running the tests, validating the plugin, the architecture and the project's conventions are described in
 **[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)**.
 

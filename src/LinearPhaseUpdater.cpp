@@ -50,7 +50,7 @@ void LinearPhaseUpdater::run()
     {
         const auto request = readRequest();
 
-        if (request.linear)
+        if (request.linear && request.sampleRate > 0.0)   // no design before the host has given a rate
         {
             if (! pending && ! (haveSubmitted && sameFilter (request, submitted)))
             {
