@@ -17,7 +17,7 @@ Milestone definitions and "done when" criteria are in [PLAN.md](PLAN.md#mileston
 | 6b | Presets | Done | Built and validated (186 tests, pluginval, auval); owner tested in Logic |
 | 7 | Dynamic EQ | Done | Built and validated (223 tests, pluginval, auval); owner tested in Logic except the side-chain (covered by unit tests only). Peak detector reading still an open decision |
 | 8 | Linear phase mode | Done | Built and validated (245 tests, pluginval, auval); owner tested in Logic |
-| 9 | Deferred features | In progress | Split into 9a-9g (small to large). 9a A/B built and validated, awaiting owner's Logic test |
+| 9 | Deferred features | In progress | Split into 9a-9g (small to large). 9a A/B done (owner tested in Logic). Next: 9b undo/redo |
 
 Status values: Not started · In progress · Done · Skipped
 
@@ -132,7 +132,8 @@ Newest first. One entry per session, a few lines each.
   slot, exactly one A/B element in the saved state; older sessions give equal slots; loading a preset changes only
   the active slot; buttons switch, copy and show the active slot, laid out at three sizes. pluginval strictness 5
   (VST3, AU) and auval pass.
-- Next step: owner's check in Logic, then 9b undo/redo.
+- Owner tested A/B in Logic; 9a done.
+- Next step: 9b undo/redo.
 
 ### 2026-09-29 — M8 done
 
