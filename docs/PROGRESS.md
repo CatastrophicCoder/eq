@@ -17,7 +17,7 @@ Milestone definitions and "done when" criteria are in [PLAN.md](PLAN.md#mileston
 | 6b | Presets | Done | Built and validated (186 tests, pluginval, auval); owner tested in Logic |
 | 7 | Dynamic EQ | Done | Built and validated (223 tests, pluginval, auval); owner tested in Logic except the side-chain (covered by unit tests only). Peak detector reading still an open decision |
 | 8 | Linear phase mode | Done | Built and validated (245 tests, pluginval, auval); owner tested in Logic |
-| 9 | Deferred features | In progress | Split into 9a-9g (small to large). 9a A/B done. 9b undo/redo done. 9c peak pick and 9d EQ Sketch done. 9e EQ Match built and validated, awaiting owner's Logic test |
+| 9 | Deferred features | In progress | Split into 9a-9g (small to large). 9a A/B done. 9b undo/redo done. 9c peak pick and 9d EQ Sketch done. 9e EQ Match done. 9f skipped (Zero latency already near analog phase). Next: 9g spectral dynamics |
 
 Status values: Not started · In progress · Done · Skipped
 
@@ -85,6 +85,7 @@ Newest first. Move each item here from "Open decisions" in `CLAUDE.md` once it i
 | 2026-09-29 | Closing the plugin window stops a running EQ Match learn pass; what it learned is kept | Learning stops; keeps learning (background thread) | Chosen by owner |
 | 2026-09-29 | User guide as an interactive web page (docs/guide/index.html, served by GitHub Pages from /docs): annotated screenshot with hotspots, use-case walkthroughs in tabs, gestures and display reference | Interactive web page; Markdown guide; both; in-plugin help | Chosen by owner |
 | 2026-09-29 | The README's Claude Code section becomes a short "How it is built" note; details move to docs/DEVELOPMENT.md | Move to dev docs; keep in README; remove | Chosen by owner |
+| 2026-09-29 | 9f natural-phase-style mode skipped: measured, Zero latency bells are already within 1.6-9.2 deg of the analog prototype's phase for 1-10 kHz bands at 48 kHz (28 deg only for a 15 kHz band, near Nyquist; about half at 96 kHz) | Analog-phase mode; reduced-phase mode; skip | Chosen by owner |
 | 2026-09-28 | Plugin name "Spectral Fault", brand (company) "Catastrophic Audio" | Name lists proposed by Claude | Chosen by owner |
 | 2026-09-28 | Rename details: bundle ID com.catastrophicaudio.spectralfault; CMake target SpectralFault (tests SpectralFaultTests); plugin codes, saved-state tag and preset tag unchanged; rename committed under M7 | Keep or change bundle ID; keep or rename target; M7 or separate prefix | Chosen by owner |
 | 2026-09-28 | User preset folder moves to ~/Library/Audio/Presets/Catastrophic Audio/Spectral Fault/; the old folder's presets are copied once (only if the new folder has none); old files stay | Keep old path; move without migration; move and migrate | Chosen by owner |
@@ -146,6 +147,13 @@ Newest first. Move each item here from "Open decisions" in `CLAUDE.md` once it i
 ## Session log
 
 Newest first. One entry per session, a few lines each.
+
+### 2026-09-29 — 9f assessed and skipped
+
+- Measured the phase of the matched bells against their analog prototypes (400 points up to 0.49 fs): worst
+  differences 1.6 / 4.2 / 9.2 / 28 deg for 1 / 5 / 10 / 15 kHz bells at 48 kHz, all at the top of the range;
+  about half at 96 kHz. An analog-phase mode would add little; owner chose to skip 9f.
+- Next step: 9g spectral dynamics.
 
 ### 2026-09-29 — Documentation for GitHub
 
