@@ -157,50 +157,76 @@ TEST_CASE ("Near the pointer the most prominent peak wins", "[peakpick]")
     CHECK_FALSE (PeakFinder::nearest (peaks, 2000.0).has_value());   // more than half an octave away
 }
 
-TEST_CASE ("The marker sits on the spectrum's peak near the pointer, over empty space only", "[peakpick][editor]")
+/** The ring on the 1 kHz resonance, if shown. */
+static std::optional<ResponseDisplay::PeakRing> ringNear (const ResponseDisplay& display, double frequencyHz)
 {
+    for (const auto& r : display.getPeakRings())
+        if (std::abs (std::log2 (r.peak.frequencyHz / frequencyHz)) < 1.0 / 12.0)
+            return r;
+    return std::nullopt;
+}
+
+TEST_CASE ("While hovering, rings mark the five most prominent peaks of the shown spectrum", "[peakpick][editor]")
+{
+    // Decision 2026-09-29 (second round): top peaks while hovering; nodes do not hide them.
     Fixture f;
 
-    f.display.handleHover (f.at (1100.0, 0.0));
-    const auto marker = f.display.getPeakMarker();
-    REQUIRE (marker.has_value());
-    CHECK (std::abs (std::log2 (marker->frequencyHz / 1000.0)) < 1.0 / 12.0);
+    f.display.handleHover (f.at (300.0, 0.0));
+    const auto& rings = f.display.getPeakRings();
+    REQUIRE_FALSE (rings.empty());
+    CHECK (rings.size() <= static_cast<size_t> (ResponseDisplay::maxPeakRings));
+    const auto resonance = ringNear (f.display, 1000.0);
+    REQUIRE (resonance.has_value());
+
+    // The most prominent peaks: none shown is more prominent than one left out.
+    double weakestShown = 1.0e9;
+    for (const auto& r : rings)
+        weakestShown = std::min (weakestShown, r.peak.prominenceDb);
+    CHECK (resonance->peak.prominenceDb >= weakestShown);
 
     // Pre+Post (default): the input spectrum.
-    CHECK_THAT (marker->levelDb, WithinAbs (f.display.getPreAnalyzer().levelDb (marker->point), 1e-9));
+    CHECK_THAT (resonance->peak.levelDb, WithinAbs (f.display.getPreAnalyzer().levelDb (resonance->peak.point), 1e-9));
 
-    // Over a node: no marker.
+    // Over a node the rings stay.
     f.editor.refreshControls();
     f.display.handleHover (f.display.getNodes().front().position);
-    CHECK_FALSE (f.display.getPeakMarker().has_value());
+    CHECK_FALSE (f.display.getPeakRings().empty());
 
     // Post only: the output spectrum.
     auto settings = f.processor.getAnalyzerSettings();
     settings.mode = static_cast<int> (AnalyzerSettings::Mode::post);
     f.processor.setAnalyzerSettings (settings);
-    f.display.handleHover (f.at (1100.0, 0.0));
-    REQUIRE (f.display.getPeakMarker().has_value());
-    CHECK_THAT (f.display.getPeakMarker()->levelDb, WithinAbs (f.display.getPostAnalyzer().levelDb (f.display.getPeakMarker()->point), 1e-9));
+    f.display.handleHover (f.at (5000.0, 0.0));
+    const auto post = ringNear (f.display, 1000.0);
+    REQUIRE (post.has_value());
+    CHECK_THAT (post->peak.levelDb, WithinAbs (f.display.getPostAnalyzer().levelDb (post->peak.point), 1e-9));
 
-    // Analyzer off: none.
+    // Analyzer off, or the pointer outside the display: none.
     settings.mode = static_cast<int> (AnalyzerSettings::Mode::off);
     f.processor.setAnalyzerSettings (settings);
     f.display.handleHover (f.at (1100.0, 0.0));
-    CHECK_FALSE (f.display.getPeakMarker().has_value());
+    CHECK (f.display.getPeakRings().empty());
+    settings.mode = static_cast<int> (AnalyzerSettings::Mode::prePost);
+    f.processor.setAnalyzerSettings (settings);
+    f.display.handleHover (f.at (1100.0, 0.0));
+    CHECK_FALSE (f.display.getPeakRings().empty());
+    f.display.handleHover ({ -50.0f, -50.0f });
+    CHECK (f.display.getPeakRings().empty());
 }
 
-TEST_CASE ("Dragging the marker creates a bell at the peak, gain from the drag, as one undo step", "[peakpick][editor][undo]")
+TEST_CASE ("Dragging a ring creates a bell at the peak, gain from the drag, as one undo step", "[peakpick][editor][undo]")
 {
     Fixture f;
     f.display.handleHover (f.at (1100.0, 0.0));
-    REQUIRE (f.display.getPeakMarker().has_value());
-    const auto peak = *f.display.getPeakMarker();
-    const auto start = f.display.getPeakMarkerPosition();
+    const auto ring = ringNear (f.display, 1000.0);
+    REQUIRE (ring.has_value());
+    const auto peak = ring->peak;
+    const auto start = ring->position;
 
     GestureCounter gestures (f.processor);
     f.display.handlePress (start, {}, 1);
     for (int i = 1; i <= 8; ++i)
-        f.display.handleDrag (start + juce::Point<float> (5.0f * static_cast<float> (i), -6.0f * static_cast<float> (i)), {});   // up (and a little right)
+        f.display.handleDrag (start + juce::Point<float> (5.0f * static_cast<float> (i), -6.0f * static_cast<float> (i)), {});
     f.display.handleRelease();
 
     REQUIRE (f.processor.isBandInUse (1));
@@ -209,8 +235,7 @@ TEST_CASE ("Dragging the marker creates a bell at the peak, gain from the drag, 
     CHECK_THAT (band.frequencyHz, WithinRel (peak.frequencyHz, 1e-3));   // frequency stays on the peak
     CHECK_THAT (band.q, WithinRel (std::clamp (peak.q, 0.5, 18.0), 1e-3));
     CHECK (band.q > 1.0);
-    CHECK (band.gainDb > 1.0);   // dragged up: boost
-    CHECK (band.isActive());
+    CHECK (band.gainDb > 1.0);
     CHECK (gestures.allMatched());
     CHECK (f.display.getSelection().getPrimary() == 1);
 
@@ -219,78 +244,60 @@ TEST_CASE ("Dragging the marker creates a bell at the peak, gain from the drag, 
     CHECK_FALSE (f.processor.isBandInUse (1));
 }
 
-TEST_CASE ("With all bands in use the marker shows the message instead of adding", "[peakpick][editor]")
+TEST_CASE ("With all bands in use the rings stay; pressing one explains instead of adding", "[peakpick][editor]")
 {
     Fixture f;
     for (int b = 1; b <= 15; ++b)
         setBand (f.processor, b, FilterType::bell, 20.0f + static_cast<float> (b), 0.0f, 1.0f, 3, true);   // nodes far from 1 kHz
+    f.processor.getUndoHistory().clear();   // the setup marked bands in use, which counts as edits
     f.editor.refreshControls();
 
     f.display.handleHover (f.at (1100.0, 0.0));
-    CHECK_FALSE (f.display.getPeakMarker().has_value());   // nothing to add: no marker
+    const auto ring = ringNear (f.display, 1000.0);
+    REQUIRE (ring.has_value());
 
-    // Pressing where the marker would be still behaves as empty space.
-    f.display.handlePress (f.at (1000.0, 0.0), {}, 1);
+    f.display.handlePress (ring->position, {}, 1);
     f.display.handleRelease();
-    CHECK (f.display.getSelection().getSelected().empty());
+    CHECK (f.display.getMessage().contains ("All 16 bands in use"));
+    CHECK (f.processor.getBandSettings()[0].frequencyHz < 30.0);   // band 1 untouched
+    CHECK (f.processor.getUndoHistory().getNumSteps() == 0);
 }
 
-TEST_CASE ("The ring holds still while the pointer stays near it, even as the spectrum moves", "[peakpick][editor]")
+TEST_CASE ("A ring holds still while the pointer is near it, even as the spectrum moves", "[peakpick][editor]")
 {
-    // Owner feedback 2026-09-29: the ring jumped with the live peak and was hard to catch.
+    // Owner feedback 2026-09-29: rings jumped with the live peaks and were hard to catch.
     Fixture f;
     f.display.handleHover (f.at (1100.0, 0.0));
-    REQUIRE (f.display.getPeakMarker().has_value());
-    const auto held = *f.display.getPeakMarker();
-    const auto position = f.display.getPeakMarkerPosition();
+    const auto held = ringNear (f.display, 1000.0);
+    REQUIRE (held.has_value());
 
-    // The sound changes: the resonance moves to 1.25 kHz. Near the ring, nothing moves.
-    f.feed (1250.0);
-    f.display.handleHover (position + juce::Point<float> (12.0f, 18.0f));
-    REQUIRE (f.display.getPeakMarker().has_value());
-    CHECK (f.display.getPeakMarker()->point == held.point);
-    CHECK (f.display.getPeakMarkerPosition() == position);
-
-    // A press anywhere within the hold radius picks the held peak.
-    f.display.handlePress (position + juce::Point<float> (-20.0f, 15.0f), {}, 1);
-    f.display.handleRelease();
-    REQUIRE (f.processor.isBandInUse (1));
-    CHECK_THAT (f.processor.getBandSettings()[0].frequencyHz, WithinRel (held.frequencyHz, 1e-3));
-
-    // Moving away lets the ring follow the spectrum again.
-    f.processor.getUndoHistory().undo();
-    f.editor.refreshControls();
-    f.display.handleHover (position + juce::Point<float> (0.0f, ResponseDisplay::peakHoldRadius + 40.0f));
-    f.display.handleHover (f.at (1300.0, 0.0));
-    REQUIRE (f.display.getPeakMarker().has_value());
-    CHECK (std::abs (std::log2 (f.display.getPeakMarker()->frequencyHz / 1250.0)) < 1.0 / 12.0);
-}
-
-TEST_CASE ("Approaching the ring from further away does not make it jump", "[peakpick][editor]")
-{
-    // Owner feedback 2026-09-29 (second round): the ring still ran away while the pointer moved towards it,
-    // because it only held within 30 px. It now holds while the pointer stays within the half-octave
-    // window it was chosen from.
-    Fixture f;
-    f.display.handleHover (f.at (1350.0, 6.0));   // about 0.43 octave above the 1 kHz peak, far above it on screen
-    REQUIRE (f.display.getPeakMarker().has_value());
-    const auto held = *f.display.getPeakMarker();
-    const auto position = f.display.getPeakMarkerPosition();
-    REQUIRE (position.getDistanceFrom (f.at (1350.0, 6.0)) > ResponseDisplay::peakHoldRadius);
-
-    // The spectrum keeps changing while the pointer moves towards the ring in small steps.
+    // The pointer approaches from further away while the resonance moves: the ring stays.
+    const auto start = f.at (1350.0, 6.0);
     for (int step = 1; step <= 10; ++step)
     {
         f.feed (step % 2 == 0 ? 1000.0 : 1180.0);
         const auto t = static_cast<float> (step) / 10.0f;
-        const auto start = f.at (1350.0, 6.0);
-        f.display.handleHover (start + (position - start) * t);
-        REQUIRE (f.display.getPeakMarker().has_value());
-        CHECK (f.display.getPeakMarker()->point == held.point);
-        CHECK (f.display.getPeakMarkerPosition() == position);
+        f.display.handleHover (start + (held->position - start) * t);
+        const auto now = ringNear (f.display, held->peak.frequencyHz);
+        REQUIRE (now.has_value());
+        CHECK (now->peak.point == held->peak.point);
+        CHECK (now->position == held->position);
     }
 
-    // Leaving the window lets it follow the spectrum again.
-    f.display.handleHover (f.at (5000.0, 0.0));
-    CHECK ((! f.display.getPeakMarker().has_value() || f.display.getPeakMarker()->point != held.point));
+    // A press within the hold radius picks the held peak.
+    f.display.handlePress (held->position + juce::Point<float> (-20.0f, 15.0f), {}, 1);
+    f.display.handleRelease();
+    REQUIRE (f.processor.isBandInUse (1));
+    CHECK_THAT (f.processor.getBandSettings()[0].frequencyHz, WithinRel (held->peak.frequencyHz, 1e-3));
+}
+
+TEST_CASE ("Rings away from the pointer follow the spectrum", "[peakpick][editor]")
+{
+    Fixture f;
+    f.display.handleHover (f.at (100.0, 0.0));   // far from 1 kHz: nothing there is held
+    REQUIRE (ringNear (f.display, 1000.0).has_value());
+
+    f.feed (1300.0);
+    f.display.handleHover (f.at (110.0, 0.0));
+    CHECK (ringNear (f.display, 1300.0).has_value());
 }

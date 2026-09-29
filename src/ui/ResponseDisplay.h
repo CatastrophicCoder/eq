@@ -100,12 +100,14 @@ public:
     /** EQ Sketch (M9d): Option-drag on empty space draws a curve, fitted into bands on release. */
     bool isSketching() const noexcept { return sketching; }
 
-    /** Peak pick (M9c): the pointer over empty space shows a marker on the nearest spectrum
-        peak; pressing on it creates a band there and the drag sets its gain. */
+    /** Peak pick (M9c): while the pointer is over the display, rings mark the most prominent peaks
+        of the shown spectrum; pressing one creates a band there and the drag sets its gain. A ring
+        holds its peak and place while the pointer is within half an octave of it. */
+    struct PeakRing { PeakFinder::Peak peak; juce::Point<float> position; };
+    static constexpr int maxPeakRings = 5;
+    static constexpr float peakHoldRadius = 30.0f;   // a press this close to a ring picks it
     void handleHover (juce::Point<float> position);
-    static constexpr float peakHoldRadius = 30.0f;   // the ring holds still, and can be pressed, this close
-    std::optional<PeakFinder::Peak> getPeakMarker() const { return peakMarker; }
-    juce::Point<float> getPeakMarkerPosition() const;
+    const std::vector<PeakRing>& getPeakRings() const noexcept { return peakRings; }
     int getHoveredBand() const noexcept { return hovered; }
 
     //==============================================================================
@@ -161,8 +163,7 @@ private:
     juce::Point<float> areaStart, areaEnd;
     std::vector<int> selectionBeforeArea;
     int hovered = 0;
-    std::optional<PeakFinder::Peak> peakMarker;
-    juce::Point<float> peakMarkerPosition;   // fixed while the ring is held
+    std::vector<PeakRing> peakRings;
     int pickBand = 0;   // band being created by a peak pick drag
     bool sketching = false;
     std::map<int, float> sketchPoints;   // x (pixel) -> y, one height per column
@@ -171,8 +172,9 @@ private:
 
     const SpectrumAnalyzer* peakSource() const;
     float analyzerYForDb (double displayDb) const;
-    bool startPeakPick (juce::Point<float> position);
-    void paintPeakMarker (juce::Graphics&, const FrequencyAxis&);
+    bool startPeakPick (const PeakRing& ring, juce::Point<float> position);
+    const PeakRing* ringAt (juce::Point<float> position) const;
+    void paintPeakRings (juce::Graphics&);
 
     juce::String message;
     juce::uint32 messageTime = 0;

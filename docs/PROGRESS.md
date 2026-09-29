@@ -72,6 +72,9 @@ Newest first. Move each item here from "Open decisions" in `CLAUDE.md` once it i
 | 2026-09-29 | EQ Sketch fitter may use bells, shelves and cuts | Bells only; bells + shelves; bells, shelves, cuts | Chosen by owner |
 | 2026-09-29 | EQ Sketch uses all available slots (free plus replaced) for the closest fit | Fewest for 1 dB; fewest for 0.5 dB; all available slots | Chosen by owner |
 | 2026-09-29 | Curve fitter bounds: single band within 0.01 dB (worst 4e-11), combinations of the fitter's own shapes within 0.1 dB above -40 dB (worst 0.038, bells + 24 dB/oct high cut), outside a partial range within 0.5 dB (worst 0.357); a drawn hump within 1 dB at its top | - | Proposed by Claude (new bounds) |
+| 2026-09-29 | EQ Sketch keeps using all available slots (revisited after a full-width sketch filled all 16 slots) | Keep all slots; fewest for 1 dB; fewest for 0.5 dB | Chosen by owner |
+| 2026-09-29 | Peak pick rings stay visible with all 16 bands in use; pressing one shows "All 16 bands in use" | Hidden; shown, press explains | Chosen by owner |
+| 2026-09-29 | Peak pick shows rings on the 5 most prominent peaks of the shown spectrum while the pointer is over the display; nodes do not hide them; a ring within half an octave of the pointer holds still (replaces the single ring near the pointer) | One near the pointer; top peaks while hovering; near pointer, also over nodes | Chosen by owner |
 | 2026-09-28 | Plugin name "Spectral Fault", brand (company) "Catastrophic Audio" | Name lists proposed by Claude | Chosen by owner |
 | 2026-09-28 | Rename details: bundle ID com.catastrophicaudio.spectralfault; CMake target SpectralFault (tests SpectralFaultTests); plugin codes, saved-state tag and preset tag unchanged; rename committed under M7 | Keep or change bundle ID; keep or rename target; M7 or separate prefix | Chosen by owner |
 | 2026-09-28 | User preset folder moves to ~/Library/Audio/Presets/Catastrophic Audio/Spectral Fault/; the old folder's presets are copied once (only if the new folder has none); old files stay | Keep old path; move without migration; move and migrate | Chosen by owner |
@@ -133,6 +136,20 @@ Newest first. Move each item here from "Open decisions" in `CLAUDE.md` once it i
 ## Session log
 
 Newest first. One entry per session, a few lines each.
+
+### 2026-09-29 — 9c/9d owner feedback (third round)
+
+- Owner, after restarting Logic: Option-drag works (a full-width sketch added nodes nicely); but afterwards no
+  rings appeared until bands were deleted, and then only when the pointer met a peak. Causes, both by design: the
+  sketch filled all 16 slots (rings were hidden with no free slot), and only one ring near the pointer, never over
+  nodes, was shown. Owner decisions (Decisions table): keep all slots; show rings with full slots and explain on
+  press; rings on the 5 most prominent peaks while hovering, nodes not hiding them, each held while the pointer
+  is within half an octave.
+- Tests rewritten for the rings (top 5 of the shown spectrum, kept over nodes, none with the analyzer off or the
+  pointer outside; drag creates the bell; full slots: message, no band, no undo step; held ring while approaching;
+  rings away from the pointer follow the spectrum). 278/278 tests, pluginval strictness 5 (VST3, AU), auval pass.
+- A clang crash (segmentation fault) on one build was not reproducible; the rebuild succeeded.
+- Next step: owner retests rings in Logic (quit and reopen Logic first).
 
 ### 2026-09-29 — 9c/9d owner feedback (second round)
 

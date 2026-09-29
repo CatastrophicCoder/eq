@@ -286,7 +286,7 @@ void ResponseDisplay::paint (juce::Graphics& g)
     }
 
     paintNodes (g, axis);
-    paintPeakMarker (g, axis);
+    paintPeakRings (g);
 
     if (sketching && sketchPoints.size() > 1)
     {
@@ -362,16 +362,18 @@ void ResponseDisplay::handlePress (juce::Point<float> position, juce::ModifierKe
         sketching = true;
         sketchPoints.clear();
         sketchPoints[juce::roundToInt (position.x)] = position.y;
-        peakMarker.reset();
+        peakRings.clear();
         return;
     }
 
     // Peak pick: a press on the marker creates a band at the peak.
-    if (numClicks == 1 && band == 0 && peakMarker.has_value() && position.getDistanceFrom (getPeakMarkerPosition()) <= peakHoldRadius)
-    {
-        startPeakPick (position);
-        return;
-    }
+    if (numClicks == 1 && band == 0)
+        if (const auto* ring = ringAt (position))
+        {
+            const auto picked = *ring;
+            startPeakPick (picked, position);
+            return;
+        }
 
     if (numClicks >= 2)
     {
@@ -776,9 +778,9 @@ void ResponseDisplay::mouseMove (const juce::MouseEvent& e)
 
 void ResponseDisplay::mouseExit (const juce::MouseEvent&)
 {
-    if (peakMarker.has_value())
+    if (! peakRings.empty())
     {
-        peakMarker.reset();
+        peakRings.clear();
         repaint();
     }
 
@@ -1048,45 +1050,64 @@ float ResponseDisplay::analyzerYForDb (double displayDb) const
 
 void ResponseDisplay::handleHover (juce::Point<float> position)
 {
-    // Hold (owner feedback 2026-09-29): while the pointer stays over empty space within the half-octave
-    // window the ring was chosen from, it keeps its peak and place, so it can be approached and caught.
-    if (peakMarker.has_value() && peakSource() != nullptr && getPlotArea().contains (position)
-        && NodeLayout::bandAt (getNodes(), position) == 0
-        && std::abs (std::log2 (getAxis().frequencyForX (position.x) / peakMarker->frequencyHz)) <= PeakFinder::nearOctaves)
-        return;
-
-    std::optional<PeakFinder::Peak> marker;
     const auto* source = peakSource();
-    const auto bands = currentBands();
-    const auto anyFree = std::any_of (bands.begin(), bands.end(), [] (const BandSettings& b) { return ! b.inUse; });
-
-    if (source != nullptr && anyFree && getPlotArea().contains (position) && NodeLayout::bandAt (getNodes(), position) == 0)
+    if (source == nullptr || ! getPlotArea().contains (position))
     {
-        std::array<double, SpectrumAnalyzer::numPoints> frequencies {}, levels {};
-        for (int k = 0; k < SpectrumAnalyzer::numPoints; ++k)
+        if (! peakRings.empty())
         {
-            frequencies[static_cast<size_t> (k)] = source->frequency (k);
-            levels[static_cast<size_t> (k)] = source->levelDb (k);
+            peakRings.clear();
+            repaint();
         }
-
-        marker = PeakFinder::nearest (PeakFinder::find (frequencies, levels), getAxis().frequencyForX (position.x));
+        return;
     }
 
-    const auto changed = marker.has_value() != peakMarker.has_value()
-                      || (marker.has_value() && marker->point != peakMarker->point);
-    peakMarker = marker;
-    if (marker.has_value())
-        peakMarkerPosition = { getAxis().xForFrequency (marker->frequencyHz), analyzerYForDb (source->displayDb (marker->point)) };
+    std::array<double, SpectrumAnalyzer::numPoints> frequencies {}, levels {};
+    for (int k = 0; k < SpectrumAnalyzer::numPoints; ++k)
+    {
+        frequencies[static_cast<size_t> (k)] = source->frequency (k);
+        levels[static_cast<size_t> (k)] = source->levelDb (k);
+    }
+
+    auto peaks = PeakFinder::find (frequencies, levels);
+    std::sort (peaks.begin(), peaks.end(), [] (const auto& a, const auto& b) { return a.prominenceDb > b.prominenceDb; });
+
+    // Rings within half an octave of the pointer hold their peak and place (owner feedback 2026-09-29),
+    // so they can be approached and caught; the rest go to the most prominent peaks now.
+    const auto pointerHz = getAxis().frequencyForX (position.x);
+    std::vector<PeakRing> rings;
+    for (const auto& r : peakRings)
+        if (std::abs (std::log2 (pointerHz / r.peak.frequencyHz)) <= PeakFinder::nearOctaves)
+            rings.push_back (r);
+
+    for (const auto& p : peaks)
+    {
+        if (static_cast<int> (rings.size()) >= maxPeakRings)
+            break;
+        const auto close = std::any_of (rings.begin(), rings.end(), [&p] (const PeakRing& r)
+                                        { return std::abs (std::log2 (p.frequencyHz / r.peak.frequencyHz)) < 1.0 / 6.0; });
+        if (! close)
+            rings.push_back ({ p, { getAxis().xForFrequency (p.frequencyHz), analyzerYForDb (source->displayDb (p.point)) } });
+    }
+
+    const auto changed = rings.size() != peakRings.size()
+                      || ! std::equal (rings.begin(), rings.end(), peakRings.begin(),
+                                       [] (const PeakRing& a, const PeakRing& b) { return a.peak.point == b.peak.point && a.position == b.position; });
+    peakRings = std::move (rings);
     if (changed)
         repaint();
 }
 
-juce::Point<float> ResponseDisplay::getPeakMarkerPosition() const
+const ResponseDisplay::PeakRing* ResponseDisplay::ringAt (juce::Point<float> position) const
 {
-    return peakMarker.has_value() ? peakMarkerPosition : juce::Point<float>();
+    const PeakRing* best = nullptr;
+    for (const auto& r : peakRings)
+        if (position.getDistanceFrom (r.position) <= peakHoldRadius
+            && (best == nullptr || position.getDistanceFrom (r.position) < position.getDistanceFrom (best->position)))
+            best = &r;
+    return best;
 }
 
-bool ResponseDisplay::startPeakPick (juce::Point<float> position)
+bool ResponseDisplay::startPeakPick (const PeakRing& ring, juce::Point<float> position)
 {
     const auto bands = currentBands();
     int free = 0;
@@ -1100,8 +1121,8 @@ bool ResponseDisplay::startPeakPick (juce::Point<float> position)
         return true;
     }
 
-    const auto f = std::clamp (peakMarker->frequencyHz, NodeDragController::minFrequency, NodeDragController::maxFrequency);
-    const auto q = std::clamp (peakMarker->q, 0.5, 18.0);
+    const auto f = std::clamp (ring.peak.frequencyHz, NodeDragController::minFrequency, NodeDragController::maxFrequency);
+    const auto q = std::clamp (ring.peak.q, 0.5, 18.0);
 
     // Creation and the gain drag form one undo step, closed on release.
     pickStep.emplace (processor.getUndoHistory());
@@ -1119,26 +1140,27 @@ bool ResponseDisplay::startPeakPick (juce::Point<float> position)
     pickBand = free;
     writer.beginGesture (free, "gain");
     drag.begin ({ { free, f, 0.0, true } }, position);
-    peakMarker.reset();
+    peakRings.clear();
     refresh();
     return true;
 }
 
-void ResponseDisplay::paintPeakMarker (juce::Graphics& g, const FrequencyAxis&)
+void ResponseDisplay::paintPeakRings (juce::Graphics& g)
 {
-    if (! peakMarker.has_value() || drag.isActive() || selectingArea)
+    if (peakRings.empty() || drag.isActive() || selectingArea || sketching)
         return;
 
-    const auto centre = getPeakMarkerPosition();
-    const auto colour = juce::Colours::white;
-    g.setColour (colour.withAlpha (0.9f));
-    g.drawEllipse (juce::Rectangle<float> (10.0f, 10.0f).withCentre (centre), 1.5f);
-    g.fillEllipse (juce::Rectangle<float> (3.0f, 3.0f).withCentre (centre));
-
-    const auto f = peakMarker->frequencyHz;
-    const auto text = f < 1000.0 ? juce::String (juce::roundToInt (f)) + " Hz" : juce::String (f / 1000.0, 2) + " kHz";
     g.setFont (juce::FontOptions (11.0f));
-    g.drawText (text, juce::Rectangle<float> (70.0f, 14.0f).withCentre (centre.translated (0.0f, -14.0f)), juce::Justification::centred);
+    for (const auto& r : peakRings)
+    {
+        g.setColour (juce::Colours::white.withAlpha (0.9f));
+        g.drawEllipse (juce::Rectangle<float> (10.0f, 10.0f).withCentre (r.position), 1.5f);
+        g.fillEllipse (juce::Rectangle<float> (3.0f, 3.0f).withCentre (r.position));
+
+        const auto f = r.peak.frequencyHz;
+        const auto text = f < 1000.0 ? juce::String (juce::roundToInt (f)) + " Hz" : juce::String (f / 1000.0, 2) + " kHz";
+        g.drawText (text, juce::Rectangle<float> (70.0f, 14.0f).withCentre (r.position.translated (0.0f, -14.0f)), juce::Justification::centred);
+    }
 }
 
 //==============================================================================
