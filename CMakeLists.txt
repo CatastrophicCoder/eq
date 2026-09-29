@@ -79,7 +79,8 @@ target_sources(SpectralFault
         src/dsp/LevelDetector.cpp
         src/dsp/DynamicGainLaw.cpp
         src/dsp/LinearPhaseDesigner.cpp
-        src/dsp/LinearPhaseEngine.cpp)
+        src/dsp/LinearPhaseEngine.cpp
+        src/dsp/CurveFitter.cpp)
 
 target_include_directories(SpectralFault
     PUBLIC

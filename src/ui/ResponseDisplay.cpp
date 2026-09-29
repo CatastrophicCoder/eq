@@ -1098,3 +1098,5 @@ void ResponseDisplay::paintPeakMarker (juce::Graphics& g, const FrequencyAxis&)
     g.setFont (juce::FontOptions (11.0f));
     g.drawText (text, juce::Rectangle<float> (70.0f, 14.0f).withCentre (centre.translated (0.0f, -14.0f)), juce::Justification::centred);
 }
+
+void ResponseDisplay::finishSketch() {}

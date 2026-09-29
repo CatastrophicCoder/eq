@@ -14,6 +14,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #include <functional>
+#include <map>
 
 class ParametricEQAudioProcessor;
 
@@ -96,6 +97,9 @@ public:
 
     bool isSelectingArea() const noexcept { return selectingArea; }
 
+    /** EQ Sketch (M9d): Option-drag on empty space draws a curve, fitted into bands on release. */
+    bool isSketching() const noexcept { return sketching; }
+
     /** Peak pick (M9c): the pointer over empty space shows a marker on the nearest spectrum
         peak; pressing on it creates a band there and the drag sets its gain. */
     void handleHover (juce::Point<float> position);
@@ -160,6 +164,9 @@ private:
     std::optional<PeakFinder::Peak> peakMarker;
     juce::Point<float> peakMarkerPosition;   // fixed while the ring is held
     int pickBand = 0;   // band being created by a peak pick drag
+    bool sketching = false;
+    std::map<int, float> sketchPoints;   // x (pixel) -> y, one height per column
+    void finishSketch();
     std::optional<UndoHistory::ScopedTransaction> pickStep;
 
     const SpectrumAnalyzer* peakSource() const;

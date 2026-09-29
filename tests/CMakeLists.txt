@@ -30,7 +30,8 @@ add_executable(SpectralFaultTests
     LinearPhaseProcessingTest.cpp
     AbComparisonTest.cpp
     UndoHistoryTest.cpp
-    PeakPickTest.cpp)
+    PeakPickTest.cpp
+    CurveFitterTest.cpp)
 
 # Link against the plugin's shared-code library. Its JUCE modules are linked
 # PRIVATE there, so take its include paths and defines explicitly instead of
