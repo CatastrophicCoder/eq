@@ -63,6 +63,9 @@ Newest first. Move each item here from "Open decisions" in `CLAUDE.md` once it i
 | 2026-09-29 | A preset load or A/B switch clears the undo history | Clear; one history per slot; keep one history | Chosen by owner |
 | 2026-09-29 | Undo history lives only while the plugin is open (not saved with the session) | Only while open; saved | Chosen by owner |
 | 2026-09-29 | Undo/redo through two buttons in the top bar only; no keyboard shortcuts (Cmd-Z stays with Logic) | Buttons and shortcuts; buttons only; shortcuts only | Chosen by owner |
+| 2026-09-29 | Peak pick (9c): a marker on the nearest spectrum peak appears while hovering empty display space; dragging it creates a band | Hover markers; modifier + drag; pick button | Chosen by owner |
+| 2026-09-29 | Peak pick band: Bell at the peak frequency, Q from the peak's -3 dB width (0.5-18), gain set by the drag from 0 dB | Q from width; fixed Q 6; fixed Q 1 | Chosen by owner |
+| 2026-09-29 | Peak pick follows the shown spectrum: pre when Pre or Pre+Post is shown, post when only Post; none with the analyzer off | Pre; post; whichever is shown | Chosen by owner |
 | 2026-09-28 | Plugin name "Spectral Fault", brand (company) "Catastrophic Audio" | Name lists proposed by Claude | Chosen by owner |
 | 2026-09-28 | Rename details: bundle ID com.catastrophicaudio.spectralfault; CMake target SpectralFault (tests SpectralFaultTests); plugin codes, saved-state tag and preset tag unchanged; rename committed under M7 | Keep or change bundle ID; keep or rename target; M7 or separate prefix | Chosen by owner |
 | 2026-09-28 | User preset folder moves to ~/Library/Audio/Presets/Catastrophic Audio/Spectral Fault/; the old folder's presets are copied once (only if the new folder has none); old files stay | Keep old path; move without migration; move and migrate | Chosen by owner |
