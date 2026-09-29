@@ -191,3 +191,5 @@ void TopBar::paint (juce::Graphics& g)
     g.setFont (juce::FontOptions (static_cast<float> (getHeight()) * 0.5f, juce::Font::bold));
     g.drawText (JucePlugin_Name, getLocalBounds().reduced (14, 0), juce::Justification::centredLeft);
 }
+
+void TopBar::showActiveSlot (bool) {}

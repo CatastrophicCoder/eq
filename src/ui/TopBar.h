@@ -4,6 +4,8 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
+#include <functional>
+
 class PresetManager;
 
 //==============================================================================
@@ -36,6 +38,14 @@ public:
     juce::TextButton& getNextButton() noexcept     { return nextButton; }
     PhaseModeControls& getPhaseModeControls() noexcept { return phaseModeControls; }
 
+    /** A/B (M9a): the editor connects them; showActive() updates the buttons without notifying. */
+    juce::TextButton& getAButton() noexcept    { return aButton; }
+    juce::TextButton& getBButton() noexcept    { return bButton; }
+    juce::TextButton& getCopyButton() noexcept { return copyButton; }
+    void showActiveSlot (bool bIsActive);
+    std::function<void (bool b)> onSlotChosen;
+    std::function<void()> onCopy;
+
     void paint (juce::Graphics&) override;
     void resized() override;
 
@@ -45,6 +55,7 @@ private:
     PresetManager& presets;
     juce::TextButton previousButton { "<" }, nextButton { ">" }, presetButton;
     PhaseModeControls phaseModeControls;
+    juce::TextButton aButton { "A" }, bButton { "B" }, copyButton;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (TopBar)
 };
