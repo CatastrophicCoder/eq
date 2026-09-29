@@ -1,6 +1,6 @@
 # Parametric EQ Plugin – Hobby Project Plan
 
-Exported from the Claude Doc on 27 Sep 2026. Track progress in [PROGRESS.md](PROGRESS.md).
+Written on 27 Sep 2026. Track progress in [PROGRESS.md](PROGRESS.md).
 
 ## The reference EQ
 
