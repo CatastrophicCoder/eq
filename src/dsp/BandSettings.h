@@ -37,6 +37,7 @@ struct BandSettings
         double releaseMs = 100.0;
         LevelDetector::Mode detector = LevelDetector::Mode::peak;
         bool sidechain = false;
+        bool spectral = false;   // 9g: act per frequency slice (SpectralDynamicsEngine) instead of on the whole band
     };
     Dynamics dynamics;
 
@@ -50,6 +51,9 @@ struct BandSettings
     /** Active, dynamics switched on, and a type that supports it. */
     bool isDynamic() const noexcept { return isActive() && dynamics.on && typeCanBeDynamic (type); }
 
+    /** Dynamic with Spectral on (9g): the moving part runs per frequency slice. */
+    bool isSpectral() const noexcept { return isDynamic() && dynamics.spectral; }
+
     /** Exact comparison, used to detect any parameter change. */
     bool isIdenticalTo (const BandSettings& other) const noexcept
     {
@@ -58,7 +62,7 @@ struct BandSettings
             && juce::exactlyEqual (gainDb, other.gainDb)
             && juce::exactlyEqual (q, other.q)
             && dynamics.mode == other.dynamics.mode && dynamics.detector == other.dynamics.detector
-            && dynamics.sidechain == other.dynamics.sidechain
+            && dynamics.sidechain == other.dynamics.sidechain && dynamics.spectral == other.dynamics.spectral
             && juce::exactlyEqual (dynamics.thresholdDb, other.dynamics.thresholdDb)
             && juce::exactlyEqual (dynamics.rangeDb, other.dynamics.rangeDb)
             && juce::exactlyEqual (dynamics.ratio, other.dynamics.ratio)

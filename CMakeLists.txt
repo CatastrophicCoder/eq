@@ -85,7 +85,8 @@ target_sources(SpectralFault
         src/dsp/LinearPhaseEngine.cpp
         src/dsp/CurveFitter.cpp
         src/dsp/SpectrumAverager.cpp
-        src/dsp/MatchCurve.cpp)
+        src/dsp/MatchCurve.cpp
+        src/dsp/SpectralDynamicsEngine.cpp)
 
 target_include_directories(SpectralFault
     PUBLIC

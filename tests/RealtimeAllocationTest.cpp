@@ -5,6 +5,7 @@
 #include "TestParameters.h"
 #include "dsp/EqBand.h"
 #include "dsp/CutSlope.h"
+#include "dsp/SpectralDynamicsEngine.h"
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -281,4 +282,41 @@ TEST_CASE ("Processor processBlock does not allocate in Linear phase mode, inclu
 
     CHECK (counter.count() == 0);
     CHECK (processor.getLinearPhaseSwapCount() > 1);   // filters really were swapped while counting
+}
+
+TEST_CASE ("SpectralDynamicsEngine::process does not allocate, with side-chain and changing bands", "[realtime][spectral]")
+{
+    SpectralDynamicsEngine engine;
+    engine.prepare (48000.0);
+
+    std::array<BandSettings, 16> bands;
+    for (int b = 0; b < 16; ++b)
+    {
+        auto& s = bands[static_cast<size_t> (b)];
+        s.type = b % 3 == 0 ? FilterType::lowShelf : b % 3 == 1 ? FilterType::bell : FilterType::highShelf;
+        s.frequencyHz = 60.0 * (b + 1);
+        s.channel = static_cast<ChannelMode> (b % ChannelModes::count);
+        s.dynamics.on = true;
+        s.dynamics.spectral = true;
+        s.dynamics.sidechain = b % 2 == 0;
+        s.dynamics.thresholdDb = -50.0;
+    }
+
+    juce::AudioBuffer<float> buffer (2, 512), side (2, 512);
+    juce::Random random (6);
+
+    ScopedAllocationCounter counter;
+    for (int block = 0; block < 60; ++block)
+    {
+        for (int ch = 0; ch < 2; ++ch)
+            for (int i = 0; i < 512; ++i)
+            {
+                buffer.setSample (ch, i, 0.3f * (random.nextFloat() - 0.5f));
+                side.setSample (ch, i, 0.3f * (random.nextFloat() - 0.5f));
+            }
+        bands[5].frequencyHz = 300.0 + block;
+        engine.setBands (bands);
+        engine.process (buffer, &side);
+    }
+    CHECK (counter.count() == 0);
 }
