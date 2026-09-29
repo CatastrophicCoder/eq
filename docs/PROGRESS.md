@@ -17,7 +17,7 @@ Milestone definitions and "done when" criteria are in [PLAN.md](PLAN.md#mileston
 | 6b | Presets | Done | Built and validated (186 tests, pluginval, auval); owner tested in Logic |
 | 7 | Dynamic EQ | Done | Built and validated (223 tests, pluginval, auval); owner tested in Logic except the side-chain (covered by unit tests only). Peak detector reading still an open decision |
 | 8 | Linear phase mode | Done | Built and validated (245 tests, pluginval, auval); owner tested in Logic |
-| 9 | Deferred features | In progress | Split into 9a-9g (small to large). 9a A/B done. 9b undo/redo done. 9c peak pick built; ring-hold fix awaiting owner's check. 9d EQ Sketch built and validated, awaiting owner's Logic test |
+| 9 | Deferred features | In progress | Split into 9a-9g (small to large). 9a A/B done. 9b undo/redo done. 9c peak pick and 9d EQ Sketch done (owner tested in Logic). Next: 9e EQ Match |
 
 Status values: Not started · In progress · Done · Skipped
 
@@ -149,7 +149,8 @@ Newest first. One entry per session, a few lines each.
   pointer outside; drag creates the bell; full slots: message, no band, no undo step; held ring while approaching;
   rings away from the pointer follow the spectrum). 278/278 tests, pluginval strictness 5 (VST3, AU), auval pass.
 - A clang crash (segmentation fault) on one build was not reproducible; the rebuild succeeded.
-- Next step: owner retests rings in Logic (quit and reopen Logic first).
+- Owner retested in Logic; 9c and 9d done.
+- Next step: 9e EQ Match.
 
 ### 2026-09-29 — 9c/9d owner feedback (second round)
 
