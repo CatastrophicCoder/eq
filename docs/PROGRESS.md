@@ -3,6 +3,15 @@
 Status of each milestone, decisions made, and a short log per working session.
 Milestone definitions and "done when" criteria are in [PLAN.md](PLAN.md#milestones).
 
+## Current state (paused 2026-09-30)
+
+- Milestones 0–9 done and tested in Logic; v0.1.0 released (GitHub Release with .pkg and .dmg, built by CI).
+- main is green in CI (build, 312 tests, auval, pluginval, packaging); no work in progress, no open decisions.
+- To resume: read CLAUDE.md, PLAN.md and this file. New work starts as milestone 10 with a plan and the owner's
+  decisions first. Releases: bump the version in CMakeLists.txt, commit, push a matching `v*` tag.
+- Housekeeping: pushes and tags go from IntelliJ (the terminal has no GitHub credentials); quit Logic before
+  testing a new build; `python3 tools/check_docs.py` after documentation changes.
+
 ## Milestones
 
 | # | Milestone | Status | Notes |
