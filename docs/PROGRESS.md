@@ -17,7 +17,7 @@ Milestone definitions and "done when" criteria are in [PLAN.md](PLAN.md#mileston
 | 6b | Presets | Done | Built and validated (186 tests, pluginval, auval); owner tested in Logic |
 | 7 | Dynamic EQ | Done | Built and validated (223 tests, pluginval, auval); owner tested in Logic except the side-chain (covered by unit tests only). Peak detector reading still an open decision |
 | 8 | Linear phase mode | Done | Built and validated (245 tests, pluginval, auval); owner tested in Logic |
-| 9 | Deferred features | In progress | Split into 9a-9g (small to large). 9a A/B done. 9b undo/redo done. 9c peak pick and 9d EQ Sketch done. 9e EQ Match done. 9f skipped (Zero latency already near analog phase). Next: 9g spectral dynamics |
+| 9 | Deferred features | In progress | Split into 9a-9g (small to large). 9a A/B done. 9b undo/redo done. 9c peak pick and 9d EQ Sketch done. 9e EQ Match done. 9f skipped. 9g spectral dynamics: stage 1 of 3 done (engine) |
 
 Status values: Not started · In progress · Done · Skipped
 
@@ -86,6 +86,10 @@ Newest first. Move each item here from "Open decisions" in `CLAUDE.md` once it i
 | 2026-09-29 | User guide as an interactive web page (docs/guide/index.html, served by GitHub Pages from /docs): annotated screenshot with hotspots, use-case walkthroughs in tabs, gestures and display reference | Interactive web page; Markdown guide; both; in-plugin help | Chosen by owner |
 | 2026-09-29 | The README's Claude Code section becomes a short "How it is built" note; details move to docs/DEVELOPMENT.md | Move to dev docs; keep in README; remove | Chosen by owner |
 | 2026-09-29 | 9f natural-phase-style mode skipped: measured, Zero latency bells are already within 1.6-9.2 deg of the analog prototype's phase for 1-10 kHz bands at 48 kHz (28 deg only for a 15 kHz band, near Nyquist; about half at 96 kHz) | Analog-phase mode; reduced-phase mode; skip | Chosen by owner |
+| 2026-09-29 | Spectral dynamics (9g) is a Spectral switch on dynamic bands: region, threshold, range, attack and release act per frequency slice | Option on dynamic bands; separate global processor | Chosen by owner |
+| 2026-09-29 | Spectral latency (2048 samples) is reported only while at least one band is spectral; switching on/off fades like a phase-mode change | Added while in use; Linear phase only; always reported | Chosen by owner |
+| 2026-09-29 | Each spectral slice compares its own level with the band's absolute threshold | Absolute; relative to neighbours | Chosen by owner |
+| 2026-09-29 | Spectral engine: 2048-point frames, hop 512, square-root periodic Hann analysis and synthesis (exact delay of 2048 samples with no gain change); per-slice linear attack/release follower; band region weighting = power response of the M7 detector filter (bell band pass, shelf Butterworth low/high pass); side-chain slices drive the same slices; Stereo per channel, M/S around the slice | - | Planned by Claude |
 | 2026-09-28 | Plugin name "Spectral Fault", brand (company) "Catastrophic Audio" | Name lists proposed by Claude | Chosen by owner |
 | 2026-09-28 | Rename details: bundle ID com.catastrophicaudio.spectralfault; CMake target SpectralFault (tests SpectralFaultTests); plugin codes, saved-state tag and preset tag unchanged; rename committed under M7 | Keep or change bundle ID; keep or rename target; M7 or separate prefix | Chosen by owner |
 | 2026-09-28 | User preset folder moves to ~/Library/Audio/Presets/Catastrophic Audio/Spectral Fault/; the old folder's presets are copied once (only if the new folder has none); old files stay | Keep old path; move without migration; move and migrate | Chosen by owner |
@@ -147,6 +151,18 @@ Newest first. Move each item here from "Open decisions" in `CLAUDE.md` once it i
 ## Session log
 
 Newest first. One entry per session, a few lines each.
+
+### 2026-09-29 — 9g stage 1 (spectral dynamics engine)
+
+- Done: `SpectralDynamicsEngine` (src/dsp) and `BandSettings::Dynamics::spectral` / `isSpectral()`; not yet wired
+  into the processor (stage 2).
+- Tests added / passing: 300/300. Exact 2048-sample delay without spectral bands and below threshold; a loud tone
+  cut by the range while a quiet tone in the same band is untouched; outside the region unchanged (< 0.05 dB);
+  attack/release timing; side-chain slices duck only their own frequencies; per channel and Side-only behaviour;
+  only active dynamic Bell/shelf bands with Spectral take part; no allocation (16 bands, side-chain, changing
+  settings); 16 spectral bands at 96 kHz: Debug 301 ms, Release 43 ms per second of audio. pluginval strictness 5
+  (VST3, AU) and auval pass (plugin unchanged in use).
+- Next step: stage 2, processor (parameter, latency and switching, presets format 3).
 
 ### 2026-09-29 — 9f assessed and skipped
 

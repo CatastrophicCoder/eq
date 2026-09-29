@@ -59,12 +59,18 @@ private:
     std::unique_ptr<juce::dsp::FFT> fft;
     std::vector<float> window;
 
+    void updateWeights (size_t band) noexcept;
+
     std::array<std::vector<float>, 2> input, sidechainInput, overlap, output;   // per channel
-    std::array<std::vector<float>, 2> spectrum, sidechainSpectrum;               // interleaved complex
+    std::array<std::vector<float>, 2> analysis, sidechainAnalysis, spectrum;    // interleaved complex
     std::vector<float> work;
     std::vector<double> envelope;       // [band][channel][bin] linear levels
-    std::vector<double> gainDb;         // [bin] scratch per channel
+    std::vector<double> weights;        // [band][bin] region weights
+    std::array<BandSettings, numBands> weightsFor {};
+    std::array<bool, numBands> weightsValid {};
     std::array<std::array<std::atomic<float>, bins>, numBands> published {};
+    std::array<bool, numBands> publishedNonZero {};
+    double calibration = 1.0;
     int position = 0;
     bool useSidechain = false;
 };
