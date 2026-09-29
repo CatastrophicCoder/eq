@@ -133,3 +133,6 @@ void MatchSession::apply (ApplyMode mode)
         processor.setBandInUse (slots[i], true);
     }
 }
+
+juce::ValueTree MatchSession::toState() const { return juce::ValueTree (stateTag); }
+void MatchSession::fromState (const juce::ValueTree&) {}

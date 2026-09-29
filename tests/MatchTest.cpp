@@ -271,11 +271,22 @@ namespace
                 processor.setPlayConfigDetails (2, 2, fs, 512);
             }
             processor.prepareToPlay (fs, 512);
+            openEditor();
+        }
+
+        void openEditor()
+        {
             base.reset (processor.createEditor());
             editor = dynamic_cast<ParametricEQAudioProcessorEditor*> (base.get());
         }
 
-        MatchSession& session() { return editor->getMatchSession(); }
+        void closeEditor()
+        {
+            base.reset();
+            editor = nullptr;
+        }
+
+        MatchSession& session() { return processor.getMatchSession(); }
 
         /** Plays main (and optionally side-chain) audio through the plugin, draining the taps as the editor would. */
         void play (const std::vector<float>& main, const std::vector<float>* side = nullptr)
@@ -439,4 +450,120 @@ TEST_CASE ("The match window opens from the bottom bar and the display previews 
     CHECK_FALSE (f.editor->isMatchWindowOpen());
     f.editor->refreshControls();
     CHECK_FALSE (f.editor->getDisplay().hasMatchPreview());
+}
+
+//==============================================================================
+namespace
+{
+    void learnBoth (MatchFixture& f, const Signals& s)
+    {
+        f.session().startLearning (MatchSession::Learning::reference);
+        f.play (s.reference);
+        f.session().startLearning (MatchSession::Learning::current);
+        f.play (s.current);
+        f.session().stopLearning();
+    }
+}
+
+TEST_CASE ("Learned spectra live in the plugin and survive closing its window", "[match][state]")
+{
+    MatchFixture f;
+    const Signals s (3.0);
+    learnBoth (f, s);
+    REQUIRE (f.session().canApply());
+    const auto seconds = f.session().getReferenceSeconds();
+    const auto curve = f.session().curveDb (grid());
+
+    f.closeEditor();
+    CHECK (f.session().canApply());
+    f.openEditor();
+    CHECK (f.editor->getMatchSession().canApply());
+    CHECK_THAT (f.session().getReferenceSeconds(), WithinAbs (seconds, 1e-9));
+    CHECK (f.session().curveDb (grid()) == curve);
+
+    f.editor->setMatchWindowOpen (true);
+    f.editor->refreshControls();
+    CHECK (f.editor->getDisplay().hasMatchPreview());
+    f.editor->setMatchWindowOpen (false);
+}
+
+TEST_CASE ("Closing the plugin window stops a running learn pass and keeps what it learned", "[match][state]")
+{
+    MatchFixture f;
+    const Signals s (2.0);
+    f.session().startLearning (MatchSession::Learning::reference);
+    f.play (s.reference);
+    f.closeEditor();
+    CHECK (f.session().getLearning() == MatchSession::Learning::none);
+    CHECK_THAT (f.session().getReferenceSeconds(), WithinAbs (2.0, 0.2));
+}
+
+TEST_CASE ("Learned spectra, Amount and Smoothing are saved with the project", "[match][state]")
+{
+    juce::MemoryBlock saved;
+    std::vector<double> curve;
+    double referenceSeconds = 0.0, currentSeconds = 0.0;
+    {
+        MatchFixture f;
+        const Signals s (4.0);
+        learnBoth (f, s);
+        f.session().setAmount (0.7);
+        f.session().setSmoothingOctaves (1.0 / 6.0);
+        curve = f.session().curveDb (grid());
+        referenceSeconds = f.session().getReferenceSeconds();
+        currentSeconds = f.session().getCurrentSeconds();
+        f.processor.getStateInformation (saved);
+    }
+
+    juce::ScopedJuceInitialiser_GUI juce;
+    ParametricEQAudioProcessor restored;
+    restored.setStateInformation (saved.getData(), static_cast<int> (saved.getSize()));
+    auto& session = restored.getMatchSession();
+    REQUIRE (session.canApply());
+    CHECK_THAT (session.getReferenceSeconds(), WithinAbs (referenceSeconds, 0.01));
+    CHECK_THAT (session.getCurrentSeconds(), WithinAbs (currentSeconds, 0.01));
+    CHECK_THAT (session.getAmount(), WithinAbs (0.7, 1e-9));
+    CHECK_THAT (session.getSmoothingOctaves(), WithinAbs (1.0 / 6.0, 1e-9));
+
+    const auto again = session.curveDb (grid());
+    double worst = 0.0;
+    for (size_t i = 0; i < curve.size(); ++i)
+        worst = std::max (worst, std::abs (again[i] - curve[i]));
+    INFO ("match curve after save and reload: worst difference " << worst << " dB");
+    CHECK (worst <= 0.01);
+
+    // State version 6; the EQ Match element stays small.
+    const auto xml = juce::AudioProcessor::getXmlFromBinary (saved.getData(), static_cast<int> (saved.getSize()));
+    REQUIRE (xml != nullptr);
+    CHECK (xml->getIntAttribute ("stateVersion") == 6);
+    const auto* match = xml->getChildByName (MatchSession::stateTag);
+    REQUIRE (match != nullptr);
+    CHECK (match->toString().length() < 16000);
+}
+
+TEST_CASE ("Older sessions open with nothing learned; A/B switches leave the learned spectra alone", "[match][state]")
+{
+    juce::MemoryBlock saved;
+    {
+        MatchFixture f;
+        const Signals s (2.0);
+        learnBoth (f, s);
+        REQUIRE (f.session().canApply());
+
+        f.processor.getAbComparison().switchTo (AbComparison::Slot::b);
+        CHECK (f.session().canApply());
+        f.processor.getStateInformation (saved);
+    }
+
+    auto xml = juce::AudioProcessor::getXmlFromBinary (saved.getData(), static_cast<int> (saved.getSize()));
+    REQUIRE (xml != nullptr);
+    xml->deleteAllChildElementsWithTagName (MatchSession::stateTag);
+    xml->setAttribute ("stateVersion", 5);
+    juce::MemoryBlock v5;
+    juce::AudioProcessor::copyXmlToBinary (*xml, v5);
+
+    juce::ScopedJuceInitialiser_GUI juce;
+    ParametricEQAudioProcessor restored;
+    restored.setStateInformation (v5.getData(), static_cast<int> (v5.getSize()));
+    CHECK_FALSE (restored.getMatchSession().canApply());
 }

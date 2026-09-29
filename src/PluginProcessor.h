@@ -6,6 +6,7 @@
 #include "presets/AbComparison.h"
 #include "presets/PresetManager.h"
 #include "presets/UndoHistory.h"
+#include "ui/MatchSession.h"
 #include "dsp/AnalyzerFifo.h"
 #include "dsp/EqBand.h"
 #include "dsp/LinearPhaseEngine.h"
@@ -124,6 +125,9 @@ public:
     /** Undo/redo of sound edits (M9b). Message thread only. */
     UndoHistory& getUndoHistory() noexcept { return undoHistory; }
 
+    /** EQ Match learned spectra and settings (M9e): kept with the plugin, saved with the project. Message thread only. */
+    MatchSession& getMatchSession() noexcept { return matchSession; }
+
     /** The current preset's name and whether it is a factory preset, stored in the session. */
     juce::String getStoredPresetName() const;
     bool isStoredPresetFactory() const;
@@ -198,6 +202,7 @@ private:
     std::unique_ptr<PresetManager> presetManager;
     AbComparison abComparison { *this };
     UndoHistory undoHistory { *this };
+    MatchSession matchSession { *this };
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ParametricEQAudioProcessor)
 };

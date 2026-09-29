@@ -31,7 +31,7 @@ ParametricEQAudioProcessorEditor::ParametricEQAudioProcessorEditor (ParametricEQ
     topBar.onCopy = [this] { eqProcessor.getAbComparison().copyActiveToOther(); };
 
     // EQ Match (M9e).
-    display.onInputSamples = [this] (const float* mono, int n) { matchSession.addInputSamples (mono, n); };
+    display.onInputSamples = [this] (const float* mono, int n) { eqProcessor.getMatchSession().addInputSamples (mono, n); };
     bottomBar.getMatchButton().onClick = [this] { setMatchWindowOpen (! isMatchWindowOpen()); };
     topBar.onUndo = [this] { eqProcessor.getUndoHistory().undo(); refreshControls(); };
     topBar.onRedo = [this] { eqProcessor.getUndoHistory().redo(); refreshControls(); };
@@ -61,6 +61,7 @@ ParametricEQAudioProcessorEditor::~ParametricEQAudioProcessorEditor()
 {
     stopTimer();
     setMatchWindowOpen (false);
+    eqProcessor.getMatchSession().stopLearning();   // the input tap stops with the window (decision 2026-09-29)
     eqProcessor.setAnalyzerActive (false);
     setLookAndFeel (nullptr);
 }
@@ -111,16 +112,16 @@ void ParametricEQAudioProcessorEditor::refreshControls()
     {
         for (int i = 0; i < n; ++i)
             sidechainMono[static_cast<size_t> (i)] = 0.5f * (sidechainScratch.getSample (0, i) + sidechainScratch.getSample (1, i));
-        matchSession.addSidechainSamples (sidechainMono.data(), n);
+        eqProcessor.getMatchSession().addSidechainSamples (sidechainMono.data(), n);
     }
 
     matchPanel.refresh();
-    if (isMatchWindowOpen() && matchSession.canApply())
+    if (isMatchWindowOpen() && eqProcessor.getMatchSession().canApply())
     {
         std::vector<double> frequencies;
         for (int i = 0; i < 256; ++i)
             frequencies.push_back (20.0 * std::pow (1000.0, i / 255.0));
-        auto db = matchSession.curveDb (frequencies);
+        auto db = eqProcessor.getMatchSession().curveDb (frequencies);
         display.setMatchPreview (std::move (frequencies), std::move (db));
     }
     else
@@ -150,7 +151,7 @@ void ParametricEQAudioProcessorEditor::setMatchWindowOpen (bool shouldBeOpen)
     }
     else
     {
-        matchSession.stopLearning();
+        eqProcessor.getMatchSession().stopLearning();
         matchWindow.reset();
         display.clearMatchPreview();
     }

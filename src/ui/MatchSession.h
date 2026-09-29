@@ -2,6 +2,8 @@
 
 #include "dsp/SpectrumAverager.h"
 
+#include <juce_data_structures/juce_data_structures.h>
+
 #include <vector>
 
 class ParametricEQAudioProcessor;
@@ -22,6 +24,7 @@ public:
     enum class Learning { none, reference, current, both };
     enum class ApplyMode { replaceAll, keepExisting };
     static constexpr double minimumSeconds = 1.0;
+    static constexpr const char* stateTag = "EQMatch";
 
     explicit MatchSession (ParametricEQAudioProcessor& processor);
 
@@ -50,6 +53,11 @@ public:
 
     int freeSlots() const;
     void apply (ApplyMode mode);
+
+    /** Saved with the project (state version 6): both spectra, Amount and Smoothing. An invalid
+        tree (older sessions) clears everything. */
+    juce::ValueTree toState() const;
+    void fromState (const juce::ValueTree& state);
 
 private:
     ParametricEQAudioProcessor& processor;

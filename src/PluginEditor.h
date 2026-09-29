@@ -39,8 +39,8 @@ public:
     BandPanel& getBandPanel() noexcept        { return bandPanel; }
     BottomBar& getBottomBar() noexcept        { return bottomBar; }
 
-    /** EQ Match (M9e): the session and panel live with the editor; the window shows the panel. */
-    MatchSession& getMatchSession() noexcept  { return matchSession; }
+    /** EQ Match (M9e): the session lives in the processor; the panel with the editor, shown in the window. */
+    MatchSession& getMatchSession() noexcept  { return eqProcessor.getMatchSession(); }
     MatchPanel& getMatchPanel() noexcept      { return matchPanel; }
     bool isMatchWindowOpen() const noexcept   { return matchWindow != nullptr; }
     void setMatchWindowOpen (bool shouldBeOpen);
@@ -56,8 +56,7 @@ private:
     BandPanel bandPanel;
     BottomBar bottomBar;
     juce::TooltipWindow tooltips { this, 600 };
-    MatchSession matchSession { eqProcessor };
-    MatchPanel matchPanel { matchSession };
+    MatchPanel matchPanel { eqProcessor.getMatchSession() };
     std::unique_ptr<MatchWindow> matchWindow;
     juce::AudioBuffer<float> sidechainScratch { 2, 4096 };
     std::vector<float> sidechainMono = std::vector<float> (4096);

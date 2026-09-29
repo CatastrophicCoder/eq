@@ -176,7 +176,7 @@ TEST_CASE ("Both slots and the active one are saved with the session", "[ab][sta
     target.getStateInformation (again);
     const auto xml = juce::AudioProcessor::getXmlFromBinary (again.getData(), static_cast<int> (again.getSize()));
     REQUIRE (xml != nullptr);
-    CHECK (xml->getIntAttribute ("stateVersion") == 5);
+    CHECK (xml->getIntAttribute ("stateVersion") == ParametricEQAudioProcessor::stateVersion);
     int abElements = 0;
     for (auto* child : xml->getChildIterator())
         if (child->hasTagName (AbComparison::stateTag))
