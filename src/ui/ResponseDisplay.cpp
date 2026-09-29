@@ -4,6 +4,8 @@
 #include "PluginProcessor.h"
 #include "SpectrumColour.h"
 #include "AnalyzerSettings.h"
+#include "dsp/BandDesign.h"
+#include "dsp/CurveFitter.h"
 #include "dsp/CutSlope.h"
 
 #include <algorithm>
@@ -285,6 +287,16 @@ void ResponseDisplay::paint (juce::Graphics& g)
 
     paintNodes (g, axis);
     paintPeakMarker (g, axis);
+
+    if (sketching && sketchPoints.size() > 1)
+    {
+        juce::Path stroke;
+        stroke.startNewSubPath (static_cast<float> (sketchPoints.begin()->first), sketchPoints.begin()->second);
+        for (const auto& [x, y] : sketchPoints)
+            stroke.lineTo (static_cast<float> (x), y);
+        g.setColour (juce::Colours::white.withAlpha (0.85f));
+        g.strokePath (stroke, juce::PathStrokeType (2.0f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+    }
     paintMeter (g);
 }
 
@@ -343,6 +355,16 @@ void ResponseDisplay::handlePress (juce::Point<float> position, juce::ModifierKe
 {
     const auto nodes = getNodes();
     const auto band = NodeLayout::bandAt (nodes, position);
+
+    // EQ Sketch: Option-drag on empty space draws a curve.
+    if (numClicks == 1 && band == 0 && mods.isAltDown())
+    {
+        sketching = true;
+        sketchPoints.clear();
+        sketchPoints[juce::roundToInt (position.x)] = position.y;
+        peakMarker.reset();
+        return;
+    }
 
     // Peak pick: a press on the marker creates a band at the peak.
     if (numClicks == 1 && band == 0 && peakMarker.has_value() && position.getDistanceFrom (getPeakMarkerPosition()) <= peakHoldRadius)
@@ -417,6 +439,17 @@ void ResponseDisplay::handlePress (juce::Point<float> position, juce::ModifierKe
 
 void ResponseDisplay::handleDrag (juce::Point<float> position, juce::ModifierKeys mods)
 {
+    if (sketching)
+    {
+        // One height per pixel column (redrawing a column replaces it); columns a fast drag skips
+        // are interpolated when the sketch is fitted.
+        const auto plot = getPlotArea();
+        const auto x = juce::roundToInt (juce::jlimit (plot.getX(), plot.getRight(), position.x));
+        sketchPoints[x] = juce::jlimit (plot.getY(), plot.getBottom(), position.y);
+        repaint();
+        return;
+    }
+
     if (drag.isActive())
     {
         for (const auto& v : drag.dragTo (position, mods.isShiftDown(), getAxis()))
@@ -453,6 +486,12 @@ void ResponseDisplay::handleDrag (juce::Point<float> position, juce::ModifierKey
 
 void ResponseDisplay::handleRelease()
 {
+    if (sketching)
+    {
+        finishSketch();
+        return;
+    }
+
     if (drag.isActive())
     {
         for (const auto& s : drag.getBands())
@@ -1099,4 +1138,96 @@ void ResponseDisplay::paintPeakMarker (juce::Graphics& g, const FrequencyAxis&)
     g.drawText (text, juce::Rectangle<float> (70.0f, 14.0f).withCentre (centre.translated (0.0f, -14.0f)), juce::Justification::centred);
 }
 
-void ResponseDisplay::finishSketch() {}
+//==============================================================================
+// EQ Sketch (M9d, decisions 2026-09-29).
+
+void ResponseDisplay::finishSketch()
+{
+    sketching = false;
+    const auto points = std::exchange (sketchPoints, {});
+    repaint();
+
+    if (points.size() < 2)
+        return;
+
+    const auto axis = getAxis();
+    const auto lo = axis.frequencyForX (static_cast<float> (points.begin()->first));
+    const auto hi = axis.frequencyForX (static_cast<float> (points.rbegin()->first));
+    if (std::log2 (hi / lo) < 1.0 / 3.0)
+        return;   // too narrow to mean a curve
+
+    // The drawn curve, linearly interpolated between columns, in dB.
+    auto drawnDb = [&] (double f)
+    {
+        const auto x = axis.xForFrequency (f);
+        auto after = points.lower_bound (static_cast<int> (std::ceil (x)));
+        if (after == points.end())
+            return axis.dbForY (points.rbegin()->second);
+        if (after == points.begin())
+            return axis.dbForY (after->second);
+        const auto before = std::prev (after);
+        const auto t = (x - static_cast<float> (before->first)) / static_cast<float> (after->first - before->first);
+        return axis.dbForY (before->second + t * (after->second - before->second));
+    };
+
+    // Bands inside the range are replaced; their slots and the free ones are the fitter's budget.
+    const auto bands = currentBands();
+    std::vector<int> slots;
+    std::vector<BandSettings> kept;
+    for (int b = 1; b <= ResponseCurves::numBands; ++b)
+    {
+        const auto& s = bands[static_cast<size_t> (b - 1)];
+        const auto insideRange = s.inUse && s.frequencyHz >= lo && s.frequencyHz <= hi;
+        if (! s.inUse || insideRange)
+            slots.push_back (b);
+        else
+            kept.push_back (s);
+    }
+
+    const auto rate = processor.getSampleRate() > 0.0 ? processor.getSampleRate() : 48000.0;
+    CurveFitter::Problem problem;
+    problem.sampleRate = rate;
+    problem.rangeLowHz = lo;
+    problem.rangeHighHz = hi;
+    for (int i = 0; i < 256; ++i)
+    {
+        const auto f = 20.0 * std::pow (1000.0, i / 255.0);
+        double keptDb = 0.0;
+        for (const auto& k : kept)
+            if (k.isActive())
+                keptDb += BandDesign::design (k, rate).magnitudeDb (std::min (f, 0.49 * rate), rate);
+
+        const auto insideRange = f >= lo && f <= hi;
+        problem.frequenciesHz.push_back (f);
+        problem.targetDb.push_back (insideRange ? drawnDb (f) - keptDb : 0.0);   // outside: add nothing
+        problem.weights.push_back (insideRange ? 1.0 : CurveFitter::outsideWeight);
+    }
+
+    const auto fitted = CurveFitter::fit (problem, static_cast<int> (slots.size()));
+
+    UndoHistory::ScopedTransaction step (processor.getUndoHistory());   // the whole sketch is one undo step
+    for (auto b : slots)
+        if (bands[static_cast<size_t> (b - 1)].inUse)
+        {
+            processor.setBandInUse (b, false);
+            selection.remove (b);
+        }
+
+    for (size_t i = 0; i < fitted.size() && i < slots.size(); ++i)
+    {
+        const auto b = slots[i];
+        const auto& s = fitted[i];
+        writer.setOnce (b, "type", static_cast<float> (s.type));
+        writer.setOnce (b, "freq", static_cast<float> (s.frequencyHz));
+        writer.setOnce (b, "gain", static_cast<float> (s.gainDb));
+        writer.setOnce (b, "q", static_cast<float> (s.q));
+        writer.setOnce (b, "slope", static_cast<float> (s.slopeIndex));
+        writer.setOnce (b, "channel", static_cast<float> (ChannelMode::stereo));
+        writer.setOnce (b, "dyn", 0.0f);
+        writer.setOnce (b, "enabled", 1.0f);
+        processor.setBandInUse (b, true);
+    }
+
+    selectionChanged();
+    refresh();
+}

@@ -76,10 +76,11 @@ namespace
         return std::any_of (bands.begin(), bands.end(), [t] (const BandSettings& b) { return b.type == t; });
     }
 
-    /** Stated bounds (dB), see docs/PROGRESS.md. */
-    constexpr double singleBandBoundDb = 0.1;
-    constexpr double combinationBoundDb = 1.0;
-    constexpr double outsideBoundDb = 1.0;
+    /** Stated bounds (dB), see docs/PROGRESS.md; worst measured values next to each. */
+    constexpr double singleBandBoundDb = 0.01;     // worst measured 4e-11 dB
+    constexpr double combinationBoundDb = 0.1;     // worst measured 0.038 dB (bells + 24 dB/oct high cut)
+    constexpr double outsideBoundDb = 0.5;         // worst measured 0.357 dB (partial range 300 Hz - 3 kHz)
+    constexpr double sketchBoundDb = 1.0;          // a drawn hump is not made of band shapes
 }
 
 //==============================================================================
@@ -107,7 +108,7 @@ TEST_CASE ("A single bell is fitted almost exactly", "[fitter]")
         const auto p = problemFrom ({ truth });
         const auto fitted = CurveFitter::fit (p, 1);
         const auto worst = worstError (p, fitted, true);
-        INFO ("bell " << truth.frequencyHz << " Hz: worst " << worst << " dB");
+        WARN ("single bell " << truth.frequencyHz << " Hz: worst " << worst << " dB");
         CHECK (worst <= singleBandBoundDb);
     }
 }
@@ -136,7 +137,12 @@ TEST_CASE ("Combinations are fitted within the stated bound, with shelves and cu
             if (p.targetDb[i] > -40.0)
                 worstAbove = std::max (worstAbove, std::abs (sumDb (fitted, p.frequenciesHz[i]) - p.targetDb[i]));
 
-        INFO (c.name << ": worst " << worst << " dB (above -40 dB: " << worstAbove << " dB)");
+        WARN (c.name << ": worst " << worst << " dB (above -40 dB: " << worstAbove << " dB); types:" << [&]
+        {
+            juce::String t;
+            for (const auto& b : fitted) t << " " << FilterTypes::names[static_cast<int> (b.type)];
+            return t;
+        }());
         CHECK (worstAbove <= combinationBoundDb);
         CHECK (hasType (fitted, c.endType));
     }
@@ -149,7 +155,7 @@ TEST_CASE ("A partial range leaves the curve outside it nearly unchanged", "[fit
     const auto fitted = CurveFitter::fit (p, 4);
     const auto inside = worstError (p, fitted, true);
     const auto outside = worstError (p, fitted, false);
-    INFO ("inside " << inside << " dB, outside " << outside << " dB");
+    WARN ("partial range: inside " << inside << " dB, outside " << outside << " dB");
     CHECK (inside <= combinationBoundDb);
     CHECK (outside <= outsideBoundDb);
 }
@@ -266,8 +272,14 @@ TEST_CASE ("Option-drag sketches a curve: bands in its range are replaced, other
         inUse += f.processor.isBandInUse (b) ? 1 : 0;
     CHECK (inUse == 16);   // all available slots: 14 free + 1 replaced, plus the kept band
 
+    int nearZero = 0;
+    for (const auto& b : f.processor.getBandSettings())
+        if (b.inUse && FilterTypes::usesGain (b.type) && std::abs (b.gainDb) < 0.5)
+            ++nearZero;
+    WARN ("sketch: " << nearZero << " of 15 fitted bands within 0.5 dB of 0 dB");
+
     const auto middle = 400.0 * std::sqrt (10.0);   // the hump's top
-    CHECK_THAT (f.curveDb (middle), WithinAbs (6.0, combinationBoundDb));
+    CHECK_THAT (f.curveDb (middle), WithinAbs (6.0, sketchBoundDb));
     CHECK_THAT (f.curveDb (60.0), WithinAbs (before100, outsideBoundDb));   // outside the sketch
     CHECK (gestures.allMatched());
 

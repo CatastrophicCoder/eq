@@ -17,7 +17,7 @@ Milestone definitions and "done when" criteria are in [PLAN.md](PLAN.md#mileston
 | 6b | Presets | Done | Built and validated (186 tests, pluginval, auval); owner tested in Logic |
 | 7 | Dynamic EQ | Done | Built and validated (223 tests, pluginval, auval); owner tested in Logic except the side-chain (covered by unit tests only). Peak detector reading still an open decision |
 | 8 | Linear phase mode | Done | Built and validated (245 tests, pluginval, auval); owner tested in Logic |
-| 9 | Deferred features | In progress | Split into 9a-9g (small to large). 9a A/B done. 9b undo/redo done. 9c peak pick built; ring-hold fix awaiting owner's check. 9d EQ Sketch in planning |
+| 9 | Deferred features | In progress | Split into 9a-9g (small to large). 9a A/B done. 9b undo/redo done. 9c peak pick built; ring-hold fix awaiting owner's check. 9d EQ Sketch built and validated, awaiting owner's Logic test |
 
 Status values: Not started · In progress · Done · Skipped
 
@@ -71,6 +71,7 @@ Newest first. Move each item here from "Open decisions" in `CLAUDE.md` once it i
 | 2026-09-29 | EQ Sketch replaces the bands whose frequency lies inside the drawn range; bands outside stay | Keep, use free slots; replace all; replace in drawn range | Chosen by owner |
 | 2026-09-29 | EQ Sketch fitter may use bells, shelves and cuts | Bells only; bells + shelves; bells, shelves, cuts | Chosen by owner |
 | 2026-09-29 | EQ Sketch uses all available slots (free plus replaced) for the closest fit | Fewest for 1 dB; fewest for 0.5 dB; all available slots | Chosen by owner |
+| 2026-09-29 | Curve fitter bounds: single band within 0.01 dB (worst 4e-11), combinations of the fitter's own shapes within 0.1 dB above -40 dB (worst 0.038, bells + 24 dB/oct high cut), outside a partial range within 0.5 dB (worst 0.357); a drawn hump within 1 dB at its top | - | Proposed by Claude (new bounds) |
 | 2026-09-28 | Plugin name "Spectral Fault", brand (company) "Catastrophic Audio" | Name lists proposed by Claude | Chosen by owner |
 | 2026-09-28 | Rename details: bundle ID com.catastrophicaudio.spectralfault; CMake target SpectralFault (tests SpectralFaultTests); plugin codes, saved-state tag and preset tag unchanged; rename committed under M7 | Keep or change bundle ID; keep or rename target; M7 or separate prefix | Chosen by owner |
 | 2026-09-28 | User preset folder moves to ~/Library/Audio/Presets/Catastrophic Audio/Spectral Fault/; the old folder's presets are copied once (only if the new folder has none); old files stay | Keep old path; move without migration; move and migrate | Chosen by owner |
@@ -132,6 +133,21 @@ Newest first. Move each item here from "Open decisions" in `CLAUDE.md` once it i
 ## Session log
 
 Newest first. One entry per session, a few lines each.
+
+### 2026-09-29 — 9d (EQ Sketch)
+
+- Done: `CurveFitter` (src/dsp): end analysis (level end -> shelf, steep drop -> cut with slope from the drop),
+  bells added at the largest remaining error until every slot is used, Levenberg-Marquardt refinement on the
+  plugin's own designs; fitted with and without the end bands, closer fit kept (a broad bell's tail had been taken
+  for a shelf plateau). `ResponseDisplay`: Option-drag on empty space draws (one height per pixel column, line
+  shown while drawing); release replaces bands inside the drawn range, keeps the rest, fits the sketch minus the
+  kept bands with outside points weighted 0.5 towards "add nothing"; one undo step. Sketches under 1/3 octave ignored.
+- Tests added / passing: 277/277. Slot count, stereo/enabled/no dynamics; single bells exact; three combinations
+  with shelf/cut at the ends; partial range spill; 16-band fit Debug 324 ms, Release 42 ms; sketch replaces in range,
+  keeps outside, curve within 1 dB of the hump, complete host edits, one undo step; plain drag selects; narrow
+  sketch ignored. pluginval strictness 5 (VST3, AU) and auval pass. Snapshot of a sketch in progress (m9d_sketch.png).
+- Observed: with "all available slots", a simple hump sketched with 15 slots gave 11 bands within 0.5 dB of 0 dB.
+- Next step: owner's check in Logic, then 9e EQ Match.
 
 ### 2026-09-29 — 9c (peak pick, the plan's "Spectrum Grab")
 

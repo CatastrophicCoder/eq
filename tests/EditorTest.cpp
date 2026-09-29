@@ -645,4 +645,21 @@ TEST_CASE ("Editor snapshot (renders PNGs to $EQ_SNAPSHOT_DIR)", "[.snapshot]")
         juce::FileOutputStream stream (file);
         REQUIRE (juce::PNGImageFormat().writeImageToStream (image, stream));
     }
+
+    // An EQ Sketch in progress (Option-drag, not released), at the default size.
+    f.editor.setSize (E::defaultWidth, E::defaultHeight);
+    auto& display = f.editor.getDisplay();
+    const auto axis = display.getAxis();
+    const juce::ModifierKeys option { juce::ModifierKeys::altModifier };
+    display.handlePress ({ axis.xForFrequency (300.0), axis.yForDb (0.0) }, option, 1);
+    for (int i = 1; i <= 80; ++i)
+    {
+        const auto t = i / 80.0;
+        display.handleDrag ({ axis.xForFrequency (300.0 * std::pow (20.0, t)), axis.yForDb (5.0 * std::sin (6.28318 * t)) }, option);
+    }
+    const auto sketchImage = f.editor.createComponentSnapshot (f.editor.getLocalBounds());
+    juce::File sketchFile (dir + "/m9d_sketch.png");
+    sketchFile.deleteFile();
+    juce::FileOutputStream sketchStream (sketchFile);
+    REQUIRE (juce::PNGImageFormat().writeImageToStream (sketchImage, sketchStream));
 }
