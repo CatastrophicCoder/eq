@@ -18,11 +18,12 @@
     <Band index=".." .../> per band in use (types and channel modes by name),
     output settings as attributes. Bands without an element are free. Format 2
     (M7) adds a <Dynamics .../> child to each band; format 1 files load with
-    dynamics off.
+    dynamics off. Format 3 (M9g) adds the Dynamics element's "spectral" flag; format 2
+    files load with it off.
 */
 struct Preset
 {
-    static constexpr int formatVersion = 2;
+    static constexpr int formatVersion = 3;
     static constexpr const char* xmlTag = "ParametricEQPreset";
 
     struct Band

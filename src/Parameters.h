@@ -29,10 +29,12 @@ namespace Parameters
     inline constexpr int m2VersionHint = 2;
     inline constexpr int m6VersionHint = 3;   // band<n>_channel
     inline constexpr int m7VersionHint = 4;   // dynamic parameters
+    inline constexpr int m9gVersionHint = 5;  // band<n>_spectral
 
-    /** Dynamic fields (M7): dyn, dynmode, thresh, range, ratio, attack, release, detector, sidechain. */
+    /** Dynamic fields (M7): dyn, dynmode, thresh, range, ratio, attack, release, detector, sidechain;
+        spectral (M9g). */
     inline constexpr const char* dynamicFields[] { "dyn", "dynmode", "thresh", "range", "ratio",
-                                                   "attack", "release", "detector", "sidechain" };
+                                                   "attack", "release", "detector", "sidechain", "spectral" };
 
     struct BandDefaults
     {

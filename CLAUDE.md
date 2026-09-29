@@ -128,6 +128,9 @@ Decided; details and dates in `docs/PROGRESS.md`.
   passes of the input), `MatchCurve` gives the smoothed, level-free difference, `CurveFitter` turns it into bands
   (replace all or keep existing, asked on Apply). Floating `MatchWindow` from the bottom bar's Match button.
   The session lives in the processor; learned spectra are saved as an "EQMatch" element (state version 6).
+- Spectral dynamics (M9g): band<n>_spectral on a dynamic band moves its dynamic part into `SpectralDynamicsEngine`
+  (short-time FFT, 2048/512, per-slice follower and gain law, region-weighted), run after the bands; latency
+  +2048 while any band is spectral, reported by a 10 Hz timer (`refreshLatency()`); preset format 3.
 - MIDI Learn is not planned: MIDI input would change the AU type (aufx -> aumf) and break saved sessions.
 - Milestone order after 5: per-band stereo (6), dynamic EQ (7), linear phase (8).
 

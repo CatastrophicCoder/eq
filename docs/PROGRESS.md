@@ -17,7 +17,7 @@ Milestone definitions and "done when" criteria are in [PLAN.md](PLAN.md#mileston
 | 6b | Presets | Done | Built and validated (186 tests, pluginval, auval); owner tested in Logic |
 | 7 | Dynamic EQ | Done | Built and validated (223 tests, pluginval, auval); owner tested in Logic except the side-chain (covered by unit tests only). Peak detector reading still an open decision |
 | 8 | Linear phase mode | Done | Built and validated (245 tests, pluginval, auval); owner tested in Logic |
-| 9 | Deferred features | In progress | Split into 9a-9g (small to large). 9a A/B done. 9b undo/redo done. 9c peak pick and 9d EQ Sketch done. 9e EQ Match done. 9f skipped. 9g spectral dynamics: stage 1 of 3 done (engine) |
+| 9 | Deferred features | In progress | Split into 9a-9g (small to large). 9a A/B done. 9b undo/redo done. 9c peak pick and 9d EQ Sketch done. 9e EQ Match done. 9f skipped. 9g spectral dynamics: stages 1-2 of 3 done (engine, processor) |
 
 Status values: Not started · In progress · Done · Skipped
 
@@ -90,6 +90,7 @@ Newest first. Move each item here from "Open decisions" in `CLAUDE.md` once it i
 | 2026-09-29 | Spectral latency (2048 samples) is reported only while at least one band is spectral; switching on/off fades like a phase-mode change | Added while in use; Linear phase only; always reported | Chosen by owner |
 | 2026-09-29 | Each spectral slice compares its own level with the band's absolute threshold | Absolute; relative to neighbours | Chosen by owner |
 | 2026-09-29 | Spectral engine: 2048-point frames, hop 512, square-root periodic Hann analysis and synthesis (exact delay of 2048 samples with no gain change); per-slice linear attack/release follower; band region weighting = power response of the M7 detector filter (bell band pass, shelf Butterworth low/high pass); side-chain slices drive the same slices; Stereo per channel, M/S around the slice | - | Planned by Claude |
+| 2026-09-29 | Spectral switch as its own parameter band<n>_spectral (bool, hint 5; 275 parameters), not a third Peak/RMS choice (which would shift stored automation of that menu); preset format 3 stores it, format 2 loads it off | - | Planned by Claude |
 | 2026-09-28 | Plugin name "Spectral Fault", brand (company) "Catastrophic Audio" | Name lists proposed by Claude | Chosen by owner |
 | 2026-09-28 | Rename details: bundle ID com.catastrophicaudio.spectralfault; CMake target SpectralFault (tests SpectralFaultTests); plugin codes, saved-state tag and preset tag unchanged; rename committed under M7 | Keep or change bundle ID; keep or rename target; M7 or separate prefix | Chosen by owner |
 | 2026-09-28 | User preset folder moves to ~/Library/Audio/Presets/Catastrophic Audio/Spectral Fault/; the old folder's presets are copied once (only if the new folder has none); old files stay | Keep old path; move without migration; move and migrate | Chosen by owner |
@@ -151,6 +152,22 @@ Newest first. Move each item here from "Open decisions" in `CLAUDE.md` once it i
 ## Session log
 
 Newest first. One entry per session, a few lines each.
+
+### 2026-09-29 — 9g stage 2 (processor)
+
+- Done: parameter band<n>_spectral (hint 5); preset format 3; processor runs the spectral engine after the bands
+  (and after the linear-phase FIR) while any band is spectral, the band's own filter keeps its static gain; the
+  mode switcher now also fades for spectral on/off and waits for one full frame; latency = linear-phase latency +
+  2048 while spectral, reported from a 10 Hz message-thread timer (`refreshLatency()`), since the switch is an
+  automatable parameter.
+- Found while testing: a test passed a 2-channel buffer with the side-chain bus enabled and the processor read
+  side-chain channels that did not exist (crash). Hosts always pass all channels; the processor now uses the
+  side-chain only when the buffer carries its channels.
+- Tests added / passing: 308/308. Parameter and count; latency only while spectral, added to linear phase;
+  measured delay = reported (zero latency and linear phase); per-slice action and static gain through the
+  processor; side-chain ducking through the bus; clean on/off switching; presets format 3 and format 2
+  compatibility; no allocation with spectral bands switching. pluginval strictness 5 (VST3, AU) and auval pass.
+- Next step: stage 3, panel switch, per-slice display, docs.
 
 ### 2026-09-29 — 9g stage 1 (spectral dynamics engine)
 

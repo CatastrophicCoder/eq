@@ -21,7 +21,7 @@ namespace
     const char* const detectorNames[] { "Peak", "RMS" };
 
     /** Format 2 dynamics, clamped to the parameter ranges; defaults for anything missing or unknown. */
-    BandSettings::Dynamics readDynamics (const juce::XmlElement* e)
+    BandSettings::Dynamics readDynamics (const juce::XmlElement* e, int version)
     {
         BandSettings::Dynamics d;
         if (e == nullptr)
@@ -36,6 +36,7 @@ namespace
         d.releaseMs = std::clamp (e->getDoubleAttribute ("release", d.releaseMs), 5.0, 2000.0);
         d.detector = indexOf (detectorNames, e->getStringAttribute ("detector")) == 1 ? LevelDetector::Mode::rms : LevelDetector::Mode::peak;
         d.sidechain = e->getBoolAttribute ("sidechain", d.sidechain);
+        d.spectral = version >= 3 && e->getBoolAttribute ("spectral", false);
         return d;
     }
 }
@@ -77,6 +78,7 @@ std::unique_ptr<juce::XmlElement> Preset::toXml() const
         dyn->setAttribute ("release", d.releaseMs);
         dyn->setAttribute ("detector", detectorNames[d.detector == LevelDetector::Mode::rms ? 1 : 0]);
         dyn->setAttribute ("sidechain", d.sidechain);
+        dyn->setAttribute ("spectral", d.spectral);
     }
 
     return xml;
@@ -117,7 +119,7 @@ std::optional<Preset> Preset::fromXml (const juce::XmlElement& xml)
         b.q = std::clamp (static_cast<float> (e->getDoubleAttribute ("q", 0.71)), 0.1f, 18.0f);
         b.slopeIndex = std::clamp (e->getIntAttribute ("slope", 3), 0, CutSlope::count - 1);
         b.channel = static_cast<ChannelMode> (std::max (0, indexOf (ChannelModes::names, e->getStringAttribute ("channel", "Stereo"))));
-        b.dynamics = readDynamics (version >= 2 ? e->getChildByName ("Dynamics") : nullptr);
+        b.dynamics = readDynamics (version >= 2 ? e->getChildByName ("Dynamics") : nullptr, version);
     }
 
     return p;
@@ -149,6 +151,7 @@ bool Preset::hasSameSettingsAs (const Preset& other) const noexcept
         const auto& db = b.dynamics;
         auto f = [] (double v) { return static_cast<float> (v); };
         if (da.on != db.on || da.mode != db.mode || da.detector != db.detector || da.sidechain != db.sidechain
+            || da.spectral != db.spectral
             || ! sameDb (f (da.thresholdDb), f (db.thresholdDb)) || ! sameDb (f (da.rangeDb), f (db.rangeDb))
             || ! sameRatio (f (da.ratio), f (db.ratio)) || ! sameRatio (f (da.attackMs), f (db.attackMs))
             || ! sameRatio (f (da.releaseMs), f (db.releaseMs)))

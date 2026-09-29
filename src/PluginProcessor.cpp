@@ -49,6 +49,7 @@ ParametricEQAudioProcessor::ParametricEQAudioProcessor()
     // Started last: its request reads the band parameters set up above.
     linearPhaseUpdater.start();
     undoHistory.attach();
+    startTimerHz (10);   // reports spectral latency changes from the message thread (M9g)
 }
 
 //==============================================================================
@@ -98,6 +99,11 @@ void ParametricEQAudioProcessor::prepareToPlay (double sampleRate, int samplesPe
     }
     linearPhaseEngine.prepare();
     samplesFed = activeTaps;
+
+    spectralEngine.prepare (sampleRate);
+    activeSpectral = SpectralDynamicsEngine::anySpectral (pushedBands);
+    spectralFed = SpectralDynamicsEngine::latencySamples;   // a fresh stream: silent past
+    updateLatency();
     modeFade.reset (sampleRate, EqBand::crossfadeSeconds);
     modeFade.setCurrentAndTargetValue (1.0f);
 
@@ -144,7 +150,12 @@ void ParametricEQAudioProcessor::pushParametersToBands() noexcept
     for (size_t i = 0; i < bands.size(); ++i)
     {
         pushedBands[i] = readBandSettings (i);
-        bands[i].setTargets (pushedBands[i]);
+
+        // A spectral band's moving part runs in the spectral engine; its filter keeps the static gain.
+        auto target = pushedBands[i];
+        if (target.isSpectral())
+            target.dynamics.on = false;
+        bands[i].setTargets (target);
     }
 }
 
@@ -175,6 +186,8 @@ void ParametricEQAudioProcessor::reset()
     // Like a fresh stream: an empty convolution history stands for a silent past.
     linearPhaseEngine.reset();
     samplesFed = activeTaps;
+    spectralEngine.reset();
+    spectralFed = SpectralDynamicsEngine::latencySamples;
 
     outputGain.setCurrentAndTargetValue (targetOutputGain());
 }
@@ -205,8 +218,10 @@ void ParametricEQAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
 
     juce::AudioBuffer<float> sidechain;
     const auto* sidechainBus = getBus (true, 1);
+    // Only when the buffer really carries the side-chain channels (a host always passes them all).
     const auto hasSidechain = sidechainBus != nullptr && sidechainBus->isEnabled()
-                           && sidechainBus->getNumberOfChannels() > 0;
+                           && sidechainBus->getNumberOfChannels() > 0
+                           && buffer.getNumChannels() >= getTotalNumInputChannels();
     if (hasSidechain)
         sidechain = getBusBuffer (buffer, true, 1);   // refers to the host's data, no allocation
 
@@ -238,12 +253,15 @@ void ParametricEQAudioProcessor::processLinearPhaseMode (juce::AudioBuffer<float
     const auto numSamples = main.getNumSamples();
     const auto wantLinear = requestedLinear.load (std::memory_order_relaxed);
     const auto wantTaps = requestedTaps();
-    const auto differs = activeLinear != wantLinear || (wantLinear && activeTaps != wantTaps);
+    const auto wantSpectral = SpectralDynamicsEngine::anySpectral (pushedBands);
+    const auto differs = activeLinear != wantLinear || (wantLinear && activeTaps != wantTaps) || activeSpectral != wantSpectral;
 
     // Ready: the filter in use has the active length and a full input history. Checked before
     // processing: the engine swaps filters at the end of a block, so the new filter is heard from
     // the next block on, and a fade-in must not start on a block still made by the old one.
-    const auto ready = ! activeLinear || (linearPhaseEngine.getCurrentTaps() == activeTaps && samplesFed >= activeTaps);
+    // The spectral engine likewise needs one full frame of history.
+    const auto ready = (! activeLinear || (linearPhaseEngine.getCurrentTaps() == activeTaps && samplesFed >= activeTaps))
+                    && (! activeSpectral || spectralFed >= SpectralDynamicsEngine::latencySamples);
 
     // Linear phase: the static bands are the FIR; dynamic bands run after it (decision 2026-09-29).
     if (activeLinear)
@@ -262,6 +280,14 @@ void ParametricEQAudioProcessor::processLinearPhaseMode (juce::AudioBuffer<float
             bands[i].process (main, sidechain);
         }
         bandRan[i] = runIir;
+    }
+
+    // Spectral dynamics after the bands, on the whole signal, so everything is delayed alike.
+    if (activeSpectral)
+    {
+        spectralEngine.setBands (pushedBands);
+        spectralEngine.process (main, sidechain);
+        spectralFed += numSamples;
     }
 
     // Fade out to switch, and stay silent until a newly started filter has its full history.
@@ -287,6 +313,9 @@ void ParametricEQAudioProcessor::processLinearPhaseMode (juce::AudioBuffer<float
         activeTaps = wantTaps;
         linearPhaseEngine.reset();
         samplesFed = 0;
+        activeSpectral = wantSpectral;
+        spectralEngine.reset();
+        spectralFed = 0;
         for (auto& band : bands)
             band.reset();
         bandRan.fill (true);
@@ -562,7 +591,9 @@ void ParametricEQAudioProcessor::readPhaseModeFromState()
 
 void ParametricEQAudioProcessor::updateLatency()
 {
-    setLatencySamples (requestedLinear.load() ? LinearPhaseEngine::latencyFor (requestedTaps()) : 0);
+    const auto spectral = SpectralDynamicsEngine::anySpectral (getBandSettings());
+    setLatencySamples ((requestedLinear.load() ? LinearPhaseEngine::latencyFor (requestedTaps()) : 0)
+                       + (spectral ? SpectralDynamicsEngine::latencySamples : 0));
 }
 
 bool ParametricEQAudioProcessor::isPhaseModeSettled() const noexcept
@@ -581,4 +612,12 @@ bool ParametricEQAudioProcessor::isSidechainConnected() const
     return bus != nullptr && bus->isEnabled() && bus->getNumberOfChannels() > 0;
 }
 
-void ParametricEQAudioProcessor::refreshLatency() {}
+ParametricEQAudioProcessor::~ParametricEQAudioProcessor()
+{
+    stopTimer();
+}
+
+void ParametricEQAudioProcessor::refreshLatency()
+{
+    updateLatency();
+}

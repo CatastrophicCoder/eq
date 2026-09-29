@@ -10,17 +10,19 @@
 #include "dsp/AnalyzerFifo.h"
 #include "dsp/EqBand.h"
 #include "dsp/LinearPhaseEngine.h"
+#include "dsp/SpectralDynamicsEngine.h"
 #include "ui/AnalyzerSettings.h"
 
 #include <juce_audio_processors/juce_audio_processors.h>
 
 //==============================================================================
-class ParametricEQAudioProcessor final : public juce::AudioProcessor
+class ParametricEQAudioProcessor final : public juce::AudioProcessor,
+                                         private juce::Timer
 {
 public:
     //==============================================================================
     ParametricEQAudioProcessor();
-    ~ParametricEQAudioProcessor() override = default;
+    ~ParametricEQAudioProcessor() override;
 
     //==============================================================================
     void prepareToPlay (double sampleRate, int samplesPerBlock) override;
@@ -199,6 +201,12 @@ private:
     juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> modeFade;
     std::atomic<bool> phaseSettled { true };
     LinearPhaseEngine linearPhaseEngine;
+
+    // Spectral dynamics (M9g): active while any band is spectral; switching fades like a phase change.
+    SpectralDynamicsEngine spectralEngine;
+    bool activeSpectral = false;
+    juce::int64 spectralFed = 0;
+    void timerCallback() override { refreshLatency(); }
     LinearPhaseUpdater linearPhaseUpdater { linearPhaseEngine, [this]
     {
         return LinearPhaseUpdater::Request { requestedLinear.load(), requestedTaps(), currentSampleRate.load(), getBandSettings() };

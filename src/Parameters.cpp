@@ -136,6 +136,8 @@ juce::AudioProcessorValueTreeState::ParameterLayout Parameters::createLayout()
             juce::StringArray { "Peak", "RMS" }, 0));
         layout.add (std::make_unique<juce::AudioParameterBool> (
             juce::ParameterID { id (band, "sidechain"), m7VersionHint }, name + "Side-chain", false));
+        layout.add (std::make_unique<juce::AudioParameterBool> (
+            juce::ParameterID { id (band, "spectral"), m9gVersionHint }, name + "Spectral", false));
     }
 
     layout.add (std::make_unique<juce::AudioParameterFloat> (
@@ -182,5 +184,6 @@ BandSettings::Dynamics Parameters::toDynamics (const std::array<float, std::size
     d.releaseMs = raw[6];
     d.detector = raw[7] >= 0.5f ? LevelDetector::Mode::rms : LevelDetector::Mode::peak;
     d.sidechain = raw[8] >= 0.5f;
+    d.spectral = raw[9] >= 0.5f;
     return d;
 }

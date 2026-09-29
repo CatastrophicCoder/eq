@@ -141,7 +141,8 @@ void PresetManager::apply (const Preset& preset)
         const float dynamics[] { d.on ? 1.0f : 0.0f, d.mode == DynamicGainLaw::Mode::ratio ? 1.0f : 0.0f,
                                  static_cast<float> (d.thresholdDb), static_cast<float> (d.rangeDb), static_cast<float> (d.ratio),
                                  static_cast<float> (d.attackMs), static_cast<float> (d.releaseMs),
-                                 d.detector == LevelDetector::Mode::rms ? 1.0f : 0.0f, d.sidechain ? 1.0f : 0.0f };
+                                 d.detector == LevelDetector::Mode::rms ? 1.0f : 0.0f, d.sidechain ? 1.0f : 0.0f,
+                                 d.spectral ? 1.0f : 0.0f };
         static_assert (std::size (dynamics) == std::size (Parameters::dynamicFields));
         for (size_t i = 0; i < std::size (dynamics); ++i)
             setWithGesture (state, Parameters::id (band, Parameters::dynamicFields[i]), dynamics[i]);
