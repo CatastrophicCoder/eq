@@ -8,6 +8,10 @@ Learning project, built with JUCE and C++ in CLion. Public repo, licensed AGPLv3
 
 - Full plan, milestones and design options: `docs/PLAN.md`
 - Current status, decisions made, session log: `docs/PROGRESS.md`
+- Developer guide (build, test, architecture): `docs/DEVELOPMENT.md`; user guide web page: `docs/guide/index.html`
+  (GitHub Pages from `/docs`), screenshots in `docs/images/` (regenerate with
+  `EQ_SCREENSHOT_DIR=docs/images build/tests/SpectralFaultTests "[.screenshots]"`). Keep README, DEVELOPMENT.md and
+  the user guide in step with user-visible changes; `python3 tools/check_docs.py` checks their links.
 
 Read both at the start of every session.
 

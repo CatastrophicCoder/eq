@@ -83,6 +83,8 @@ Newest first. Move each item here from "Open decisions" in `CLAUDE.md` once it i
 | 2026-09-29 | EQ Match bound: match curve and applied bands within 0.25 dB of a known EQ's shape, 100 Hz - 10 kHz, for 6-8 s of pink noise at 1/6-octave smoothing (worst measured 0.057 dB) | - | Proposed by Claude (new bound) |
 | 2026-09-29 | EQ Match learned spectra live in the plugin (not the window) and are saved with the project (state version 6: an "EQMatch" element with both spectra as 1024 log-spaced float32 points, 20 Hz - 20 kHz, plus Amount and Smoothing; about 11 kB); older sessions open with nothing learned | Until plugin removed; saved with project | Chosen by owner (1024-point form proposed by Claude after correcting a size estimate of about 10 kB for raw bins, which would be about 45 kB) |
 | 2026-09-29 | Closing the plugin window stops a running EQ Match learn pass; what it learned is kept | Learning stops; keeps learning (background thread) | Chosen by owner |
+| 2026-09-29 | User guide as an interactive web page (docs/guide/index.html, served by GitHub Pages from /docs): annotated screenshot with hotspots, use-case walkthroughs in tabs, gestures and display reference | Interactive web page; Markdown guide; both; in-plugin help | Chosen by owner |
+| 2026-09-29 | The README's Claude Code section becomes a short "How it is built" note; details move to docs/DEVELOPMENT.md | Move to dev docs; keep in README; remove | Chosen by owner |
 | 2026-09-28 | Plugin name "Spectral Fault", brand (company) "Catastrophic Audio" | Name lists proposed by Claude | Chosen by owner |
 | 2026-09-28 | Rename details: bundle ID com.catastrophicaudio.spectralfault; CMake target SpectralFault (tests SpectralFaultTests); plugin codes, saved-state tag and preset tag unchanged; rename committed under M7 | Keep or change bundle ID; keep or rename target; M7 or separate prefix | Chosen by owner |
 | 2026-09-28 | User preset folder moves to ~/Library/Audio/Presets/Catastrophic Audio/Spectral Fault/; the old folder's presets are copied once (only if the new folder has none); old files stay | Keep old path; move without migration; move and migrate | Chosen by owner |
@@ -144,6 +146,19 @@ Newest first. Move each item here from "Open decisions" in `CLAUDE.md` once it i
 ## Session log
 
 Newest first. One entry per session, a few lines each.
+
+### 2026-09-29 — Documentation for GitHub
+
+- README rewritten (features, screenshots, under the hood with sources, building, status, licence); new
+  docs/DEVELOPMENT.md (prerequisites, build, tests incl. hidden runs, validation, troubleshooting, architecture
+  diagram, source layout, state versions, testing approach, conventions, how the project is developed); interactive
+  user guide docs/guide/index.html (15 hotspots on the interface, 9 walkthroughs, gestures, display legend, FAQ;
+  dark/light, no external scripts), docs/index.html redirect and .nojekyll for GitHub Pages.
+- Screenshots: hidden test "[.screenshots]" renders 8 scenes at 2x into docs/images (1.8 MB). The first EQ Match
+  scene (two different resonances) gave an off-scale curve and was replaced by a realistic brighter reference.
+- Checks: tools/check_docs.py (all relative links resolve), HTML tag balance and script syntax, headless renders at
+  1400 and 520 px (headless Edge will not go below a 492 px viewport).
+- Owner to enable GitHub Pages (Settings > Pages > Deploy from a branch > main, /docs).
 
 ### 2026-09-29 — 9e follow-up (learned data kept)
 

@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spectral Fault User Guide</title>
+<meta name="description" content="How to use Spectral Fault, a 16-band parametric and dynamic equalizer: an annotated tour of the interface and walkthroughs for common mixing and mastering jobs.">
+<style>
+  :root {
+    --bg: #f6f5f2; --surface: #ffffff; --surface-2: #eeece7; --text: #1d1c21; --muted: #5d5b66;
+    --line: #dcd9d2; --accent: #c7861d; --accent-2: #2f8fae; --hot: #e0a030; --hot-text: #1d1c21;
+    --code: #efece5; --shadow: 0 1px 3px rgba(0,0,0,.08), 0 8px 24px rgba(0,0,0,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #121217; --surface: #1b1b22; --surface-2: #23232c; --text: #ece9e3; --muted: #a09da8;
+      --line: #2e2e39; --accent: #f0b43c; --accent-2: #7fcfe2; --hot: #f0b43c; --hot-text: #121217;
+      --code: #26262f; --shadow: 0 1px 3px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #121217; --surface: #1b1b22; --surface-2: #23232c; --text: #ece9e3; --muted: #a09da8;
+    --line: #2e2e39; --accent: #f0b43c; --accent-2: #7fcfe2; --hot: #f0b43c; --hot-text: #121217;
+    --code: #26262f; --shadow: 0 1px 3px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  a { color: var(--accent-2); }
+  code { overflow-wrap: anywhere; }
+  code, kbd { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .9em; background: var(--code); border-radius: 4px; padding: .1em .35em; }
+  kbd { border: 1px solid var(--line); border-bottom-width: 2px; }
+  header.site { position: sticky; top: 0; z-index: 10; background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
+  .bar { max-width: 1180px; margin: 0 auto; padding: .6rem 16px; display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; }
+  .brand { font-weight: 700; color: var(--accent); text-decoration: none; font-size: 1.05rem; }
+  nav.links { display: flex; gap: .9rem; flex-wrap: wrap; font-size: .92rem; }
+  nav.links a { color: var(--muted); text-decoration: none; }
+  nav.links a:hover { color: var(--text); }
+  .theme { margin-left: auto; background: var(--surface); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: .25rem .6rem; cursor: pointer; font: inherit; font-size: .85rem; }
+  main { max-width: 1180px; margin: 0 auto; padding: 0 16px 4rem; }
+  section { padding-top: 2.2rem; }
+  h1 { font-size: clamp(1.8rem, 4vw, 2.6rem); line-height: 1.15; margin: 2rem 0 .4rem; }
+  h2 { font-size: 1.55rem; margin: 0 0 .6rem; }
+  h3 { font-size: 1.15rem; margin: 1.4rem 0 .4rem; }
+  .lead { color: var(--muted); font-size: 1.08rem; max-width: 60ch; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); }
+  /* Tour */
+  .tour { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 1rem; align-items: start; }
+  @media (max-width: 900px) { .tour { grid-template-columns: 1fr; } }
+  .shot { position: relative; line-height: 0; border-radius: 10px; overflow: hidden; }
+  .shot img { width: 100%; height: auto; display: block; }
+  .hot { position: absolute; transform: translate(-50%, -50%); width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--hot-text);
+         background: var(--hot); color: var(--hot-text); font: 700 12px/22px -apple-system, sans-serif; text-align: center; cursor: pointer; padding: 0;
+         box-shadow: 0 0 0 3px rgba(240,180,60,.35); transition: transform .12s; }
+  .hot:hover, .hot:focus-visible, .hot.active { transform: translate(-50%, -50%) scale(1.25); outline: none; box-shadow: 0 0 0 5px rgba(240,180,60,.5); }
+  .hot.active { background: var(--accent-2); }
+  .info { padding: 1rem 1.1rem; position: sticky; top: 4.2rem; }
+  .info h3 { margin-top: 0; }
+  .info .n { display: inline-block; min-width: 1.6em; text-align: center; border-radius: 1em; background: var(--hot); color: var(--hot-text); font-weight: 700; font-size: .85rem; margin-right: .4rem; }
+  .info ul { padding-left: 1.1rem; margin: .4rem 0; }
+  .info .nav { display: flex; gap: .5rem; margin-top: .8rem; }
+  .info .nav button, .tabs button { background: var(--surface-2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: .35rem .7rem; cursor: pointer; font: inherit; font-size: .88rem; }
+  .info .nav button:hover, .tabs button:hover { border-color: var(--accent); }
+  .hint { color: var(--muted); font-size: .88rem; margin: .5rem 0 0; }
+  /* Use cases */
+  .tabs { display: flex; flex-wrap: wrap; gap: .4rem; margin: .8rem 0 1rem; }
+  .tabs button[aria-selected="true"] { background: var(--accent); color: var(--hot-text); border-color: var(--accent); font-weight: 600; }
+  .case { display: none; padding: 1.2rem 1.3rem; }
+  .case.shown { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 1.4rem; }
+  @media (max-width: 900px) { .case.shown { grid-template-columns: 1fr; } }
+  .case h3 { margin-top: 0; }
+  .case ol { padding-left: 1.3rem; }
+  .case ol li { margin: .35rem 0; }
+  .case figure { margin: 0; }
+  .case figure img { width: 100%; border-radius: 8px; border: 1px solid var(--line); }
+  .case figcaption { color: var(--muted); font-size: .85rem; margin-top: .3rem; line-height: 1.4; }
+  .tip { border-left: 3px solid var(--accent); background: var(--surface-2); padding: .6rem .8rem; border-radius: 0 6px 6px 0; margin: .8rem 0; font-size: .95rem; }
+  /* Tables */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: .95rem; }
+  th, td { text-align: left; padding: .5rem .7rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; font-size: .85rem; text-transform: uppercase; letter-spacing: .03em; }
+  .legend { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: .6rem; }
+  .legend div { display: flex; gap: .6rem; align-items: center; padding: .55rem .7rem; }
+  .sw { flex: none; width: 34px; height: 10px; border-radius: 3px; }
+  footer { color: var(--muted); font-size: .88rem; border-top: 1px solid var(--line); margin-top: 3rem; padding-top: 1rem; }
+</style>
+</head>
+<body>
+<header class="site">
+  <div class="bar">
+    <a class="brand" href="#top">Spectral Fault</a>
+    <nav class="links" aria-label="Sections">
+      <a href="#tour">Interface tour</a>
+      <a href="#cases">Walkthroughs</a>
+      <a href="#gestures">Mouse and keys</a>
+      <a href="#reading">Reading the display</a>
+      <a href="#faq">Questions</a>
+      <a href="https://github.com/CatastrophicCoder/eq">GitHub</a>
+    </nav>
+    <button class="theme" id="theme" type="button" aria-label="Switch colour theme">Theme</button>
+  </div>
+</header>
+
+<main id="top">
+  <h1>Spectral Fault user guide</h1>
+  <p class="lead">A 16-band parametric and dynamic equalizer with linear phase, per-band stereo, peak pick, EQ Sketch
+    and EQ Match. Start with the interface tour, then pick a walkthrough for the job at hand.</p>
+
+  <!-- ============================================================ Tour -->
+  <section id="tour">
+    <h2>Interface tour</h2>
+    <p>Click a numbered marker (or use the arrows) to see what each part does.</p>
+    <div class="tour">
+      <div class="shot card">
+        <img src="../images/hero.png" alt="The Spectral Fault window with numbered markers on each control" width="2560" height="1540">
+        <div id="hotspots"></div>
+      </div>
+      <aside class="info card" id="info" aria-live="polite"></aside>
+    </div>
+  </section>
+
+  <!-- ============================================================ Use cases -->
+  <section id="cases">
+    <h2>Walkthroughs</h2>
+    <p>Starting points for common jobs. Frequencies and amounts are typical values to begin from; always adjust by ear.</p>
+    <div class="tabs" role="tablist" id="tabs"></div>
+    <div id="casePanels"></div>
+  </section>
+
+  <!-- ============================================================ Gestures -->
+  <section id="gestures">
+    <h2>Mouse and keys</h2>
+    <div class="card table-wrap">
+      <table>
+        <thead><tr><th>Where</th><th>Action</th><th>Result</th></tr></thead>
+        <tbody>
+          <tr><td>Empty display</td><td>Double-click</td><td>Adds a Bell at that frequency and gain (first free band)</td></tr>
+          <tr><td>Empty display</td><td>Drag</td><td>Selection rectangle (<kbd>Shift</kbd> adds to the selection)</td></tr>
+          <tr><td>Empty display</td><td><kbd>⌥ Option</kbd> + drag</td><td>EQ Sketch: draw a curve; on release it becomes bands</td></tr>
+          <tr><td>Node</td><td>Click / <kbd>⌘</kbd>-click</td><td>Selects the band / adds or removes it from the selection</td></tr>
+          <tr><td>Node</td><td>Drag</td><td>Moves frequency and gain of every selected, enabled band (<kbd>Shift</kbd>: fine)</td></tr>
+          <tr><td>Node</td><td>Scroll wheel or pinch</td><td>Changes Q (quick steps merge into one undo step)</td></tr>
+          <tr><td>Node</td><td>Double-click</td><td>Enables or disables the band</td></tr>
+          <tr><td>Node</td><td>Right-click</td><td>Menu: type, slope, channel, enable/disable, delete</td></tr>
+          <tr><td>Selection</td><td><kbd>Delete</kbd> / <kbd>⌫</kbd></td><td>Deletes the selected bands</td></tr>
+          <tr><td>Peak ring</td><td>Drag</td><td>Creates a Bell at the peak (Q from the peak's width); the drag sets its gain</td></tr>
+          <tr><td>Range button</td><td>Click</td><td>Display range ±3 / 6 / 12 / 30 dB</td></tr>
+          <tr><td>Output meter</td><td>Click</td><td>Resets the clip indicators</td></tr>
+          <tr><td>Undo / redo arrows</td><td>Click</td><td>Undo or redo your last edits (<kbd>⌘Z</kbd> stays with your host)</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============================================================ Reading the display -->
+  <section id="reading">
+    <h2>Reading the display</h2>
+    <div class="legend">
+      <div class="card"><span class="sw" style="background:#f0b43c"></span><span><b>Summed curve</b>: what the whole EQ does</span></div>
+      <div class="card"><span class="sw" style="background:#7fcfe2"></span><span><b>Second sum</b>: R or S when channel modes split the display (labels L/R or M/S)</span></div>
+      <div class="card"><span class="sw" style="background:linear-gradient(90deg,#6a2fd0,#1d6ff0,#1fd04a,#f0e020,#f03a20)"></span><span><b>Band curves</b>: coloured from violet (band 1) to red (band 16)</span></div>
+      <div class="card"><span class="sw" style="background:#8a8894"></span><span><b>Grey node or curve</b>: a disabled band (kept, but not heard)</span></div>
+      <div class="card"><span class="sw" style="background:#4f7fc6"></span><span><b>Blue spectrum</b>: the input (pre)</span></div>
+      <div class="card"><span class="sw" style="background:#ddd4c6"></span><span><b>Light spectrum</b>: the output (post)</span></div>
+      <div class="card"><span class="sw" style="background:repeating-linear-gradient(90deg,#1fd04a 0 6px,transparent 6px 10px)"></span><span><b>Faint area, dashed edge</b>: a dynamic band's range; the filled curve moves with its live gain</span></div>
+      <div class="card"><span class="sw" style="background:repeating-linear-gradient(90deg,#7fcfe2 0 6px,transparent 6px 10px)"></span><span><b>Dashed cyan</b>: EQ Match preview</span></div>
+    </div>
+    <p class="hint">The orange scale on the right is the EQ gain; the grey scale next to it is the analyzer level; the rightmost column is the output meter.</p>
+  </section>
+
+  <!-- ============================================================ FAQ -->
+  <section id="faq">
+    <h2>Questions</h2>
+    <h3>Which phase mode should I use?</h3>
+    <p><b>Zero latency</b> suits tracking, live use and most mixing: no delay, and the filters behave like analog
+      ones. <b>Linear phase</b> keeps the phase relationships between frequencies intact, which matters when a track
+      is also heard unprocessed elsewhere (parallel chains, multi-miked sources) or for mastering. It adds latency
+      (96 / 181 / 352 ms at 48 kHz), which your host compensates for on playback, and steep or narrow low-frequency
+      moves can cause audible pre-ringing before transients. Longer lengths reproduce narrow bass moves more precisely.
+      Switching modes silences the output briefly while the new mode starts.</p>
+    <h3>What does Auto Gain do?</h3>
+    <p>It offsets the output so the EQ changes tone rather than loudness, computed from the curve with a loudness
+      weighting (not measured from the audio). Cuts are not included, so a low cut does not raise the level. The
+      correction is shown next to the switch.</p>
+    <h3>What is the difference between Range and Ratio?</h3>
+    <p>In <b>Range</b> mode the band moves smoothly from no change at the threshold to the full range 12 dB above it.
+      In <b>Ratio</b> mode it behaves like a compressor or expander on that band: the change grows with the ratio, with a
+      soft knee, and never exceeds the range. A negative range cuts when loud; a positive range boosts when loud.</p>
+    <h3>Why did nothing happen when I pressed Apply in EQ Match?</h3>
+    <p>Both spectra need at least a second of learning. Learning only runs while the plugin window is open and audio
+      is playing through the plugin; learned spectra are then kept and saved with the project.</p>
+    <h3>A new version does not show up in Logic.</h3>
+    <p>Logic keeps a plugin's code loaded until it quits: quit Logic (<kbd>⌘Q</kbd>) and reopen the project.</p>
+  </section>
+
+  <footer>
+    Spectral Fault by Catastrophic Audio · open source under the AGPLv3 ·
+    <a href="https://github.com/CatastrophicCoder/eq">source code</a> ·
+    <a href="https://github.com/CatastrophicCoder/eq/blob/main/docs/DEVELOPMENT.md">developer guide</a>
+  </footer>
+</main>
+
+<script>
+(function () {
+  // ---------------------------------------------------------------- theme
+  const root = document.documentElement;
+  const themeButton = document.getElementById("theme");
+  const stored = (() => { try { return localStorage.getItem("sf-guide-theme"); } catch (e) { return null; } })();
+  if (stored) root.setAttribute("data-theme", stored);
+  themeButton.addEventListener("click", () => {
+    const dark = root.getAttribute("data-theme")
+      ? root.getAttribute("data-theme") === "dark"
+      : window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const next = dark ? "light" : "dark";
+    root.setAttribute("data-theme", next);
+    try { localStorage.setItem("sf-guide-theme", next); } catch (e) {}
+  });
+
+  // ---------------------------------------------------------------- tour
+  // Marker positions are percentages of the screenshot (docs/images/hero.png, 2560 x 1540).
+  const spots = [
+    { x: 24.2, y: 2.2, title: "Undo and redo", body: "<p>Undo or redo your own edits: knob moves, node drags, menu changes, adding, deleting or enabling bands, phase mode. One drag is one step; quick wheel steps on Q merge into one.</p><ul><li>Host automation and view settings are not recorded.</li><li>Loading a preset or switching A/B starts a fresh history.</li><li>Keeps the last 100 steps while the plugin is open. <kbd>⌘Z</kbd> stays with your host.</li></ul>" },
+    { x: 31.0, y: 2.2, title: "A/B comparison", body: "<p>Two complete settings to compare: <b>A</b> and <b>B</b> switch between them (the active one is lit), and the copy button (<b>A→B</b> or <b>B→A</b>) copies the active setting to the other slot.</p><p>A slot holds everything: bands, output, phase mode and view settings. Both slots are saved with your project.</p>" },
+    { x: 50.0, y: 2.2, title: "Presets", body: "<p><b>&lt;</b> and <b>&gt;</b> step through the presets; click the name for the menu: factory presets by category (vocals, guitars, bass, drums, mix), your own presets, <b>Save As…</b> and <b>Delete</b>.</p><p>A <b>*</b> after the name means you have changed the preset since loading it. User presets are files in <code>~/Library/Audio/Presets/Catastrophic Audio/Spectral Fault/</code>.</p>" },
+    { x: 86.4, y: 2.2, title: "Phase mode", body: "<p><b>Zero latency</b> or <b>Linear phase</b>. The second menu sets the linear-phase length, shown as its latency at the current sample rate (about 96, 181 or 352 ms at 48 kHz).</p><ul><li>The latency is reported to your host, which compensates for it on playback.</li><li>Longer settings reproduce narrow low-frequency moves more precisely, at more CPU and more pre-ringing.</li><li>Switching fades out, waits for the new filter and fades back in.</li></ul>" },
+    { x: 89.7, y: 7.0, title: "Display range", body: "<p>Cycles the EQ scale through ±3, 6, 12 and 30 dB. Use a small range for subtle mastering moves, a large one for cuts and filters.</p>" },
+    { x: 72.2, y: 40.5, title: "Band nodes", body: "<p>Each band in use has a node in its colour. Drag it to change frequency and gain; scroll or pinch to change Q; double-click to disable it; right-click for its menu.</p><ul><li>The selected band shows its values in a label and opens the band panel below.</li><li>Select several with <kbd>⌘</kbd>-click or a selection rectangle and drag them together.</li><li>Double-click empty space to add a Bell there.</li></ul>" },
+    { x: 30.0, y: 45.5, title: "Curves", body: "<p>The <b>amber</b> line is the sum: what the EQ does overall. Each band's own curve is filled in its colour. When bands act on different channels, a second <b>cyan</b> sum appears, labelled L/R or M/S.</p>" },
+    { x: 65.5, y: 24.0, title: "Spectrum analyzer and peak pick", body: "<p>The input (blue) and output (light) spectra of the audio passing through. While the pointer is over the display, rings mark the five most prominent peaks: drag a ring to create a band tuned to that peak.</p><p>A ring near the pointer holds still so you can catch it; <b>Freeze</b> in the bottom bar holds the whole spectrum.</p>" },
+    { x: 23.0, y: 80.5, title: "Band: on, type, channel", body: "<p><b>On</b> enables or bypasses the band (a bypassed band keeps its settings but is not heard, and cannot be edited until enabled).</p><p>The type menu offers Bell, Low/High Shelf, Low/High Cut, Notch, Band Pass, Tilt Shelf, Flat Tilt and All Pass. The channel menu sets where the band acts: <b>Stereo</b>, <b>Left</b>, <b>Right</b>, <b>Mid</b> or <b>Side</b>.</p>" },
+    { x: 33.5, y: 82.0, title: "Frequency, gain, Q, slope", body: "<p>The band's main controls. Q sets the width of bells, notches and band passes (shelves and cuts ignore it). The slope menu sets cut steepness from 6 to 96 dB/oct, or <b>Brickwall</b>. Controls a type does not use are greyed out.</p>" },
+    { x: 63.5, y: 82.0, title: "Dynamics", body: "<p>For Bell and shelves: <b>Dynamic</b> makes the band's gain follow the level in its own frequency region.</p><ul><li><b>Range</b> or <b>Ratio</b> law; <b>Peak</b> or <b>RMS</b> detection.</li><li><b>Thresh</b>, <b>Range</b> (negative cuts when loud, positive boosts), <b>Ratio</b> (Ratio mode only), <b>Attack</b>, <b>Release</b>.</li><li><b>Side-chain</b> lets another track drive the band (set it up in your host's side-chain menu).</li></ul>" },
+    { x: 5.5, y: 98.3, title: "Auto Gain and Invert", body: "<p><b>Auto Gain</b> keeps loudness roughly constant as you boost and cut, so comparisons are fair; the correction is shown next to it. <b>Invert</b> flips the output polarity.</p>" },
+    { x: 32.0, y: 98.3, title: "Analyzer settings", body: "<p>Which spectra to show (Off, Pre, Post, Pre+Post), resolution, speed, analyzer range, and <b>Freeze</b> to hold the current spectrum.</p>" },
+    { x: 53.3, y: 98.3, title: "EQ Match", body: "<p>Opens the EQ Match window: learn a reference and your own track, preview the difference as a dashed curve, and fit it into bands. See the <a href=\"#cases\" data-case=\"match\">matching walkthrough</a>.</p>" },
+    { x: 91.0, y: 98.3, title: "Output and meter", body: "<p>Output gain (±30 dB), applied after the bands. The meter on the right shows the output level; click it to reset the clip indicators.</p>" }
+  ];
+
+  const hotspots = document.getElementById("hotspots");
+  const info = document.getElementById("info");
+  let current = 0;
+
+  spots.forEach((s, i) => {
+    const b = document.createElement("button");
+    b.className = "hot";
+    b.type = "button";
+    b.textContent = String(i + 1);
+    b.style.left = s.x + "%";
+    b.style.top = s.y + "%";
+    b.setAttribute("aria-label", (i + 1) + ": " + s.title);
+    b.addEventListener("click", () => show(i));
+    b.addEventListener("mouseenter", () => show(i));
+    hotspots.appendChild(b);
+  });
+
+  function show(i) {
+    current = (i + spots.length) % spots.length;
+    const s = spots[current];
+    info.innerHTML = '<h3><span class="n">' + (current + 1) + "</span>" + s.title + "</h3>" + s.body +
+      '<div class="nav"><button type="button" data-step="-1">&larr; Previous</button><button type="button" data-step="1">Next &rarr;</button></div>' +
+      '<p class="hint">' + (current + 1) + " of " + spots.length + "</p>";
+    info.querySelectorAll("[data-step]").forEach(btn => btn.addEventListener("click", () => show(current + Number(btn.dataset.step))));
+    info.querySelectorAll("[data-case]").forEach(a => a.addEventListener("click", () => selectCase(a.dataset.case)));
+    hotspots.querySelectorAll(".hot").forEach((h, k) => h.classList.toggle("active", k === current));
+  }
+  show(0);
+
+  // ---------------------------------------------------------------- use cases
+  const cases = [
+    { id: "vocal", label: "Clean up a vocal", image: "hero.png", caption: "A typical curve: low cut, a small low shelf, a cut in the boxy range, a narrow resonance cut, presence and air.",
+      html: `<h3>Clean up a vocal</h3>
+      <ol>
+        <li>Load <b>Vocals → Lead Vocal</b> from the preset menu as a starting point, or start empty.</li>
+        <li>Add a <b>Low Cut</b> around 80–100 Hz at 12–24 dB/oct to remove rumble and handling noise.</li>
+        <li>Find boxiness: add a narrow Bell, boost it about 6 dB and sweep between 200 and 500 Hz until the vocal sounds boxy, then turn it into a 2–4 dB cut with a wider Q.</li>
+        <li>For presence, a gentle Bell around 3–5 kHz (+1 to +3 dB, Q around 1); for air, a High Shelf around 10–12 kHz.</li>
+        <li>Turn on <b>Auto Gain</b> and compare with the band nodes disabled (double-click) or with <b>A/B</b>, so loudness does not fool you.</li>
+      </ol>
+      <div class="tip">Harsh sibilance is better handled dynamically than with a static cut: see <b>Dynamic de-essing</b>.</div>` },
+    { id: "resonance", label: "Tame resonances", image: "peak-pick.png", caption: "Rings mark the most prominent peaks; the one at 2.82 kHz is a resonance.",
+      html: `<h3>Tame resonances with peak pick</h3>
+      <ol>
+        <li>Loop a section where the resonance rings (a snare's ring, a room mode on a bass, a harsh guitar frequency).</li>
+        <li>Hover over the display: rings appear on the five most prominent peaks, labelled with their frequency.</li>
+        <li>Move to the ring on the offending peak (it holds still while you approach) and <b>drag it down</b>: a Bell is created at that exact frequency with a Q matching the peak's width, and your drag sets the cut.</li>
+        <li>Fine-tune Q with the scroll wheel; listen with and without (double-click the node).</li>
+      </ol>
+      <div class="tip">If the peak comes and goes, press <b>Freeze</b> to hold the spectrum while you pick it. If a resonance only rings on loud notes, make the band <b>Dynamic</b> so it only cuts when needed.</div>` },
+    { id: "deess", label: "Dynamic de-essing", image: "dynamic-band.png", caption: "A dynamic Bell at 2.8 kHz: the faint area shows its range; the filled curve shows the live cut.",
+      html: `<h3>Dynamic de-essing and resonance control</h3>
+      <ol>
+        <li>Add a Bell at the sibilant region (usually 5–8 kHz for "s" sounds), Q 2–4, gain 0 dB.</li>
+        <li>Turn on <b>Dynamic</b>, keep <b>Range</b> mode and <b>Peak</b> detection, set <b>Range</b> to −4 to −8 dB.</li>
+        <li>Set <b>Attack</b> short (1–5 ms) and <b>Release</b> around 50–100 ms.</li>
+        <li>Play the vocal and lower <b>Thresh</b> until the filled curve dips on sibilants only; the faint area shows how far it can go.</li>
+      </ol>
+      <div class="tip">The band listens to its own region, so the rest of the vocal does not trigger it. The same recipe on a low-mid Bell controls boominess that appears only on certain notes; a dynamic High Shelf with a positive range adds air only when the signal is loud.</div>` },
+    { id: "ducking", label: "Side-chain ducking", image: "dynamic-band.png", caption: "A dynamic band driven by the side-chain dips only when the other track plays.",
+      html: `<h3>Duck the bass under the kick</h3>
+      <ol>
+        <li>Put Spectral Fault on the <b>bass</b> track.</li>
+        <li>In Logic's plugin header (above the plugin), open the <b>Side Chain</b> menu and choose the <b>kick</b> track.</li>
+        <li>Add a Bell at the kick's fundamental (often 50–80 Hz), Q around 1.5, gain 0 dB.</li>
+        <li>Turn on <b>Dynamic</b> and <b>Side-chain</b>; Range −4 to −6 dB, Attack 1–5 ms, Release 80–150 ms.</li>
+        <li>Lower <b>Thresh</b> until the band dips on each kick hit; only the low end of the bass moves out of the way.</li>
+      </ol>
+      <div class="tip">The side-chain is filtered to the band's own region, so the kick's click does not trigger the band. With no side-chain connected, a side-chain band listens to its own track instead.</div>` },
+    { id: "mastering", label: "Mix bus and mastering", image: "top-bar.png", caption: "The phase mode menus sit at the top right.",
+      html: `<h3>Mix bus and mastering in linear phase</h3>
+      <ol>
+        <li>Choose <b>Linear phase</b> in the phase mode menu and a length: the shortest (about 96 ms at 48 kHz) is often enough; choose longer ones for narrow moves below about 100 Hz.</li>
+        <li>Set the display range to <b>3</b> or <b>6 dB</b> (range button) for fine moves.</li>
+        <li>Make broad, gentle changes: a Tilt Shelf for overall balance, wide Bells (Q 0.5–1), shelves for lows and highs, a gentle Low Cut below the music.</li>
+        <li>Turn on <b>Auto Gain</b> and use <b>A/B</b> to compare alternatives at equal loudness.</li>
+      </ol>
+      <div class="tip">Linear phase does not smear phase between frequencies, but steep or narrow low-frequency moves can pre-ring before transients. If the kick sounds soft, try a wider Q, a gentler slope or Zero latency mode. Dynamic bands stay in Zero-latency style after the linear-phase filter.</div>` },
+    { id: "match", label: "Match a reference", image: "eq-match-window.png", caption: "The EQ Match window: learn buttons, learned seconds, Amount, Smoothing and Apply.",
+      html: `<h3>Match a reference track</h3>
+      <ol>
+        <li>Click <b>Match</b> in the bottom bar to open the EQ Match window.</li>
+        <li><b>With a side-chain</b> (route the reference to it in your host's side-chain menu): press <b>Learn (side-chain)</b> and play; reference and your track are learned in one pass.</li>
+        <li><b>Without a side-chain</b>: place the reference audio on the same track, press <b>Learn reference</b>, play 20–30 s of it and press <b>Stop</b>; then <b>Learn current</b> on your own material.</li>
+        <li>Watch the dashed preview on the display and adjust <b>Smoothing</b> (1/3 to 1/2 octave follows tonal balance, finer settings follow details) and <b>Amount</b> (50–80 % is often more natural than 100 %).</li>
+        <li>Press <b>Apply…</b> and choose <b>Replace all bands</b> or <b>Keep existing</b> (fits into the free bands, allowing for what your bands already do). One undo reverts it.</li>
+      </ol>
+      <div class="tip">Only the shape is matched: a louder reference does not become a boost. Learned spectra are kept when you close the window and saved with your project.</div>` },
+    { id: "sketch", label: "Sketch a curve", image: "eq-sketch.png", caption: "Drawing with Option-drag: on release the line becomes bands.",
+      html: `<h3>Sketch a tone curve</h3>
+      <ol>
+        <li>Hold <kbd>⌥ Option</kbd>, press on empty display space and draw the curve you want, left to right; the height is the gain on the orange scale.</li>
+        <li>Release the mouse: the drawing becomes bands — shelves where it levels off at an end, cuts where it drops steeply, bells in between.</li>
+        <li>Bands whose frequency lies inside the drawn range are replaced; bands outside it stay.</li>
+        <li>Fine-tune the resulting nodes, or undo the whole sketch in one step.</li>
+      </ol>
+      <div class="tip">A sketch uses every free band for the closest fit, so a simple shape can create many small bands. Draw only over the range you want to change.</div>` },
+    { id: "ms", label: "Mid/Side", image: "stereo.png", caption: "Mid and Side bands with the split M/S sums.",
+      html: `<h3>Mid/Side shaping</h3>
+      <ol>
+        <li>Set a band's channel menu to <b>Mid</b> (what is common to both channels) or <b>Side</b> (the difference: the stereo width).</li>
+        <li>Tighten the low end: a Low Cut on <b>Side</b> around 100–200 Hz keeps bass in the centre.</li>
+        <li>Open up the top: a gentle High Shelf on <b>Side</b> adds width and air without changing the centre.</li>
+        <li>Focus a vocal or lead: a small Bell on <b>Mid</b> in the presence range.</li>
+      </ol>
+      <div class="tip">When Mid/Side bands are in use the display shows two sums, labelled M and S. <b>Left</b> and <b>Right</b> work the same way for single channels, shown as L and R.</div>` },
+    { id: "compare", label: "Compare with A/B and undo", image: "top-bar.png", caption: "Undo and redo arrows, then A, B and the copy button.",
+      html: `<h3>Try alternatives safely</h3>
+      <ol>
+        <li>Make your first version in <b>A</b>.</li>
+        <li>Press the copy button (<b>A→B</b>) and switch to <b>B</b>: B starts as a copy.</li>
+        <li>Change B freely — even the phase mode — and switch between A and B while the music plays.</li>
+        <li>Use the <b>undo</b> arrow to step back through edits within a slot.</li>
+      </ol>
+      <div class="tip">Both slots are saved with your project. Switching slots or loading a preset starts a fresh undo history, so A/B is the way to keep an alternative.</div>` }
+  ];
+
+  const tabs = document.getElementById("tabs");
+  const panels = document.getElementById("casePanels");
+  cases.forEach((c, i) => {
+    const t = document.createElement("button");
+    t.type = "button";
+    t.role = "tab";
+    t.id = "tab-" + c.id;
+    t.textContent = c.label;
+    t.setAttribute("aria-controls", "case-" + c.id);
+    t.addEventListener("click", () => selectCase(c.id));
+    tabs.appendChild(t);
+
+    const p = document.createElement("div");
+    p.className = "case card";
+    p.id = "case-" + c.id;
+    p.setAttribute("role", "tabpanel");
+    p.setAttribute("aria-labelledby", "tab-" + c.id);
+    p.innerHTML = "<div>" + c.html + "</div><figure><img loading=\"lazy\" src=\"../images/" + c.image + "\" alt=\"" + c.caption + "\"><figcaption>" + c.caption + "</figcaption></figure>";
+    panels.appendChild(p);
+  });
+
+  function selectCase(id) {
+    cases.forEach(c => {
+      const selected = c.id === id;
+      document.getElementById("tab-" + c.id).setAttribute("aria-selected", String(selected));
+      document.getElementById("case-" + c.id).classList.toggle("shown", selected);
+    });
+    try { history.replaceState(null, "", "#" + id); } catch (e) {}
+  }
+
+  const fromHash = cases.find(c => "#" + c.id === location.hash);
+  selectCase(fromHash ? fromHash.id : cases[0].id);
+  if (fromHash) document.getElementById("cases").scrollIntoView();
+})();
+</script>
+</body>
+</html>
