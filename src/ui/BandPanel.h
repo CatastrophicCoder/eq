@@ -38,6 +38,7 @@ public:
     juce::ComboBox& getDynamicModeBox() noexcept       { return dynamicMode; }
     juce::ComboBox& getDetectorBox() noexcept          { return detector; }
     juce::ToggleButton& getSidechainButton() noexcept  { return sidechain; }
+    juce::ToggleButton& getSpectralButton() noexcept   { return spectral; }   // M9g
     juce::Slider& getThresholdSlider() noexcept        { return threshold; }
     juce::Slider& getRangeSlider() noexcept            { return range; }
     juce::Slider& getRatioSlider() noexcept            { return ratio; }
@@ -59,7 +60,7 @@ private:
     juce::Slider frequency, gain, q;
     juce::Label frequencyCaption, gainCaption, qCaption;
 
-    juce::ToggleButton dynamic, sidechain;
+    juce::ToggleButton dynamic, sidechain, spectral;
     juce::ComboBox dynamicMode, detector;
     juce::Slider threshold, range, ratio, attack, release;
     juce::Label thresholdCaption, rangeCaption, ratioCaption, attackCaption, releaseCaption;

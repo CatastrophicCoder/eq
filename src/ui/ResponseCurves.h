@@ -30,6 +30,10 @@ public:
     /** Same, with each band's live dynamic gain change in dB (M7). */
     bool update (std::span<const BandSettings> bands, double sampleRate, std::span<const double> liveGainDb);
 
+    /** Same, with each spectral band's live per-slice gain change at the curve's points (M9g). */
+    using SliceGains = std::array<std::array<double, 512>, 16>;
+    bool update (std::span<const BandSettings> bands, double sampleRate, std::span<const double> liveGainDb, const SliceGains& spectralDb);
+
     int getNumRecomputes() const noexcept { return recomputes; }
 
     double frequency (int point) const noexcept   { return frequencies[static_cast<size_t> (point)]; }

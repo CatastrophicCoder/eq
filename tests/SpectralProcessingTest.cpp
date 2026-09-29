@@ -299,3 +299,125 @@ TEST_CASE ("Presets store the Spectral switch (format 3); older presets load wit
     CHECK (old->bands[2].dynamics.on);
     CHECK_FALSE (old->bands[2].dynamics.spectral);
 }
+
+//==============================================================================
+#include "PluginEditor.h"
+#include "ui/ResponseCurves.h"
+
+TEST_CASE ("The band panel's Spectral switch follows the band and greys out where it does not apply", "[spectral][editor]")
+{
+    juce::ScopedJuceInitialiser_GUI juce;
+    ParametricEQAudioProcessor p;
+    std::unique_ptr<juce::AudioProcessorEditor> base (p.createEditor());
+    auto& editor = *dynamic_cast<ParametricEQAudioProcessorEditor*> (base.get());
+    auto& panel = editor.getBandPanel();
+
+    setBand (p, 3, FilterType::bell, 1000.0f, 0.0f, 1.0f, 3, true);
+    panel.setBand (3);
+
+    // Control <-> parameter.
+    set (p, "band3_dyn", 1.0f);
+    editor.refreshControls();
+    panel.getSpectralButton().setToggleState (true, juce::sendNotificationSync);
+    CHECK_THAT (value (p, "band3_spectral"), WithinAbs (1.0f, 0.0f));
+    set (p, "band3_spectral", 0.0f);
+    CHECK_FALSE (panel.getSpectralButton().getToggleState());
+
+    // Only with Dynamic on (and a type that can be dynamic, on an enabled band); Peak/RMS greys out while spectral.
+    set (p, "band3_spectral", 1.0f);
+    editor.refreshControls();
+    CHECK (panel.getSpectralButton().isEnabled());
+    CHECK_FALSE (panel.getDetectorBox().isEnabled());
+    set (p, "band3_spectral", 0.0f);
+    editor.refreshControls();
+    CHECK (panel.getDetectorBox().isEnabled());
+
+    set (p, "band3_dyn", 0.0f);
+    editor.refreshControls();
+    CHECK_FALSE (panel.getSpectralButton().isEnabled());
+
+    set (p, "band3_dyn", 1.0f);
+    set (p, "band3_type", static_cast<float> (FilterType::notch));
+    editor.refreshControls();
+    CHECK_FALSE (panel.getSpectralButton().isEnabled());
+
+    // Laid out inside the panel at every size.
+    set (p, "band3_type", static_cast<float> (FilterType::bell));
+    editor.getDisplay().setSelection ({ 3 }, 3);
+    using E = ParametricEQAudioProcessorEditor;
+    for (auto [w, h] : { std::pair { E::minWidth, E::minHeight }, { E::defaultWidth, E::defaultHeight }, { E::maxWidth, E::maxHeight } })
+    {
+        editor.setSize (w, h);
+        INFO ("size " << w << "x" << h);
+        const auto b = panel.getSpectralButton().getBounds();
+        CHECK (panel.getLocalBounds().contains (b));
+        CHECK (b.getHeight() >= 16);
+        CHECK_FALSE (b.intersects (panel.getSidechainButton().getBounds()));
+    }
+}
+
+TEST_CASE ("A spectral band's curve follows its per-slice gain", "[spectral][curves]")
+{
+    constexpr double rate = 48000.0;
+    std::array<BandSettings, 16> bands;
+    for (auto& s : bands)
+        s.inUse = false;
+    auto& b = bands[4];
+    b = BandSettings {};
+    b.type = FilterType::bell; b.frequencyHz = 2000.0; b.gainDb = 2.0; b.q = 1.0;
+    b.dynamics.on = true; b.dynamics.spectral = true; b.dynamics.rangeDb = -8.0;
+
+    std::array<std::array<double, ResponseCurves::numPoints>, 16> slices {};
+    ResponseCurves curves;
+    for (int k = 0; k < ResponseCurves::numPoints; ++k)
+        slices[4][static_cast<size_t> (k)] = curves.frequency (k) > 1800.0 && curves.frequency (k) < 2200.0 ? -6.0 : 0.0;
+
+    std::array<double, 16> live {};
+    REQUIRE (curves.update (bands, rate, live, slices));
+    CHECK (curves.isBandDynamic (4));
+    for (int k = 0; k < ResponseCurves::numPoints; k += 7)
+    {
+        const auto f = curves.frequency (k);
+        const auto expected = BandDesign::design (b, rate).magnitudeDb (f, rate) + slices[4][static_cast<size_t> (k)];
+        INFO (f << " Hz");
+        CHECK_THAT (curves.bandDb (4, k), WithinAbs (expected, 1e-9));
+    }
+
+    // Small movements (under 0.05 dB anywhere) do not recompute.
+    auto nudged = slices;
+    nudged[4][100] += 0.03;
+    CHECK_FALSE (curves.update (bands, rate, live, nudged));
+    nudged[4][100] += 0.1;
+    CHECK (curves.update (bands, rate, live, nudged));
+}
+
+TEST_CASE ("The display draws a spectral band with its live per-slice cut", "[spectral][editor]")
+{
+    juce::ScopedJuceInitialiser_GUI juce;
+    ParametricEQAudioProcessor p;
+    spectralBell (p, 5, 2200.0f, 0.7f, -40.0f, -12.0f);
+    prepare (p);
+    std::unique_ptr<juce::AudioProcessorEditor> base (p.createEditor());
+    auto& editor = *dynamic_cast<ParametricEQAudioProcessorEditor*> (base.get());
+    p.refreshLatency();
+    REQUIRE (settle (p));
+
+    auto y = tones (static_cast<int> (fs), { { 2000.0, -10.0 }, { 2800.0, -55.0 } });
+    run (p, y);
+    editor.refreshControls();
+
+    const auto& curves = editor.getDisplay().getCurves();
+    REQUIRE (curves.isBandDynamic (4));
+    auto pointNear = [&] (double f)
+    {
+        int best = 0;
+        for (int k = 0; k < ResponseCurves::numPoints; ++k)
+            if (std::abs (std::log (curves.frequency (k) / f)) < std::abs (std::log (curves.frequency (best) / f)))
+                best = k;
+        return best;
+    };
+    const auto k2000 = pointNear (2000.0), k2800 = pointNear (2800.0);
+    INFO ("curve at 2 kHz " << curves.bandDb (4, k2000) << " dB, at 2.8 kHz " << curves.bandDb (4, k2800) << " dB");
+    CHECK (curves.bandDb (4, k2000) < -8.0);                       // the loud slice is pulled down
+    CHECK_THAT (curves.bandDb (4, k2800), WithinAbs (0.0, 1.0));  // the quiet one is not
+}

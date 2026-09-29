@@ -135,3 +135,8 @@ double ResponseCurves::rangeBandDb (int band, int point) const noexcept
 {
     return rangeCurves[static_cast<size_t> (band)][static_cast<size_t> (point)];
 }
+
+bool ResponseCurves::update (std::span<const BandSettings> bands, double sampleRate, std::span<const double> liveGainDb, const SliceGains&)
+{
+    return update (bands, sampleRate, liveGainDb);
+}
