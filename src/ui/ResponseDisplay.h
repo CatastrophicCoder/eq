@@ -9,6 +9,7 @@
 #include "LevelMeter.h"
 #include "SelectionModel.h"
 #include "SpectrumAnalyzer.h"
+#include "presets/UndoHistory.h"
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
@@ -156,6 +157,13 @@ private:
     std::vector<int> selectionBeforeArea;
     int hovered = 0;
     std::optional<PeakFinder::Peak> peakMarker;
+    int pickBand = 0;   // band being created by a peak pick drag
+    std::optional<UndoHistory::ScopedTransaction> pickStep;
+
+    const SpectrumAnalyzer* peakSource() const;
+    float analyzerYForDb (double displayDb) const;
+    bool startPeakPick (juce::Point<float> position);
+    void paintPeakMarker (juce::Graphics&, const FrequencyAxis&);
 
     juce::String message;
     juce::uint32 messageTime = 0;

@@ -121,7 +121,8 @@ TEST_CASE ("The peak finder finds a resonance's frequency and Q", "[peakpick]")
         CHECK_THAT (peaks[0].frequencyHz, WithinRel (1000.0, 0.02));
         CHECK_THAT (peaks[0].q, WithinRel (q, 0.1));
         CHECK_THAT (peaks[0].levelDb, WithinAbs (-40.0, 0.1));
-        CHECK (peaks[0].prominenceDb > 20.0);
+        // Prominence is measured within one octave: 10 log10 (1 + Q^2 (2 - 1/2)^2), at most the 30 dB to the floor.
+        CHECK_THAT (peaks[0].prominenceDb, WithinAbs (std::min (30.0, 10.0 * std::log10 (1.0 + q * q * 2.25)), 0.5));
     }
 }
 

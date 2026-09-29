@@ -17,7 +17,7 @@ Milestone definitions and "done when" criteria are in [PLAN.md](PLAN.md#mileston
 | 6b | Presets | Done | Built and validated (186 tests, pluginval, auval); owner tested in Logic |
 | 7 | Dynamic EQ | Done | Built and validated (223 tests, pluginval, auval); owner tested in Logic except the side-chain (covered by unit tests only). Peak detector reading still an open decision |
 | 8 | Linear phase mode | Done | Built and validated (245 tests, pluginval, auval); owner tested in Logic |
-| 9 | Deferred features | In progress | Split into 9a-9g (small to large). 9a A/B done. 9b undo/redo done. Next: 9c Spectrum Grab |
+| 9 | Deferred features | In progress | Split into 9a-9g (small to large). 9a A/B done. 9b undo/redo done. 9c peak pick built and validated, awaiting owner's Logic test |
 
 Status values: Not started · In progress · Done · Skipped
 
@@ -127,6 +127,20 @@ Newest first. Move each item here from "Open decisions" in `CLAUDE.md` once it i
 ## Session log
 
 Newest first. One entry per session, a few lines each.
+
+### 2026-09-29 — 9c (peak pick, the plan's "Spectrum Grab")
+
+- Done: `PeakFinder` (src/ui): local maxima at least 3 dB prominent within an octave, Q from the -3 dB width;
+  `ResponseDisplay`: marker (with frequency label) on the most prominent peak within half an octave of the pointer
+  over empty space, from the shown spectrum; pressing it creates a Bell (peak frequency, estimated Q clamped
+  0.5-18, 0 dB) and the drag sets the gain only; creation and drag are one undo step. No marker over nodes, with
+  the analyzer off or with all 16 bands in use. The UI uses the neutral name "peak pick" (brand rule).
+- Tests added / passing: 269/269. Finder frequency and Q (within 10 % for Q 1, 4, 12) and prominence; no peaks for
+  flat spectra or a 2 dB bump; most prominent near the pointer; marker from pre or post by analyzer mode, none over
+  nodes or with the analyzer off, on a real 1 kHz resonance fed through the plugin; drag creates the bell with gain
+  following, frequency fixed, complete host edits, one undo step; all bands in use: no marker. pluginval
+  strictness 5 (VST3, AU) and auval pass. Snapshot shows the marker.
+- Next step: owner's check in Logic, then 9d EQ Sketch.
 
 ### 2026-09-29 — 9b (undo/redo)
 

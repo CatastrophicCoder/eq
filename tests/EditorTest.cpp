@@ -638,6 +638,7 @@ TEST_CASE ("Editor snapshot (renders PNGs to $EQ_SNAPSHOT_DIR)", "[.snapshot]")
     {
         f.editor.setSize (w, h);
         feed();
+        f.editor.getDisplay().handleHover (f.editor.getDisplay().getAxis().getPlotArea().getRelativePoint (0.42f, 0.5f));   // a peak marker, if one is near
         const auto image = f.editor.createComponentSnapshot (f.editor.getLocalBounds());
         juce::File file (dir + "/m3_" + juce::String (w) + "x" + juce::String (h) + ".png");
         file.deleteFile();

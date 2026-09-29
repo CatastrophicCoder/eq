@@ -284,6 +284,7 @@ void ResponseDisplay::paint (juce::Graphics& g)
     }
 
     paintNodes (g, axis);
+    paintPeakMarker (g, axis);
     paintMeter (g);
 }
 
@@ -342,6 +343,13 @@ void ResponseDisplay::handlePress (juce::Point<float> position, juce::ModifierKe
 {
     const auto nodes = getNodes();
     const auto band = NodeLayout::bandAt (nodes, position);
+
+    // Peak pick: a press on the marker creates a band at the peak.
+    if (numClicks == 1 && band == 0 && peakMarker.has_value() && position.getDistanceFrom (getPeakMarkerPosition()) <= 10.0f)
+    {
+        startPeakPick (position);
+        return;
+    }
 
     if (numClicks >= 2)
     {
@@ -413,6 +421,12 @@ void ResponseDisplay::handleDrag (juce::Point<float> position, juce::ModifierKey
     {
         for (const auto& v : drag.dragTo (position, mods.isShiftDown(), getAxis()))
         {
+            if (v.band == pickBand)
+            {
+                writer.set (v.band, "gain", static_cast<float> (v.gainDb));   // peak pick: gain only
+                continue;
+            }
+
             writer.set (v.band, "freq", static_cast<float> (v.frequencyHz));
 
             const auto type = currentBands()[static_cast<size_t> (v.band - 1)].type;
@@ -443,12 +457,24 @@ void ResponseDisplay::handleRelease()
     {
         for (const auto& s : drag.getBands())
         {
+            if (s.band == pickBand)
+            {
+                writer.endGesture (s.band, "gain");
+                continue;
+            }
+
             writer.endGesture (s.band, "freq");
             if (s.usesGain)
                 writer.endGesture (s.band, "gain");
         }
 
         drag.end();
+    }
+
+    if (pickBand != 0)
+    {
+        pickBand = 0;
+        pickStep.reset();   // closes the peak pick's undo step
     }
 
     if (selectingArea)
@@ -700,6 +726,7 @@ void ResponseDisplay::mouseUp (const juce::MouseEvent&)
 
 void ResponseDisplay::mouseMove (const juce::MouseEvent& e)
 {
+    handleHover (e.position);
     const auto band = NodeLayout::bandAt (getNodes(), e.position);
     if (band != hovered)
     {
@@ -710,6 +737,12 @@ void ResponseDisplay::mouseMove (const juce::MouseEvent& e)
 
 void ResponseDisplay::mouseExit (const juce::MouseEvent&)
 {
+    if (peakMarker.has_value())
+    {
+        peakMarker.reset();
+        repaint();
+    }
+
     if (hovered != 0)
     {
         hovered = 0;
@@ -951,5 +984,115 @@ void ResponseDisplay::paintNodes (juce::Graphics& g, const FrequencyAxis& axis)
     }
 }
 
-void ResponseDisplay::handleHover (juce::Point<float>) {}
-juce::Point<float> ResponseDisplay::getPeakMarkerPosition() const { return {}; }
+//==============================================================================
+// Peak pick (M9c, decisions 2026-09-29).
+
+const SpectrumAnalyzer* ResponseDisplay::peakSource() const
+{
+    // The shown spectrum: input when Pre or Pre+Post is shown, output when only Post.
+    switch (static_cast<AnalyzerSettings::Mode> (processor.getAnalyzerSettings().mode))
+    {
+        case AnalyzerSettings::Mode::pre:
+        case AnalyzerSettings::Mode::prePost: return &preAnalyzer;
+        case AnalyzerSettings::Mode::post:    return &postAnalyzer;
+        case AnalyzerSettings::Mode::off:     break;
+    }
+    return nullptr;
+}
+
+float ResponseDisplay::analyzerYForDb (double displayDb) const
+{
+    const auto plot = getPlotArea();
+    const auto range = AnalyzerSettings::ranges[static_cast<size_t> (processor.getAnalyzerSettings().range)];
+    return juce::jlimit (plot.getY(), plot.getBottom(), plot.getY() + static_cast<float> (-displayDb / range) * plot.getHeight());
+}
+
+void ResponseDisplay::handleHover (juce::Point<float> position)
+{
+    std::optional<PeakFinder::Peak> marker;
+    const auto* source = peakSource();
+    const auto bands = currentBands();
+    const auto anyFree = std::any_of (bands.begin(), bands.end(), [] (const BandSettings& b) { return ! b.inUse; });
+
+    if (source != nullptr && anyFree && getPlotArea().contains (position) && NodeLayout::bandAt (getNodes(), position) == 0)
+    {
+        std::array<double, SpectrumAnalyzer::numPoints> frequencies {}, levels {};
+        for (int k = 0; k < SpectrumAnalyzer::numPoints; ++k)
+        {
+            frequencies[static_cast<size_t> (k)] = source->frequency (k);
+            levels[static_cast<size_t> (k)] = source->levelDb (k);
+        }
+
+        marker = PeakFinder::nearest (PeakFinder::find (frequencies, levels), getAxis().frequencyForX (position.x));
+    }
+
+    const auto changed = marker.has_value() != peakMarker.has_value()
+                      || (marker.has_value() && marker->point != peakMarker->point);
+    peakMarker = marker;
+    if (changed)
+        repaint();
+}
+
+juce::Point<float> ResponseDisplay::getPeakMarkerPosition() const
+{
+    const auto* source = peakSource();
+    if (! peakMarker.has_value() || source == nullptr)
+        return {};
+
+    return { getAxis().xForFrequency (peakMarker->frequencyHz), analyzerYForDb (source->displayDb (peakMarker->point)) };
+}
+
+bool ResponseDisplay::startPeakPick (juce::Point<float> position)
+{
+    const auto bands = currentBands();
+    int free = 0;
+    for (int b = 1; b <= ResponseCurves::numBands && free == 0; ++b)
+        if (! bands[static_cast<size_t> (b - 1)].inUse)
+            free = b;
+
+    if (free == 0)
+    {
+        showMessage ("All 16 bands in use");
+        return true;
+    }
+
+    const auto f = std::clamp (peakMarker->frequencyHz, NodeDragController::minFrequency, NodeDragController::maxFrequency);
+    const auto q = std::clamp (peakMarker->q, 0.5, 18.0);
+
+    // Creation and the gain drag form one undo step, closed on release.
+    pickStep.emplace (processor.getUndoHistory());
+    writer.setOnce (free, "type", static_cast<float> (FilterType::bell));
+    writer.setOnce (free, "freq", static_cast<float> (f));
+    writer.setOnce (free, "gain", 0.0f);
+    writer.setOnce (free, "q", static_cast<float> (q));
+    writer.setOnce (free, "enabled", 1.0f);
+    processor.setBandInUse (free, true);
+
+    selection.select (free);
+    selectionChanged();
+
+    // The drag sets the gain only: the frequency stays on the peak.
+    pickBand = free;
+    writer.beginGesture (free, "gain");
+    drag.begin ({ { free, f, 0.0, true } }, position);
+    peakMarker.reset();
+    refresh();
+    return true;
+}
+
+void ResponseDisplay::paintPeakMarker (juce::Graphics& g, const FrequencyAxis&)
+{
+    if (! peakMarker.has_value() || drag.isActive() || selectingArea)
+        return;
+
+    const auto centre = getPeakMarkerPosition();
+    const auto colour = juce::Colours::white;
+    g.setColour (colour.withAlpha (0.9f));
+    g.drawEllipse (juce::Rectangle<float> (10.0f, 10.0f).withCentre (centre), 1.5f);
+    g.fillEllipse (juce::Rectangle<float> (3.0f, 3.0f).withCentre (centre));
+
+    const auto f = peakMarker->frequencyHz;
+    const auto text = f < 1000.0 ? juce::String (juce::roundToInt (f)) + " Hz" : juce::String (f / 1000.0, 2) + " kHz";
+    g.setFont (juce::FontOptions (11.0f));
+    g.drawText (text, juce::Rectangle<float> (70.0f, 14.0f).withCentre (centre.translated (0.0f, -14.0f)), juce::Justification::centred);
+}
