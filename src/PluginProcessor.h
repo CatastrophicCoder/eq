@@ -57,7 +57,7 @@ public:
 
     //==============================================================================
     /** Version written into every saved state; bump when the state format changes. */
-    static constexpr int stateVersion = 4;   // 4: phase mode properties (M8)
+    static constexpr int stateVersion = 5;   // 4: phase mode properties (M8); 5: A/B slots (M9a)
 
     juce::AudioProcessorValueTreeState& getValueTreeState() noexcept { return parameters; }
 

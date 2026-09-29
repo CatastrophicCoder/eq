@@ -34,6 +34,28 @@ TopBar::TopBar (PresetManager& p) : presets (p)
         addAndMakeVisible (b);
     addAndMakeVisible (phaseModeControls);
 
+    // A/B (M9a).
+    aButton.setName ("slotA");
+    bButton.setName ("slotB");
+    copyButton.setName ("copySlot");
+    aButton.setClickingTogglesState (false);
+    bButton.setClickingTogglesState (false);
+    aButton.setTooltip ("Setting A");
+    bButton.setTooltip ("Setting B");
+    copyButton.setTooltip ("Copy the active setting to the other slot");
+    aButton.onClick = [this] { if (onSlotChosen != nullptr) onSlotChosen (false); };
+    bButton.onClick = [this] { if (onSlotChosen != nullptr) onSlotChosen (true); };
+    copyButton.onClick = [this] { if (onCopy != nullptr) onCopy(); };
+    for (auto* b : { &aButton, &bButton })
+    {
+        // The active slot in the warm colour of the summed curve.
+        b->setColour (juce::TextButton::buttonOnColourId, ResponseDisplay::sumColour().withAlpha (0.8f));
+        b->setColour (juce::TextButton::textColourOnId, juce::Colour { 0xff111116 });
+    }
+    for (auto* b : { &aButton, &bButton, &copyButton })
+        addAndMakeVisible (b);
+    showActiveSlot (false);
+
     refresh();
 }
 
@@ -175,6 +197,14 @@ void TopBar::resized()
     nextButton.setBounds (centre.removeFromRight (28));
     presetButton.setBounds (centre.reduced (4, 0));
 
+    // A/B left of the preset browser (M9a), between it and the plugin name.
+    auto abArea = juce::Rectangle<int> (area.getX(), area.getY(), previousButton.getX() - 12 - area.getX(), area.getHeight());
+    copyButton.setBounds (abArea.removeFromRight (44));
+    abArea.removeFromRight (6);
+    bButton.setBounds (abArea.removeFromRight (26));
+    abArea.removeFromRight (2);
+    aButton.setBounds (abArea.removeFromRight (26));
+
     // Phase mode menus on the right (M8), in the space beside the preset browser.
     const auto rightSpace = area.getRight() - nextButton.getRight() - 12;
     const auto width = juce::jmin (230, rightSpace);
@@ -192,4 +222,9 @@ void TopBar::paint (juce::Graphics& g)
     g.drawText (JucePlugin_Name, getLocalBounds().reduced (14, 0), juce::Justification::centredLeft);
 }
 
-void TopBar::showActiveSlot (bool) {}
+void TopBar::showActiveSlot (bool bIsActive)
+{
+    aButton.setToggleState (! bIsActive, juce::dontSendNotification);
+    bButton.setToggleState (bIsActive, juce::dontSendNotification);
+    copyButton.setButtonText (juce::String::fromUTF8 (bIsActive ? "B\xe2\x86\x92" "A" : "A\xe2\x86\x92" "B"));
+}

@@ -113,6 +113,9 @@ Decided; details and dates in `docs/PROGRESS.md`.
   `LinearPhaseUpdater` (background thread), `LinearPhaseEngine` (own partitioned convolution; filter changes keep the
   input history and crossfade). Latency taps/2 + 512. Static bands form the FIR; dynamic bands run as IIR after it,
   detecting the delayed signal. Mode and length switches fade out, wait for a full history, fade in.
+- A/B (M9a): `AbComparison` (src/presets) keeps the inactive slot (complete setting incl. phase mode and view);
+  saved as an "ABComparison" element next to the parameter state (state version 5), not inside it.
+- MIDI Learn is not planned: MIDI input would change the AU type (aufx -> aumf) and break saved sessions.
 - Milestone order after 5: per-band stereo (6), dynamic EQ (7), linear phase (8).
 
 ## Hard rules: real-time audio thread

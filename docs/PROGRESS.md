@@ -17,7 +17,7 @@ Milestone definitions and "done when" criteria are in [PLAN.md](PLAN.md#mileston
 | 6b | Presets | Done | Built and validated (186 tests, pluginval, auval); owner tested in Logic |
 | 7 | Dynamic EQ | Done | Built and validated (223 tests, pluginval, auval); owner tested in Logic except the side-chain (covered by unit tests only). Peak detector reading still an open decision |
 | 8 | Linear phase mode | Done | Built and validated (245 tests, pluginval, auval); owner tested in Logic |
-| 9 | Deferred features | In progress | Split into 9a-9g (small to large). Next: 9a A/B comparison |
+| 9 | Deferred features | In progress | Split into 9a-9g (small to large). 9a A/B built and validated, awaiting owner's Logic test |
 
 Status values: Not started · In progress · Done · Skipped
 
@@ -57,6 +57,8 @@ Newest first. Move each item here from "Open decisions" in `CLAUDE.md` once it i
 | 2026-09-29 | M8 mode and length switches: fade out (20 ms), switch, stay silent until the filter of the new length is in use and has a full input history (taps samples), fade in (20 ms). prepareToPlay and reset() count as a fresh stream (no wait) | - | Planned by Claude |
 | 2026-09-29 | MIDI Learn dropped: MIDI input would change the AU type from aufx to aumf (breaking saved Logic sessions), and VST3 would need hidden controller parameters; hosts map controllers to parameters themselves | Drop; VST3 and Standalone only; change the AU type; postpone | Chosen by owner |
 | 2026-09-29 | M9 split into 9a A/B, 9b undo/redo, 9c Spectrum Grab, 9d EQ Sketch, 9e EQ Match, 9f natural-phase-style mode, 9g spectral dynamics, built in that order | Small to large; workflow first; DSP first | Chosen by owner |
+| 2026-09-29 | A/B slots hold everything: all parameters, bands in use, phase mode and length, view settings, current preset | Same as a preset; preset plus phase mode; everything | Chosen by owner |
+| 2026-09-29 | Both A/B slots and the active one are saved with the session (state version 5); older sessions start with both slots equal | Saved with session; only while open | Chosen by owner |
 | 2026-09-28 | Plugin name "Spectral Fault", brand (company) "Catastrophic Audio" | Name lists proposed by Claude | Chosen by owner |
 | 2026-09-28 | Rename details: bundle ID com.catastrophicaudio.spectralfault; CMake target SpectralFault (tests SpectralFaultTests); plugin codes, saved-state tag and preset tag unchanged; rename committed under M7 | Keep or change bundle ID; keep or rename target; M7 or separate prefix | Chosen by owner |
 | 2026-09-28 | User preset folder moves to ~/Library/Audio/Presets/Catastrophic Audio/Spectral Fault/; the old folder's presets are copied once (only if the new folder has none); old files stay | Keep old path; move without migration; move and migrate | Chosen by owner |
@@ -118,6 +120,19 @@ Newest first. Move each item here from "Open decisions" in `CLAUDE.md` once it i
 ## Session log
 
 Newest first. One entry per session, a few lines each.
+
+### 2026-09-29 — M9 planning and 9a (A/B comparison)
+
+- M9 assessed feature by feature: only MIDI Learn needed a change to existing work (AU type aufx -> aumf); dropped
+  by owner. Order and A/B decisions recorded.
+- Done: `AbComparison` (src/presets): capture/apply of the complete setting, switch (differing parameters as host
+  edits), copy, saved state; top bar A / B / copy buttons left of the preset browser, active slot in amber.
+- Tests added / passing: 253/253. Start state; each slot keeps its edits (bands, in-use, dynamics, output, phase
+  mode, view); copy; host edits only for differing parameters, all complete; saved and restored with the active
+  slot, exactly one A/B element in the saved state; older sessions give equal slots; loading a preset changes only
+  the active slot; buttons switch, copy and show the active slot, laid out at three sizes. pluginval strictness 5
+  (VST3, AU) and auval pass.
+- Next step: owner's check in Logic, then 9b undo/redo.
 
 ### 2026-09-29 — M8 done
 

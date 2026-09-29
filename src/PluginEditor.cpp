@@ -23,6 +23,13 @@ ParametricEQAudioProcessorEditor::ParametricEQAudioProcessorEditor (ParametricEQ
     phase.onModeChanged = [this] (bool linear) { eqProcessor.setLinearPhase (linear); };
     phase.onLengthChanged = [this] (int index) { eqProcessor.setLinearPhaseLength (index); };
 
+    topBar.onSlotChosen = [this] (bool b)
+    {
+        eqProcessor.getAbComparison().switchTo (b ? AbComparison::Slot::b : AbComparison::Slot::a);
+        refreshControls();
+    };
+    topBar.onCopy = [this] { eqProcessor.getAbComparison().copyActiveToOther(); };
+
     addAndMakeVisible (topBar);
     addAndMakeVisible (display);
     addAndMakeVisible (bottomBar);
@@ -91,6 +98,7 @@ void ParametricEQAudioProcessorEditor::refreshControls()
     display.refresh();
     display.refreshAnalyzer (elapsed);
     topBar.refresh();
+    topBar.showActiveSlot (eqProcessor.getAbComparison().getActive() == AbComparison::Slot::b);
     topBar.getPhaseModeControls().show (eqProcessor.isLinearPhase(), eqProcessor.getLinearPhaseLength(),
                                         eqProcessor.getSampleRate() > 0.0 ? eqProcessor.getSampleRate() : 48000.0);
     bandPanel.refreshControlStates();

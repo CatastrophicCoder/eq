@@ -430,6 +430,7 @@ void ParametricEQAudioProcessor::getStateInformation (juce::MemoryBlock& destDat
 {
     const auto xml = parameters.copyState().createXml();
     xml->setAttribute ("stateVersion", stateVersion);
+    xml->addChildElement (abComparison.toState().createXml().release());   // version 5 (M9a)
     copyXmlToBinary (*xml, destData);
 }
 
@@ -445,7 +446,14 @@ void ParametricEQAudioProcessor::setStateInformation (const void* data, int size
     if (version < 1 || version > stateVersion)
         return;
 
-    parameters.replaceState (juce::ValueTree::fromXml (*xml));
+    // The A/B element (version 5) is kept apart: it is not part of the setting itself.
+    auto tree = juce::ValueTree::fromXml (*xml);
+    const auto abState = tree.getChildWithName (AbComparison::stateTag);
+    if (abState.isValid())
+        tree.removeChild (abState, nullptr);
+    tree.removeProperty ("stateVersion", nullptr);
+
+    parameters.replaceState (tree);
 
     // Version 1 (M1) had a single bell on band 1 and no type or enable parameters.
     if (version == 1)
@@ -471,6 +479,7 @@ void ParametricEQAudioProcessor::setStateInformation (const void* data, int size
 
     readPhaseModeFromState();   // version 4 (M8); older states read as Zero latency
     presetManager->restoreFromSession();
+    abComparison.fromState (abState);   // version 5 (M9a); older states: both slots equal
 }
 
 //==============================================================================
