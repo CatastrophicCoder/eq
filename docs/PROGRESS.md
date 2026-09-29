@@ -16,7 +16,7 @@ Milestone definitions and "done when" criteria are in [PLAN.md](PLAN.md#mileston
 | 6 | Per-band stereo | Done | Built and validated (172 tests, pluginval, auval); owner tested in Logic |
 | 6b | Presets | Done | Built and validated (186 tests, pluginval, auval); owner tested in Logic |
 | 7 | Dynamic EQ | Done | Built and validated (223 tests, pluginval, auval); owner tested in Logic except the side-chain (covered by unit tests only). Peak detector reading still an open decision |
-| 8 | Linear phase mode | In progress | Steps 0-3 built and validated (245 tests, pluginval, auval); awaiting owner's Logic test |
+| 8 | Linear phase mode | Done | Built and validated (245 tests, pluginval, auval); owner tested in Logic |
 | 9 | Deferred features | Not started | |
 
 Status values: Not started · In progress · Done · Skipped
@@ -116,6 +116,10 @@ Newest first. Move each item here from "Open decisions" in `CLAUDE.md` once it i
 ## Session log
 
 Newest first. One entry per session, a few lines each.
+
+### 2026-09-29 — M8 done
+
+- Owner tested Linear phase mode in Logic and marked M8 done.
 
 ### 2026-09-29 — M8 step 3 (phase mode menus)
 
