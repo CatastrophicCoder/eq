@@ -32,6 +32,7 @@ TopBar::TopBar (PresetManager& p) : presets (p)
 
     for (auto* b : { &previousButton, &nextButton, &presetButton })
         addAndMakeVisible (b);
+    addAndMakeVisible (phaseModeControls);
 
     refresh();
 }
@@ -173,6 +174,11 @@ void TopBar::resized()
     previousButton.setBounds (centre.removeFromLeft (28));
     nextButton.setBounds (centre.removeFromRight (28));
     presetButton.setBounds (centre.reduced (4, 0));
+
+    // Phase mode menus on the right (M8), in the space beside the preset browser.
+    const auto rightSpace = area.getRight() - nextButton.getRight() - 12;
+    const auto width = juce::jmin (230, rightSpace);
+    phaseModeControls.setBounds (area.removeFromRight (width));
 }
 
 void TopBar::paint (juce::Graphics& g)

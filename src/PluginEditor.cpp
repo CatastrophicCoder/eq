@@ -19,6 +19,10 @@ ParametricEQAudioProcessorEditor::ParametricEQAudioProcessorEditor (ParametricEQ
         display.refreshAnalyzer (0.0);
     };
 
+    auto& phase = topBar.getPhaseModeControls();
+    phase.onModeChanged = [this] (bool linear) { eqProcessor.setLinearPhase (linear); };
+    phase.onLengthChanged = [this] (int index) { eqProcessor.setLinearPhaseLength (index); };
+
     addAndMakeVisible (topBar);
     addAndMakeVisible (display);
     addAndMakeVisible (bottomBar);
@@ -87,6 +91,8 @@ void ParametricEQAudioProcessorEditor::refreshControls()
     display.refresh();
     display.refreshAnalyzer (elapsed);
     topBar.refresh();
+    topBar.getPhaseModeControls().show (eqProcessor.isLinearPhase(), eqProcessor.getLinearPhaseLength(),
+                                        eqProcessor.getSampleRate() > 0.0 ? eqProcessor.getSampleRate() : 48000.0);
     bandPanel.refreshControlStates();
     bottomBar.refresh();
 }

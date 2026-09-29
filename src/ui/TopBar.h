@@ -7,7 +7,8 @@
 class PresetManager;
 
 //==============================================================================
-/** Thin bar above the display: the plugin name and the preset browser (M6b):
+/** Thin bar above the display: the plugin name, the preset browser (M6b) and, on the
+    right, the phase mode menus (M8). Preset browser:
     previous / next, the current preset's name (with "*" when modified), and a
     menu with factory presets by category, user presets, Save As and Delete.
 */

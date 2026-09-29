@@ -545,7 +545,8 @@ TEST_CASE ("Phase mode menus drive the processor and follow it", "[editor][linea
     CHECK (length.getSelectedItemIndex() == 1);
     CHECK_FALSE (length.isEnabled());
 
-    // Another sample rate: the latencies in ms follow.
+    // Another sample rate (a host sets the rate, then prepares): the latencies in ms follow.
+    p.setPlayConfigDetails (2, 2, 96000.0, 512);
     p.prepareToPlay (96000.0, 512);
     f.editor.refreshControls();
     CHECK (length.getItemText (0) == "48 ms");

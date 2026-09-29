@@ -16,7 +16,7 @@ Milestone definitions and "done when" criteria are in [PLAN.md](PLAN.md#mileston
 | 6 | Per-band stereo | Done | Built and validated (172 tests, pluginval, auval); owner tested in Logic |
 | 6b | Presets | Done | Built and validated (186 tests, pluginval, auval); owner tested in Logic |
 | 7 | Dynamic EQ | Done | Built and validated (223 tests, pluginval, auval); owner tested in Logic except the side-chain (covered by unit tests only). Peak detector reading still an open decision |
-| 8 | Linear phase mode | In progress | Steps 0-2 of 3 done (detector change, FIR design, audio path). Next: step 3, UI |
+| 8 | Linear phase mode | In progress | Steps 0-3 built and validated (245 tests, pluginval, auval); awaiting owner's Logic test |
 | 9 | Deferred features | Not started | |
 
 Status values: Not started · In progress · Done · Skipped
@@ -116,6 +116,18 @@ Newest first. Move each item here from "Open decisions" in `CLAUDE.md` once it i
 ## Session log
 
 Newest first. One entry per session, a few lines each.
+
+### 2026-09-29 — M8 step 3 (phase mode menus)
+
+- Done: `PhaseModeControls` (src/ui): Zero latency / Linear phase and a length menu showing each length's latency in
+  ms at the current sample rate (96 / 181 / 352 ms at 48 kHz); the length menu is greyed in Zero latency mode.
+  Placed on the right of the top bar instead of the planned bottom bar: at the minimum width (960 px) the bottom bar
+  has no room for two more menus.
+- Tests added / passing: 245/245. Menus drive the processor and follow it (session load, sample rate change);
+  layout and readability at three sizes, clear of the preset browser. Snapshots checked. pluginval strictness 5
+  (VST3, AU) and auval pass.
+- Next step: owner's listening check in Logic (mode switch, the three lengths, parameter changes, latency
+  compensation against another track).
 
 ### 2026-09-29 — M8 step 2 (linear-phase audio path)
 
