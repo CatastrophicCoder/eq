@@ -14,7 +14,7 @@ project follows. For what the plugin does and how to use it, see the [README](..
 - [Saved state and compatibility](#saved-state-and-compatibility)
 - [Testing approach](#testing-approach)
 - [Conventions](#conventions)
-- [How this project is developed](#how-this-project-is-developed)
+- [Workflow](#workflow)
 
 ## Prerequisites
 
@@ -216,20 +216,13 @@ An equalizer is unusually testable: every filter has an analytic target. Tests c
 - Small, focused commits: `M<n>: <what changed>` for milestone work (e.g. `M8: add linear-phase design tests`),
   `Docs: …` for documentation.
 
-## How this project is developed
-
-Spectral Fault is a learning project built with an AI coding assistant, Claude Code, under rules written in
-[CLAUDE.md](../CLAUDE.md):
+## Workflow
 
 1. **Milestones** from [PLAN.md](PLAN.md) are taken one at a time, split into stages.
-2. **Every design decision is the owner's**: the assistant lays out the options with their trade-offs, and the
-   choice is recorded with the alternatives in the Decisions table of [PROGRESS.md](PROGRESS.md).
-3. **A plan comes before any edit**: files, tests and commands, approved before work starts.
+2. **Design decisions** are made explicitly and recorded with their alternatives in the Decisions table of
+   [PROGRESS.md](PROGRESS.md).
+3. **A plan comes before any edit**: files, tests and commands.
 4. **Tests are written first** and committed before the implementation.
 5. **Each step ends with** a build, all tests, pluginval and auval, a snapshot check for UI work, and a session
    log entry in PROGRESS.md.
-6. **Listening tests are human**: the owner checks each milestone in Logic Pro before it is marked done; the
-   assistant cannot hear audio, so everything it verifies is numerical.
-
-To continue the work with Claude Code, start a session in the repository root and name the milestone or feature;
-the assistant reads CLAUDE.md, PLAN.md and PROGRESS.md first.
+6. **Listening checks** in Logic Pro come before a milestone is marked done; the automated checks are numerical.

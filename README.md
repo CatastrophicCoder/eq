@@ -113,12 +113,6 @@ All planned milestones (0–9) are done, including the deferred features: A/B, u
 EQ Match and spectral dynamics. The plan and a detailed log are in [docs/PLAN.md](docs/PLAN.md) and [docs/PROGRESS.md](docs/PROGRESS.md).
 The primary test host is Logic Pro (AU); the VST3 is checked with pluginval.
 
-## How it is built
-
-Spectral Fault is developed milestone by milestone, tests first, with the help of an AI coding assistant
-(Claude Code). Every design decision is recorded with its alternatives in [docs/PROGRESS.md](docs/PROGRESS.md);
-more in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md#how-this-project-is-developed).
-
 ## License
 
 [GNU Affero General Public License v3.0](LICENSE). JUCE is used under its AGPLv3 option.

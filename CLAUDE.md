@@ -186,6 +186,8 @@ Write the test first, then the implementation.
 ## Do not
 
 - Edit anything under `external/`.
+- Describe or advertise the AI-assisted development in the README, DEVELOPMENT.md or the user guide (owner's
+  decision 2026-09-29); commit trailers and CLAUDE.md itself are fine.
 - Copy code from AGPL/GPL projects (e.g. ZL Equalizer, FreeEQ8). Reading them for ideas is fine;
   implement from published papers and formulas and cite the source in a comment.
 - Use other companies' product or brand names, logos or wordmarks anywhere (code, UI, docs, commits); copy their
