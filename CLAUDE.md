@@ -123,6 +123,7 @@ Decided; details and dates in `docs/PROGRESS.md`.
 - EQ Match (M9e): `MatchSession` learns long-term spectra (side-chain = reference in one pass, else two capture
   passes of the input), `MatchCurve` gives the smoothed, level-free difference, `CurveFitter` turns it into bands
   (replace all or keep existing, asked on Apply). Floating `MatchWindow` from the bottom bar's Match button.
+  The session lives in the processor; learned spectra are saved as an "EQMatch" element (state version 6).
 - MIDI Learn is not planned: MIDI input would change the AU type (aufx -> aumf) and break saved sessions.
 - Milestone order after 5: per-band stereo (6), dynamic EQ (7), linear phase (8).
 

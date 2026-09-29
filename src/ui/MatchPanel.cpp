@@ -62,6 +62,10 @@ MatchPanel::MatchPanel (MatchSession& s) : session (s)
 
 void MatchPanel::refresh()
 {
+    // Settings may come from a loaded project.
+    amount.setValue (session.getAmount() * 100.0, juce::dontSendNotification);
+    smoothing.setValue (session.getSmoothingOctaves(), juce::dontSendNotification);
+
     using L = MatchSession::Learning;
     const auto running = session.getLearning();
     const auto sidechain = session.usesSidechain();

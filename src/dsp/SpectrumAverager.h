@@ -1,5 +1,6 @@
 #pragma once
 
+#include <juce_data_structures/juce_data_structures.h>
 #include <juce_dsp/juce_dsp.h>
 
 #include <vector>
@@ -25,9 +26,16 @@ public:
     void addSamples (const float* samples, int numSamples);
 
     double getSeconds() const noexcept;
-    bool hasData() const noexcept { return frames > 0; }
+    bool hasData() const noexcept { return frames > 0 || ! restoredHz.empty(); }
 
     std::vector<double> levelsDb (const std::vector<double>& frequenciesHz) const;
+
+    /** Saved form (EQ Match, state version 6): the levels at statePoints log-spaced frequencies from
+        20 Hz to 20 kHz (float32, base64) with the learned seconds. A restored averager reads those
+        points (interpolated in log frequency) until the next reset. */
+    static constexpr int statePoints = 1024;
+    juce::ValueTree toState (const juce::Identifier& type) const;
+    void fromState (const juce::ValueTree& state);
 
 private:
     void analyseFrame();
@@ -38,4 +46,6 @@ private:
     std::vector<double> powerSum;
     juce::int64 samplesAdded = 0;
     int frames = 0;
+    std::vector<double> restoredHz, restoredDb;
+    double restoredSeconds = 0.0;
 };

@@ -441,6 +441,7 @@ void ParametricEQAudioProcessor::getStateInformation (juce::MemoryBlock& destDat
     const auto xml = parameters.copyState().createXml();
     xml->setAttribute ("stateVersion", stateVersion);
     xml->addChildElement (abComparison.toState().createXml().release());   // version 5 (M9a)
+    xml->addChildElement (matchSession.toState().createXml().release());   // version 6 (M9e)
     copyXmlToBinary (*xml, destData);
 }
 
@@ -465,6 +466,9 @@ void ParametricEQAudioProcessor::setStateInformation (const void* data, int size
     const auto abState = tree.getChildWithName (AbComparison::stateTag);
     if (abState.isValid())
         tree.removeChild (abState, nullptr);
+    const auto matchState = tree.getChildWithName (MatchSession::stateTag);   // version 6 (M9e)
+    if (matchState.isValid())
+        tree.removeChild (matchState, nullptr);
     tree.removeProperty ("stateVersion", nullptr);
 
     parameters.replaceState (tree);
@@ -494,6 +498,7 @@ void ParametricEQAudioProcessor::setStateInformation (const void* data, int size
     readPhaseModeFromState();   // version 4 (M8); older states read as Zero latency
     presetManager->restoreFromSession();
     abComparison.fromState (abState);   // version 5 (M9a); older states: both slots equal
+    matchSession.fromState (matchState);   // version 6 (M9e); older states: nothing learned
 }
 
 //==============================================================================

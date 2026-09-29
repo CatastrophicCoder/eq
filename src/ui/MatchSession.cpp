@@ -134,5 +134,21 @@ void MatchSession::apply (ApplyMode mode)
     }
 }
 
-juce::ValueTree MatchSession::toState() const { return juce::ValueTree (stateTag); }
-void MatchSession::fromState (const juce::ValueTree&) {}
+juce::ValueTree MatchSession::toState() const
+{
+    juce::ValueTree state (stateTag);
+    state.setProperty ("amount", amount, nullptr);
+    state.setProperty ("smoothing", smoothing, nullptr);
+    state.appendChild (reference.toState ("Reference"), nullptr);
+    state.appendChild (current.toState ("Current"), nullptr);
+    return state;
+}
+
+void MatchSession::fromState (const juce::ValueTree& state)
+{
+    stopLearning();
+    reference.fromState (state.getChildWithName ("Reference"));   // invalid: cleared
+    current.fromState (state.getChildWithName ("Current"));
+    amount = std::clamp (static_cast<double> (state.getProperty ("amount", 1.0)), 0.0, 1.0);
+    smoothing = std::clamp (static_cast<double> (state.getProperty ("smoothing", 1.0 / 3.0)), 1.0 / 12.0, 1.0);
+}
