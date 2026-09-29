@@ -17,7 +17,7 @@ Milestone definitions and "done when" criteria are in [PLAN.md](PLAN.md#mileston
 | 6b | Presets | Done | Built and validated (186 tests, pluginval, auval); owner tested in Logic |
 | 7 | Dynamic EQ | Done | Built and validated (223 tests, pluginval, auval); owner tested in Logic except the side-chain (covered by unit tests only). Peak detector reading still an open decision |
 | 8 | Linear phase mode | Done | Built and validated (245 tests, pluginval, auval); owner tested in Logic |
-| 9 | Deferred features | In progress | Split into 9a-9g (small to large). 9a A/B done. 9b undo/redo done. 9c peak pick built and validated, awaiting owner's Logic test |
+| 9 | Deferred features | In progress | Split into 9a-9g (small to large). 9a A/B done. 9b undo/redo done. 9c peak pick done (ring hold added after owner feedback). Next: 9d EQ Sketch |
 
 Status values: Not started · In progress · Done · Skipped
 
@@ -66,6 +66,7 @@ Newest first. Move each item here from "Open decisions" in `CLAUDE.md` once it i
 | 2026-09-29 | Peak pick (9c): a marker on the nearest spectrum peak appears while hovering empty display space; dragging it creates a band | Hover markers; modifier + drag; pick button | Chosen by owner |
 | 2026-09-29 | Peak pick band: Bell at the peak frequency, Q from the peak's -3 dB width (0.5-18), gain set by the drag from 0 dB | Q from width; fixed Q 6; fixed Q 1 | Chosen by owner |
 | 2026-09-29 | Peak pick follows the shown spectrum: pre when Pre or Pre+Post is shown, post when only Post; none with the analyzer off | Pre; post; whichever is shown | Chosen by owner |
+| 2026-09-29 | Peak pick ring holds its peak and place while the pointer is within 30 px, and a press anywhere in that radius picks it (owner feedback: the ring jumped with the live peak) | Hold while near; slow peak memory; both | Chosen by owner |
 | 2026-09-28 | Plugin name "Spectral Fault", brand (company) "Catastrophic Audio" | Name lists proposed by Claude | Chosen by owner |
 | 2026-09-28 | Rename details: bundle ID com.catastrophicaudio.spectralfault; CMake target SpectralFault (tests SpectralFaultTests); plugin codes, saved-state tag and preset tag unchanged; rename committed under M7 | Keep or change bundle ID; keep or rename target; M7 or separate prefix | Chosen by owner |
 | 2026-09-28 | User preset folder moves to ~/Library/Audio/Presets/Catastrophic Audio/Spectral Fault/; the old folder's presets are copied once (only if the new folder has none); old files stay | Keep old path; move without migration; move and migrate | Chosen by owner |
@@ -140,7 +141,10 @@ Newest first. One entry per session, a few lines each.
   nodes or with the analyzer off, on a real 1 kHz resonance fed through the plugin; drag creates the bell with gain
   following, frequency fixed, complete host edits, one undo step; all bands in use: no marker. pluginval
   strictness 5 (VST3, AU) and auval pass. Snapshot shows the marker.
-- Next step: owner's check in Logic, then 9d EQ Sketch.
+- Owner feedback from Logic: the ring jumped with the live peak and could only be caught with the analyzer frozen.
+  Fixed: the ring holds while the pointer is within 30 px, and a press in that radius picks it (270/270 tests,
+  pluginval and auval pass). 9c done.
+- Next step: 9d EQ Sketch.
 
 ### 2026-09-29 — 9b (undo/redo)
 

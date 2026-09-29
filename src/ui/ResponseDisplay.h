@@ -158,6 +158,7 @@ private:
     std::vector<int> selectionBeforeArea;
     int hovered = 0;
     std::optional<PeakFinder::Peak> peakMarker;
+    juce::Point<float> peakMarkerPosition;   // fixed while the ring is held
     int pickBand = 0;   // band being created by a peak pick drag
     std::optional<UndoHistory::ScopedTransaction> pickStep;
 

@@ -345,7 +345,7 @@ void ResponseDisplay::handlePress (juce::Point<float> position, juce::ModifierKe
     const auto band = NodeLayout::bandAt (nodes, position);
 
     // Peak pick: a press on the marker creates a band at the peak.
-    if (numClicks == 1 && band == 0 && peakMarker.has_value() && position.getDistanceFrom (getPeakMarkerPosition()) <= 10.0f)
+    if (numClicks == 1 && band == 0 && peakMarker.has_value() && position.getDistanceFrom (getPeakMarkerPosition()) <= peakHoldRadius)
     {
         startPeakPick (position);
         return;
@@ -1009,6 +1009,10 @@ float ResponseDisplay::analyzerYForDb (double displayDb) const
 
 void ResponseDisplay::handleHover (juce::Point<float> position)
 {
+    // Hold: while the pointer stays near the ring, it keeps its peak and place (owner feedback 2026-09-29).
+    if (peakMarker.has_value() && peakSource() != nullptr && position.getDistanceFrom (peakMarkerPosition) <= peakHoldRadius)
+        return;
+
     std::optional<PeakFinder::Peak> marker;
     const auto* source = peakSource();
     const auto bands = currentBands();
@@ -1029,17 +1033,15 @@ void ResponseDisplay::handleHover (juce::Point<float> position)
     const auto changed = marker.has_value() != peakMarker.has_value()
                       || (marker.has_value() && marker->point != peakMarker->point);
     peakMarker = marker;
+    if (marker.has_value())
+        peakMarkerPosition = { getAxis().xForFrequency (marker->frequencyHz), analyzerYForDb (source->displayDb (marker->point)) };
     if (changed)
         repaint();
 }
 
 juce::Point<float> ResponseDisplay::getPeakMarkerPosition() const
 {
-    const auto* source = peakSource();
-    if (! peakMarker.has_value() || source == nullptr)
-        return {};
-
-    return { getAxis().xForFrequency (peakMarker->frequencyHz), analyzerYForDb (source->displayDb (peakMarker->point)) };
+    return peakMarker.has_value() ? peakMarkerPosition : juce::Point<float>();
 }
 
 bool ResponseDisplay::startPeakPick (juce::Point<float> position)
