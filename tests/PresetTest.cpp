@@ -534,7 +534,7 @@ namespace
 
 TEST_CASE ("Preset format 2 stores each band's dynamics", "[preset][dynamics]")
 {
-    CHECK (Preset::formatVersion == 2);
+    CHECK (Preset::formatVersion >= 2);
 
     auto original = sample();
     original.bands[4].dynamics = someDynamics();

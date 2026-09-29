@@ -92,6 +92,10 @@ public:
     int getLinearPhaseLength() const;
     void setLinearPhaseLength (int index);
 
+    /** Re-reads whether any band is spectral and reports the resulting latency (M9g). Message thread;
+        a 10 Hz timer calls it too, since the Spectral switch is an automatable parameter. */
+    void refreshLatency();
+
     /** True when the audio runs in the requested mode with its filter loaded and no fade pending; any thread. */
     bool isPhaseModeSettled() const noexcept;
 

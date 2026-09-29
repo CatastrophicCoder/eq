@@ -34,7 +34,8 @@ add_executable(SpectralFaultTests
     CurveFitterTest.cpp
     MatchTest.cpp
     ScreenshotTest.cpp
-    SpectralDynamicsTest.cpp)
+    SpectralDynamicsTest.cpp
+    SpectralProcessingTest.cpp)
 
 # Link against the plugin's shared-code library. Its JUCE modules are linked
 # PRIVATE there, so take its include paths and defines explicitly instead of

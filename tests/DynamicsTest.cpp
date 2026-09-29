@@ -215,7 +215,8 @@ TEST_CASE ("Every band has the nine dynamic parameters with their ranges and def
         {
             INFO ("field " << field);
             REQUIRE (p.getValueTreeState().getParameter (Parameters::id (b, field)) != nullptr);
-            CHECK (param (p, Parameters::id (b, field)).getVersionHint() == 4);
+            const auto isSpectral = juce::String (field) == "spectral";   // added in M9g
+            CHECK (param (p, Parameters::id (b, field)).getVersionHint() == (isSpectral ? 5 : 4));
         }
 
         auto range = [&] (const char* f) { return param (p, Parameters::id (b, f)).getNormalisableRange(); };

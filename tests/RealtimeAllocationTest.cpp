@@ -320,3 +320,35 @@ TEST_CASE ("SpectralDynamicsEngine::process does not allocate, with side-chain a
     }
     CHECK (counter.count() == 0);
 }
+TEST_CASE ("Processor processBlock does not allocate with spectral bands, including switching them", "[realtime][spectral]")
+{
+    juce::ScopedJuceInitialiser_GUI juce;
+    ParametricEQAudioProcessor processor;
+    for (int band = 1; band <= 6; ++band)
+    {
+        TestParameters::setBand (processor, band, FilterType::bell, 300.0f * static_cast<float> (band), 2.0f, 1.0f, 3, true);
+        TestParameters::set (processor, Parameters::id (band, "dyn"), 1.0f);
+        TestParameters::set (processor, Parameters::id (band, "spectral"), 1.0f);
+        TestParameters::set (processor, Parameters::id (band, "thresh"), -50.0f);
+    }
+    processor.setPlayConfigDetails (2, 2, 48000.0, 512);
+    processor.prepareToPlay (48000.0, 512);
+    processor.setAnalyzerActive (true);
+
+    juce::AudioBuffer<float> buffer (2, 512);
+    juce::Random random (9);
+    juce::MidiBuffer midi;
+    auto* spectral = processor.getValueTreeState().getParameter ("band6_spectral");
+
+    ScopedAllocationCounter counter;
+    for (int block = 0; block < 200; ++block)
+    {
+        for (int ch = 0; ch < 2; ++ch)
+            for (int i = 0; i < 512; ++i)
+                buffer.setSample (ch, i, 0.3f * (random.nextFloat() - 0.5f));
+        if (block % 50 == 25)
+            spectral->setValue (block % 100 == 25 ? 0.0f : 1.0f);
+        processor.processBlock (buffer, midi);
+    }
+    CHECK (counter.count() == 0);
+}

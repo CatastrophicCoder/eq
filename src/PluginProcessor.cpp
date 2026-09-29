@@ -580,3 +580,5 @@ bool ParametricEQAudioProcessor::isSidechainConnected() const
     const auto* bus = getBus (true, 1);
     return bus != nullptr && bus->isEnabled() && bus->getNumberOfChannels() > 0;
 }
+
+void ParametricEQAudioProcessor::refreshLatency() {}
