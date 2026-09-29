@@ -175,7 +175,8 @@ Newest first. One entry per session, a few lines each.
   crossfaded in). It now waits for the host's rate; new test reproduces it (1.0 dB instead of 6 dB before the fix).
 - Tests: 312/312 (Debug), and three parallel Release runs 312/312; pluginval strictness 5 (VST3 Debug and
   Release, AU) and auval pass.
-- Next step: owner pushes, checks the first CI run, then tags v0.1.0.
+- First CI run on GitHub: green (owner).
+- Next step: owner tags v0.1.0 to publish the release.
 
 ### 2026-09-29 — 9g stage 3 (UI and docs)
 
