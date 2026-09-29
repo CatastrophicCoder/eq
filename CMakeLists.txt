@@ -48,6 +48,7 @@ target_sources(SpectralFault
         src/ui/LevelMeter.cpp
         src/ui/BandPanel.cpp
         src/ui/TopBar.cpp
+        src/ui/PhaseModeControls.cpp
         src/ui/BottomBar.cpp
         src/ui/CompactLookAndFeel.cpp
         src/dsp/BiquadCoefficients.cpp

@@ -507,6 +507,83 @@ TEST_CASE ("The display draws a dynamic band at its live gain", "[editor][dynami
     CHECK_THAT (curves.bandDb (5, k), WithinAbs (BandDesign::design (settings, fs).magnitudeDb (curves.frequency (k), fs), 0.05));
 }
 
+TEST_CASE ("Phase mode menus drive the processor and follow it", "[editor][linearphase]")
+{
+    EditorFixture f;
+    auto& p = f.processor;
+    p.setPlayConfigDetails (2, 2, 48000.0, 512);
+    p.prepareToPlay (48000.0, 512);
+    f.editor.refreshControls();
+
+    auto& controls = f.editor.getTopBar().getPhaseModeControls();
+    auto& mode = controls.getModeBox();
+    auto& length = controls.getLengthBox();
+
+    REQUIRE (mode.getNumItems() == 2);
+    REQUIRE (length.getNumItems() == 3);
+    CHECK (mode.getSelectedItemIndex() == 0);
+    CHECK_FALSE (length.isEnabled());   // no length in Zero latency mode
+
+    // Lengths are shown as their latency at the current sample rate (taps / 2 + 512 samples).
+    CHECK (length.getItemText (0) == "96 ms");
+    CHECK (length.getItemText (1) == "181 ms");
+    CHECK (length.getItemText (2) == "352 ms");
+
+    // Control -> processor.
+    mode.setSelectedItemIndex (1, juce::sendNotificationSync);
+    CHECK (p.isLinearPhase());
+    CHECK (length.isEnabled());
+    length.setSelectedItemIndex (2, juce::sendNotificationSync);
+    CHECK (p.getLinearPhaseLength() == 2);
+    CHECK (p.getLatencySamples() == 16384 + 512);
+
+    // Processor (e.g. a loaded session) -> controls.
+    p.setLinearPhase (false);
+    p.setLinearPhaseLength (1);
+    f.editor.refreshControls();
+    CHECK (mode.getSelectedItemIndex() == 0);
+    CHECK (length.getSelectedItemIndex() == 1);
+    CHECK_FALSE (length.isEnabled());
+
+    // Another sample rate: the latencies in ms follow.
+    p.prepareToPlay (96000.0, 512);
+    f.editor.refreshControls();
+    CHECK (length.getItemText (0) == "48 ms");
+    CHECK (length.getItemText (2) == "176 ms");
+}
+
+TEST_CASE ("Phase mode menus fit the top bar beside the preset browser", "[editor][linearphase]")
+{
+    EditorFixture f;
+    auto& bar = f.editor.getTopBar();
+    auto& controls = bar.getPhaseModeControls();
+
+    for (auto [w, h] : sizes)
+    {
+        f.editor.setSize (w, h);
+        INFO ("size " << w << "x" << h);
+        checkLaidOut (f.editor, f.editor, "editor");
+
+        const auto controlsArea = inEditor (controls, f.editor);
+        CHECK (inEditor (bar, f.editor).contains (controlsArea));
+        CHECK_FALSE (controlsArea.intersects (inEditor (bar.getNextButton(), f.editor)));
+        CHECK (controlsArea.getX() > inEditor (bar.getNextButton(), f.editor).getRight());
+
+        for (int i = 0; i < 2; ++i)
+        {
+            f.processor.setLinearPhase (i == 1);
+            f.editor.refreshControls();
+            CHECK (menuReadable (controls.getModeBox(), i));
+        }
+        for (int i = 0; i < 3; ++i)
+        {
+            f.processor.setLinearPhaseLength (i);
+            f.editor.refreshControls();
+            CHECK (menuReadable (controls.getLengthBox(), i));
+        }
+    }
+}
+
 TEST_CASE ("Editor snapshot (renders PNGs to $EQ_SNAPSHOT_DIR)", "[.snapshot]")
 {
     // Hidden: run with  EQ_SNAPSHOT_DIR=<dir> SpectralFaultTests "[.snapshot]"  to look at the layout.
@@ -527,6 +604,7 @@ TEST_CASE ("Editor snapshot (renders PNGs to $EQ_SNAPSHOT_DIR)", "[.snapshot]")
     set (f.processor, Parameters::id (8, "dyn"), 1.0f);           // dynamic: range and live gain drawn
     set (f.processor, Parameters::id (8, "thresh"), -40.0f);
     set (f.processor, Parameters::id (8, "range"), -8.0f);
+    f.processor.setLinearPhase (true);                             // phase menus show Linear phase
     setBand (f.processor, 14, FilterType::highCut, 6000.0f, 0.0f, 0.71f, 5, true);   // post drops above 6 kHz
     f.editor.refreshControls();
     f.editor.getDisplay().setSelection ({ 8, 10 }, 8);

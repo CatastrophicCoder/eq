@@ -1,5 +1,7 @@
 #pragma once
 
+#include "PhaseModeControls.h"
+
 #include <juce_gui_basics/juce_gui_basics.h>
 
 class PresetManager;
@@ -31,6 +33,7 @@ public:
     juce::TextButton& getPresetButton() noexcept   { return presetButton; }
     juce::TextButton& getPreviousButton() noexcept { return previousButton; }
     juce::TextButton& getNextButton() noexcept     { return nextButton; }
+    PhaseModeControls& getPhaseModeControls() noexcept { return phaseModeControls; }
 
     void paint (juce::Graphics&) override;
     void resized() override;
@@ -40,6 +43,7 @@ private:
 
     PresetManager& presets;
     juce::TextButton previousButton { "<" }, nextButton { ">" }, presetButton;
+    PhaseModeControls phaseModeControls;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (TopBar)
 };
