@@ -17,7 +17,7 @@ Milestone definitions and "done when" criteria are in [PLAN.md](PLAN.md#mileston
 | 6b | Presets | Done | Built and validated (186 tests, pluginval, auval); owner tested in Logic |
 | 7 | Dynamic EQ | Done | Built and validated (223 tests, pluginval, auval); owner tested in Logic except the side-chain (covered by unit tests only). Peak detector reading still an open decision |
 | 8 | Linear phase mode | Done | Built and validated (245 tests, pluginval, auval); owner tested in Logic |
-| 9 | Deferred features | Not started | |
+| 9 | Deferred features | In progress | Split into 9a-9g (small to large). Next: 9a A/B comparison |
 
 Status values: Not started · In progress · Done · Skipped
 
@@ -55,6 +55,8 @@ Newest first. Move each item here from "Open decisions" in `CLAUDE.md` once it i
 | 2026-09-29 | M8 accuracy bounds: a band is resolved when its frequency and (bell, notch, band pass) bandwidth f0/Q are at least 32 FFT bins (32 fs/N); for resolved bands above 32 fs/N: smooth shapes within 0.1 dB (worst measured 0.048 dB, 1 kHz Q8 notch), cuts within 0.5 dB outside their transition band (max(1/4, 24/slope) octaves) with a -40 dB floor (worst measured 0.000 dB); smooth-shape floor -60 dB. 93 of 126 grid cases resolved | - | Proposed by Claude (new bounds) |
 | 2026-09-29 | M8 convolution: own uniformly partitioned overlap-save engine (512-sample partitions) instead of juce::dsp::Convolution, whose new filters start with an empty history (a dropout of up to half the filter length on every change); the input spectra are kept across filter changes and old/new outputs crossfade over 1024 samples. Adds 512 samples: latency = taps/2 + 512 | juce::dsp::Convolution; own engine | Chosen by Claude after a failing test (reported to owner) |
 | 2026-09-29 | M8 mode and length switches: fade out (20 ms), switch, stay silent until the filter of the new length is in use and has a full input history (taps samples), fade in (20 ms). prepareToPlay and reset() count as a fresh stream (no wait) | - | Planned by Claude |
+| 2026-09-29 | MIDI Learn dropped: MIDI input would change the AU type from aufx to aumf (breaking saved Logic sessions), and VST3 would need hidden controller parameters; hosts map controllers to parameters themselves | Drop; VST3 and Standalone only; change the AU type; postpone | Chosen by owner |
+| 2026-09-29 | M9 split into 9a A/B, 9b undo/redo, 9c Spectrum Grab, 9d EQ Sketch, 9e EQ Match, 9f natural-phase-style mode, 9g spectral dynamics, built in that order | Small to large; workflow first; DSP first | Chosen by owner |
 | 2026-09-28 | Plugin name "Spectral Fault", brand (company) "Catastrophic Audio" | Name lists proposed by Claude | Chosen by owner |
 | 2026-09-28 | Rename details: bundle ID com.catastrophicaudio.spectralfault; CMake target SpectralFault (tests SpectralFaultTests); plugin codes, saved-state tag and preset tag unchanged; rename committed under M7 | Keep or change bundle ID; keep or rename target; M7 or separate prefix | Chosen by owner |
 | 2026-09-28 | User preset folder moves to ~/Library/Audio/Presets/Catastrophic Audio/Spectral Fault/; the old folder's presets are copied once (only if the new folder has none); old files stay | Keep old path; move without migration; move and migrate | Chosen by owner |

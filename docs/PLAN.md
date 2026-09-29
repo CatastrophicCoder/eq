@@ -47,7 +47,7 @@ The milestones follow the tiers: a working multi-band EQ with knobs first, then 
 | 6b | Presets (added 2026-09-28) | Factory presets for common instruments and vocals, built from cited public sources; user presets saved as files; preset browser in the top bar | 1–2 weeks |
 | 7 | Dynamic EQ | Per-band threshold, ratio or range, attack, release; optional external side-chain input | 3–5 weeks |
 | 8 | Linear phase mode | FIR generated from the summed magnitude response, FFT convolution, latency reported to the host, selectable latency | 4–6 weeks |
-| 9 | Deferred | Natural-phase-style mode, spectral dynamics, EQ Match, EQ Sketch, Spectrum Grab, MIDI Learn, undo/redo, A/B, presets | As interest dictates |
+| 9 | Deferred (split 2026-09-29) | 9a A/B comparison, 9b undo/redo, 9c Spectrum Grab, 9d EQ Sketch, 9e EQ Match, 9f natural-phase-style mode, 9g spectral dynamics (presets done in 6b; MIDI Learn dropped: hosts map controllers) | As interest dictates |
 
 Milestones 6, 7 and 8 do not depend on each other and can be taken in any order after milestone 5. Milestone 4 is where UI work starts to dominate; milestones 7 and 8 are where DSP depth dominates.
 
