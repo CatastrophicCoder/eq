@@ -67,6 +67,10 @@ Newest first. Move each item here from "Open decisions" in `CLAUDE.md` once it i
 | 2026-09-29 | Peak pick band: Bell at the peak frequency, Q from the peak's -3 dB width (0.5-18), gain set by the drag from 0 dB | Q from width; fixed Q 6; fixed Q 1 | Chosen by owner |
 | 2026-09-29 | Peak pick follows the shown spectrum: pre when Pre or Pre+Post is shown, post when only Post; none with the analyzer off | Pre; post; whichever is shown | Chosen by owner |
 | 2026-09-29 | Peak pick ring holds its peak and place while the pointer is within 30 px, and a press anywhere in that radius picks it (owner feedback: the ring jumped with the live peak) | Hold while near; slow peak memory; both | Chosen by owner |
+| 2026-09-29 | EQ Sketch (9d): Option + drag on empty display space draws a curve; release turns it into bands | Sketch button; Option + drag; right-click menu | Chosen by owner |
+| 2026-09-29 | EQ Sketch replaces the bands whose frequency lies inside the drawn range; bands outside stay | Keep, use free slots; replace all; replace in drawn range | Chosen by owner |
+| 2026-09-29 | EQ Sketch fitter may use bells, shelves and cuts | Bells only; bells + shelves; bells, shelves, cuts | Chosen by owner |
+| 2026-09-29 | EQ Sketch uses all available slots (free plus replaced) for the closest fit | Fewest for 1 dB; fewest for 0.5 dB; all available slots | Chosen by owner |
 | 2026-09-28 | Plugin name "Spectral Fault", brand (company) "Catastrophic Audio" | Name lists proposed by Claude | Chosen by owner |
 | 2026-09-28 | Rename details: bundle ID com.catastrophicaudio.spectralfault; CMake target SpectralFault (tests SpectralFaultTests); plugin codes, saved-state tag and preset tag unchanged; rename committed under M7 | Keep or change bundle ID; keep or rename target; M7 or separate prefix | Chosen by owner |
 | 2026-09-28 | User preset folder moves to ~/Library/Audio/Presets/Catastrophic Audio/Spectral Fault/; the old folder's presets are copied once (only if the new folder has none); old files stay | Keep old path; move without migration; move and migrate | Chosen by owner |
