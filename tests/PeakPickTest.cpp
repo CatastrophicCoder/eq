@@ -265,3 +265,32 @@ TEST_CASE ("The ring holds still while the pointer stays near it, even as the sp
     REQUIRE (f.display.getPeakMarker().has_value());
     CHECK (std::abs (std::log2 (f.display.getPeakMarker()->frequencyHz / 1250.0)) < 1.0 / 12.0);
 }
+
+TEST_CASE ("Approaching the ring from further away does not make it jump", "[peakpick][editor]")
+{
+    // Owner feedback 2026-09-29 (second round): the ring still ran away while the pointer moved towards it,
+    // because it only held within 30 px. It now holds while the pointer stays within the half-octave
+    // window it was chosen from.
+    Fixture f;
+    f.display.handleHover (f.at (1350.0, 6.0));   // about 0.43 octave above the 1 kHz peak, far above it on screen
+    REQUIRE (f.display.getPeakMarker().has_value());
+    const auto held = *f.display.getPeakMarker();
+    const auto position = f.display.getPeakMarkerPosition();
+    REQUIRE (position.getDistanceFrom (f.at (1350.0, 6.0)) > ResponseDisplay::peakHoldRadius);
+
+    // The spectrum keeps changing while the pointer moves towards the ring in small steps.
+    for (int step = 1; step <= 10; ++step)
+    {
+        f.feed (step % 2 == 0 ? 1000.0 : 1180.0);
+        const auto t = static_cast<float> (step) / 10.0f;
+        const auto start = f.at (1350.0, 6.0);
+        f.display.handleHover (start + (position - start) * t);
+        REQUIRE (f.display.getPeakMarker().has_value());
+        CHECK (f.display.getPeakMarker()->point == held.point);
+        CHECK (f.display.getPeakMarkerPosition() == position);
+    }
+
+    // Leaving the window lets it follow the spectrum again.
+    f.display.handleHover (f.at (5000.0, 0.0));
+    CHECK ((! f.display.getPeakMarker().has_value() || f.display.getPeakMarker()->point != held.point));
+}
