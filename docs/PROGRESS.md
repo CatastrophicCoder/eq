@@ -17,7 +17,7 @@ Milestone definitions and "done when" criteria are in [PLAN.md](PLAN.md#mileston
 | 6b | Presets | Done | Built and validated (186 tests, pluginval, auval); owner tested in Logic |
 | 7 | Dynamic EQ | Done | Built and validated (223 tests, pluginval, auval); owner tested in Logic except the side-chain (covered by unit tests only). Peak detector reading still an open decision |
 | 8 | Linear phase mode | Done | Built and validated (245 tests, pluginval, auval); owner tested in Logic |
-| 9 | Deferred features | In progress | Split into 9a-9g (small to large). 9a A/B done. 9b undo/redo done. 9c peak pick done (ring hold added after owner feedback). Next: 9d EQ Sketch |
+| 9 | Deferred features | In progress | Split into 9a-9g (small to large). 9a A/B done. 9b undo/redo done. 9c peak pick built; ring-hold fix awaiting owner's check. 9d EQ Sketch in planning |
 
 Status values: Not started · In progress · Done · Skipped
 
@@ -143,7 +143,7 @@ Newest first. One entry per session, a few lines each.
   strictness 5 (VST3, AU) and auval pass. Snapshot shows the marker.
 - Owner feedback from Logic: the ring jumped with the live peak and could only be caught with the analyzer frozen.
   Fixed: the ring holds while the pointer is within 30 px, and a press in that radius picks it (270/270 tests,
-  pluginval and auval pass). 9c done.
+  pluginval and auval pass). Awaiting the owner's check of the fix.
 - Next step: 9d EQ Sketch.
 
 ### 2026-09-29 — 9b (undo/redo)
